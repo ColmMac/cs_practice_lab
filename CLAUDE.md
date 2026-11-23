@@ -4,7 +4,9 @@ Client-side Python trace-table generator (React + TS + Vite, Pyodide in a Web Wo
 
 ## Commands (once scaffolded in M0)
 - `npm run dev` / `npm test` (Vitest) / `npx tsc --noEmit` / `npx playwright test`
-- `uv run --python 3.12 pytest tests/tracer` — tracer tests; also run with `--python 3.13`. Default `python` on this machine is 3.7: never use it.
+- `npm run test:py` (= `uv run --no-project --python 3.12 --with pytest python -m pytest tests/tracer -p no:cacheprovider`) — tracer tests; also run with `--python 3.13`. Default `python` on this machine is 3.7: never use it.
+- Windows Application Control blocks executables inside a project `.venv` (os error 4551), so don't use `uv run pytest` / `uv sync`; use the ephemeral `--no-project --with pytest` form above.
+- Node is installed system-wide (winget). In a fresh PowerShell it may need PATH refreshed from the Machine/User environment.
 
 ## Rules
 - The worker records the FULL every-line trace. Granularity, column visibility, Exam-blanks and Study masking are pure TS projections in `src/core/derive` — never re-run code for them.
