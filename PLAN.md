@@ -1074,3 +1074,539 @@ Hub-wide rules (these join CLAUDE.md as they land):
 H0 → H1.1 → H1.2 → H1.3 → H1.4 → T2.1 → T2.2 → T2.3 → T2.4 → T2.5 → T2.6 → N3.1 → N3.2 → N3.3 → N3.4 → N3.5 → S4.1 → S4.2 → S4.3 → S4.4 → S4.5 → W5.1 → W5.2 → W5.3 → W5.4
 
 One ticket at a time, and each ends with the checks in 16.2 and one commit. T2.4 and T2.5 build the shared answer grid and export panel that Phases 3 and 4 reuse, so they must land before N3.4 and S4.3.
+
+---
+
+## 17. Classroom, exam-feedback and retention upgrade — ticket plan (C tickets)
+
+Goal: three feature groups for the trace-table tool, all client-side with no external APIs.
+1. **Classroom:** student challenge links, a printable worksheet + mark scheme, and a projector mode.
+2. **Exam accuracy:** a Condition (True/False) column, deterministic "Why was this wrong?" explanations, and an exam-pseudocode reference view (AQA / OCR / SQA).
+3. **Retention:** a local mastery tracker on the home page, and keyboard-first Study Mode navigation.
+
+Everything below reuses the existing primitives (`src/components/ui/`), the Tailwind v4 class tokens (`ui/README.md`), the `lz-string` share link, the study core and the Playwright suite.
+
+### 17.1 Codebase audit: what exists and what the brief got wrong
+
+| Brief says | Reality (2026-11-24) | Consequence for the plan |
+|------------|----------------------|---------------------------|
+| `src/utils/urlState.ts` | No `src/utils/`. The trace share link is `src/core/share/urlState.ts` (`#s=<lz>`, schema `v: 1`, `MAX_SHARE_PAYLOAD`, decoded through `sanitizeWorkspace`). It **already carries** granularity, display style, hidden columns, column order, `studyConfig` (mask mode, %, columns, output-only, close credit) and `studySeed` (§7.3: "what a teacher's share link carries"). | A challenge link is the existing share payload plus `mode: 'quiz'` and a small reproducibility check. Only the "specific masked cells" mode is genuinely new (`maskMode: 'cells'`). |
+| "Opening a `mode=quiz` link boots directly into Study Mode" | CLAUDE.md: **code from share links must never auto-run**, and Study Mode needs a finished run. | Not negotiable. The link opens a **review banner** with no table; one click on **Start challenge** runs the code and enters Study Mode **in the same state update**, so the unmasked table never renders (17.3, C4). |
+| `TraceStep` needs a condition outcome | `TraceStep.branch?: boolean` exists. tracer.py sets it (wire `b`) for `if`/`elif`/`while`/`for` headers from whether the next line is inside the body (`Static.body_range`). `TraceTable` shows it as a T/F chip in the Line cell. Tested in `test_tracer_m2.py`. | No new per-step field. Add a **static** per-line description (`TraceResult.lines`) so the UI knows the header kind and the condition text, plus a Condition **column** that is a pure projection of `branch`. |
+| "Why was this wrong?" shows "updating `count` from `2` to `3`" | CLAUDE.md: grading messages must never contain the ground truth. | Two levels. **Why?** (after a check, on red cells) shows the working **without** the cell's own result: "`count + 1` with `count` = `2` is `2 + 1`". The full sentence including the result shows only after **Reveal**, which already excludes the cell from the score. |
+| `stepExplainer.ts` in `src/utils/` | Core is language-neutral (`src/core`), Python specifics live in `src/languages/python`. | `src/core/explain/stepExplainer.ts` works from `TraceStep` + `LineInfo` + `formatValue`. The only Python work (finding the expression and its variable names) happens in tracer.py's existing static AST pass. |
+| Exam pseudocode view | Nothing exists. Parsing Python in TS would mean a second Python parser. Pyodide (already loaded on `/trace-table`) has `ast`. | A separate `pseudocode.py` (only imports `ast`, tested with CPython) and a new worker request. Parsing never executes code, so it is safe for shared code under review. |
+| "Print Worksheet + Answer Key" in `ExportMenu` | `ExportMenu` already offers a worksheet variant (blanks the study mask) and **Print…**. `PrintRegion` renders one `ExportTable` on `beforeprint`. `index.css` already repeats `thead` and has `break-inside: avoid` on rows. | Add a print **job** (`'table' \| 'pack'`). The pack renders two sections with `break-after: page` between them. No new layout engine. |
+| Keyboard-first: Enter/Tab advance and highlight the editor line | Mostly **already done**. `answerGridKeyDown`: Enter/↓ next in the column, Shift+Enter/↑ previous, end of quiz → Check answers. Tab moves along the row (rows have `tabIndex=-1` in study, Hint/Reveal buttons are `tabIndex=-1`). `AnswerCell.onFocusCell` → `selectStepExclusive` → `CodeEditor` highlights and scrolls to the line. | C6 closes the gaps only: Tab from the last box goes to Check answers, focus goes to the first wrong answer after Check, the sticky header no longer hides the focused box, and a real-browser E2E (the existing coverage is jsdom). Enter stays "down the column" (documented contract, D12). |
+| Mastery on the home page | `HomePage` must not load CodeMirror, Pyodide or the trace store (W5.1 E2E checks the network log). Presets are listed in `presets.json`. Study sessions are keyed by `executionKey`, not by preset. | `src/core/mastery/` (pure) plus a tiny storage hook that imports only `presets.json`. The trace store records an attempt in `checkAnswers` when the code that ran **is** a built-in preset. |
+| Projector toggle in "the top bar" | The hub nav (`AppShell`) is shared by five pages. Only the trace page has an editor and a trace table. | The toggle goes in the trace page's `ToolHeader` (`Toolbar.tsx`). A `projector:` Tailwind custom variant (like `dark:`) on `<html class="projector">`, set only while the trace page is mounted. |
+
+### 17.2 Schema and contract updates
+
+#### A. Static line info (tracer.py → wire → `TraceResult`)
+
+`src/core/types.ts` (language-neutral):
+
+```ts
+/** Control-flow headers whose outcome is `TraceStep.branch`. */
+export type HeaderKind = 'if' | 'elif' | 'while' | 'for'
+export type StatementKind = HeaderKind | 'assign' | 'augassign' | 'return' | 'output' | 'other'
+
+/** An expression as a template: literal text and variable references, e.g. ['', {name:'count'}, ' + 1']. */
+export type ExprPart = string | { name: string }
+
+export interface LineExpr {
+  /** Source text as written (`i < len(items) and not found`), at most 200 characters. */
+  text: string
+  /** Normalised template for substitution (ast.unparse spacing). */
+  parts: ExprPart[]
+  /** No calls except safe built-ins, no walrus/yield/await/lambda/comprehension: safe to say
+   *  "with x = 2 this is 2 + 1". Impure expressions are quoted but never substituted. */
+  pure: boolean
+}
+
+export interface LineInfo {
+  kind: StatementKind
+  /** if/elif/while: the test · for: the iterable · assign: the value · augassign: `target op value`
+   *  · return: the value · output: the printed arguments */
+  expr?: LineExpr
+  /** assign / augassign / for: names (or target source text, e.g. `nums[j]`) bound by the line */
+  targets?: string[]
+  /** the right-hand side reads program input (`input()`): explained as "read from the inputs" */
+  readsInput?: boolean
+}
+
+export interface TraceResult {
+  // ...existing fields...
+  /** Per source line (1-based): what the first statement on that line is. Static, so one entry per line,
+   *  not per step. Optional: old fixtures and the fake runner have none. */
+  lines?: Record<number, LineInfo>
+}
+```
+
+`TraceStep` keeps its shape. The `branch` doc comment is tightened:
+
+```ts
+/** Header lines only (see LineInfo.kind). if/elif/while: the condition's value (True = body entered).
+ *  for: another item was taken (False = the loop is exhausted). Undefined for one-line bodies
+ *  (`if x: y`), where the next line event cannot tell, and when the header raised. */
+branch?: boolean
+```
+
+Wire (`protocol.ts`): `WireLineInfo = { k: StatementKind; e?: { t: string; p: (string | { n: string })[]; u: boolean }; tg?: string[]; in?: true }`. `WireChunk.lines?: Record<string, WireLineInfo>` is sent in the **first** chunk (a killed run is rebuilt from chunks, so the result must not depend on the final message). `WireResult.lines?` is set only when nothing was streamed. `materialise.ts` converts it. `runTrace` still never rejects for user-code failures.
+
+tracer.py changes (one AST pass, still no `js`/`pyodide` import, still never evaluates anything):
+1. `Static.line_info: dict[int, dict]`, filled in the existing `ast.walk` loop. The first statement on a line wins. `elif` = an `If` that is the only node in its parent's `orelse` **and** whose source line starts with `elif` (this tells it apart from `else:` + nested `if`).
+2. `_template(expr)`: deep-copy the node, replace each `Name(Load)` that is not a call target with `Name("__tt_<k>__")`, `ast.unparse`, split on `__tt_(\d+)__`. `pure` follows the watch allowlist idea: `Call` only to `SAFE_CALLS` names, and no `NamedExpr`, `Await`, `Yield`, `YieldFrom`, `Lambda` or comprehension. Over 200 characters or 40 names → `expr` omitted.
+3. AugAssign `count += 1` → `expr` = template of `count + 1` (a synthetic `BinOp`), `targets = ['count']`.
+4. `print(a, b)` → kind `output`, `expr` from the arguments joined with `, `. An assignment whose value contains a call to `input` gets `readsInput`.
+5. **Header span check (possible existing bug):** a condition split over several lines (`while (i < n and\n not found):`) may produce line events for its continuation lines on 3.12–3.14. `finalise` would then see `next_line` outside the body and record `branch = False` wrongly. C1 adds a test first. If it fails, `Static.header_span` (header line → last line of the test/iterable) lets `local_trace` treat those events as part of the header (no new row, no early finalise).
+6. Cost: static only, so no per-step work. `lines` is capped at 2 000 entries.
+
+#### B. Workspace (`src/core/workspace.ts`)
+
+```ts
+export interface Workspace {
+  // ...existing fields...
+  /** Show the Condition (True/False) column. Opt-in, so existing tables, goldens and old links are unchanged. */
+  showCondition: boolean
+}
+```
+
+Default `false`, sanitised like `showEphemeral`. It is a view setting, so it is **not** in `runSignature` and does not re-run anything. `columns.ts` gets `CONDITION_COL = 'cond'`. `deriveColumns(result, { showCondition })` adds `{ id: 'cond', header: 'Condition', kind: 'meta' }` after the watches and before Return/Output, only when some step has `branch !== undefined`.
+
+Why a flag and not `DEFAULT_HIDDEN_COLUMNS`: persisted workspaces and old links hold `hiddenColumns: ['stack']`. Adding `'cond'` to the defaults would make the column appear for every existing user.
+
+#### C. Study config (`src/core/study/types.ts`, `session.ts`, `mask.ts`)
+
+```ts
+export type MaskMode = 'all' | 'random' | 'columns' | 'cells'
+export interface StudyConfig {
+  // ...existing fields...
+  /** Used by `cells`: cell keys `${stepIndex}:${colId}` chosen by hand. At most 300. */
+  cells: string[]
+}
+```
+
+`sanitizeStudyConfig`: each key must match the existing `CELL_KEY` regex; deduplicated and capped at 300. `selectMasks` case `'cells'` keeps only keys that are maskable in this table (a stale or forged key masks nothing). `DEFAULT_STUDY_CONFIG.cells = []`.
+
+#### D. Share link / challenge (`src/core/share/urlState.ts`)
+
+```ts
+export type ShareMode = 'workspace' | 'quiz'
+
+/** What the teacher's run produced, so the student's device can tell it reproduced the same table. */
+export interface ChallengeSpec {
+  /** TraceResult.steps.length of the teacher's run */
+  steps: number
+  /** executionKey of the teacher's run (cyrb53, [0-9a-z]{1,16}) */
+  executionKey: string
+}
+
+export interface DecodedShare {
+  workspace: Workspace
+  mode: ShareMode
+  /** Present only when mode === 'quiz' and the spec was well-formed. */
+  challenge?: ChallengeSpec
+}
+
+// JSON inside the lz payload (schema stays v: 1; old app versions ignore the new keys and open a
+// challenge as a plain shared workspace, which is a safe fallback):
+//   { v: 1, ...Workspace, mode?: 'quiz', ch?: { n: number, ek: string } }
+
+export function encodeShare(ws: Workspace, quiz?: ChallengeSpec): string
+export function decodeShare(payload: string): DecodedShare | null   // was: Workspace | null
+export function buildChallengeUrl(base: string, ws: Workspace, spec: ChallengeSpec): { url: string; length: number; tooLong: boolean }
+```
+
+Decoding rules: `mode` must be exactly `'quiz'` (anything else → `'workspace'`). `ch.n` must be an integer 1..`maxSteps`, `ch.ek` must match `/^[0-9a-z]{1,16}$/`. A quiz link without a valid `ch` still opens, but as a plain shared workspace with a note. Every other field still goes through `sanitizeWorkspace`. The existing payload and JSON size caps stay.
+
+`buildChallengeUrl` takes the mask from the **running** study session if there is one, otherwise the saved `studyConfig`. A zero `studySeed` is replaced by a fresh one **before** encoding, so every student gets the same random mask.
+
+#### E. Store state (`src/store/index.ts`, none of it persisted)
+
+```ts
+challenge: {
+  stage: 'review' | 'starting' | 'active' | 'unreproducible'
+  spec: ChallengeSpec
+  /** Reveal (button and Alt+R) stays hidden until the first Check answers. */
+  checkedOnce: boolean
+} | null
+/** Set by a challenge or by `?preset=…&study=1`: start this study session in the SAME set() as the result. */
+studyOnRun: { config: StudyConfig; seed: number } | null
+printJob: 'table' | 'pack'
+```
+
+Actions: `startChallenge()`, `endChallenge()` (restores `shared.backup`, as `discardShared` does), `copyChallengeLink()`, `setPrintJob()`, `setShowCondition()`.
+
+#### F. Mastery (`localStorage` only)
+
+```ts
+// src/core/mastery/types.ts
+export const MASTERY_KEY = 'hub:mastery:v1'
+export const MASTERY_PERCENT = 80          // D11
+export const MIN_SCORED_SHARE = 0.5        // a session counts only if ≥ half the table's questions were scored
+
+export type MasteryTool = 'trace'          // 'truth' | 'numbers' | 'sorting' later; the key format already allows them
+
+export interface MasteryRecord {
+  tool: MasteryTool
+  /** built-in preset id from presets.json, e.g. 'bubble-sort' */
+  itemId: string
+  /** checked sessions that qualified */
+  attempts: number
+  /** 0..100, best qualifying Study Mode score */
+  bestPercent: number
+  lastPercent: number
+  /** sticky once reached: bestPercent >= MASTERY_PERCENT on a qualifying session */
+  mastered: boolean
+  masteredAt?: number
+  /** ms since epoch */
+  lastPracticedAt: number
+}
+
+export interface MasteryFile {
+  v: 1
+  /** key: `${tool}:${itemId}` */
+  records: Record<string, MasteryRecord>
+}
+```
+
+`sanitizeMastery(raw)`: version must be 1. Keys must match `/^trace:[a-z0-9-]{1,64}$/`. Numbers must be finite and clamped. Timestamps must be ≤ now + 1 day. At most 200 records. Built from picked fields, never spread. Unknown preset ids are kept (a preset could come back) but are not counted.
+
+#### G. Exam pseudocode
+
+```ts
+// src/core/pseudocode/types.ts
+export type ExamDialect = 'aqa' | 'ocr' | 'sqa'
+export interface PseudoLine {
+  text: string
+  indent: number
+  /** 1-based Python line this came from; null for closers (ENDWHILE, NEXT i) */
+  sourceLine: number | null
+  /** No exam equivalent: the Python is shown as-is with a marker */
+  unsupported?: boolean
+}
+export type PseudoResult =
+  | { ok: true; dialect: ExamDialect; lines: PseudoLine[] }
+  | { ok: false; message: string; line?: number }
+
+// src/core/runner.ts (optional, like validateWatch)
+toPseudocode?(code: string, dialect: ExamDialect): Promise<PseudoResult>
+
+// protocol.ts
+// → { type: 'pseudocode'; requestId: string; code: string; dialect: ExamDialect }
+// ← { type: 'pseudocode-done'; requestId: string; result: PseudoResult }
+```
+
+### 17.3 Design notes
+
+**Condition column.** `deriveRows`: the cell shows `format({ k: 'bool', v: step.branch })` (Python: `True`/`False`), `written: true` and `value` set, so Study Mode can mask and grade it with no new grading code. In **compact** mode a header step is kept when Condition is visible. Without that, the final `False` check (the mark-scheme row) would be dropped because it writes nothing. When the Condition column is visible, the Line cell's T/F chip is **not** rendered: in Study Mode it would show the answer to a masked Condition cell. A one-line header (`if x: y`) gives `branch === undefined`: the cell shows `?` with the note "Condition and body on one line: put the body on its own line to see the outcome", and it is not maskable.
+
+Hand-worked expected table (linear search, compact, Condition on). Line 5 is the `while`, line 6 the `if`:
+
+```
+Line | items | target | found | i | Condition | Output
+1    | [4, 8, 15, 16, 23, 42]
+2    |       | 15
+3    |       |        | False
+4    |       |        |       | 0
+5    |       |        |       |   | True
+6    |       |        |       |   | False
+9    |       |        |       | 1
+5    |       |        |       |   | True
+6    |       |        |       |   | False
+9    |       |        |       | 2
+5    |       |        |       |   | True
+6    |       |        |       |   | True
+7    |       |        | True
+5    |       |        |       |   | False
+10   |       |        |       |   |           | True 2
+```
+
+**Step explainer.** `explainCell(ctx, stepIndex, columnId, { withResult })` returns `{ parts: ({ t: 'text' | 'code' | 'result'; s: string })[] }`. The UI renders `code` parts as `<code>` and `result` parts with `data-part="result"`. `withResult: false` drops every `result` part, and that is what **Why?** shows. Pre-state values come from step `stepIndex - 1`'s scopes (rows are post-state, so the previous step's snapshot **is** the state before this line ran). Lookup: the active frame first, then `<module>`. Names not in any scope (functions, built-ins) stay as names. Only scalars are substituted (`int`, `float`, `bool`, `None`, strings up to 20 characters); collections stay as names (`nums[0] > nums[0 + 1]`, not a list literal). `isHidden(columnId, beforeStep)` keeps a name unsubstituted when the value it holds came from a masked cell that is not yet answered correctly or revealed, so explaining one cell never leaks another cell's answer.
+
+| Line kind | Why? (no result) | After Reveal (`withResult`) |
+|-----------|------------------|-----------------------------|
+| assign | Line 9 ran `i = i + 1`. Before it ran, `i` was `0`, so the right-hand side is `0 + 1`. | … so `i` becomes `1`. |
+| augassign | Line 5 ran `count += 1`, which means `count + 1`; with `count` = `2` that is `2 + 1`. | … so `count` becomes `3`. |
+| if / elif / while | Line 5 tested `i < len(items) and not found`. With `i` = `2` and `found` = `True` that is `2 < len(items) and not True`. | … which is `False`, so the loop ends. (if: "so the body is skipped") |
+| for | Line 2 asks `range(3)` for its next item. | … `i` becomes `1` / … there are no items left, so the loop ends. |
+| output | Line 10 printed `found, i`. | … the output is `True 2`. |
+| return | Line 4 returns `n * fact(n - 1)` (impure: not substituted). | … the value returned is `6`. |
+| readsInput | Line 1 reads the next line of the program inputs. | … `word` becomes `'education'`. |
+| fallback (no LineInfo, e.g. the fake runner) | Line N ran `<lineSource>`. | … `x` is now `…`. |
+
+**Challenge flow.** `openSharedFromHash` → `decodeShare` → `mode: 'quiz'` with a valid spec → the existing shared-review path (own workspace kept in `shared.backup`, rerun timer cleared, `runToken` bumped) plus `challenge = { stage: 'review' }`. While `challenge.stage !== 'active'`, `App` renders a `ChallengePanel` **instead of** the table area. Start challenge → `studyOnRun = { config, seed }` → `run()`. `run()`'s success branch builds the study state with the same logic as `startStudy` (extracted into one `studyStateFor(result, workspace, config, seed)`) and sets `result` and `study` **in one `set()`**. If `result.status !== 'ok'` or `steps.length !== spec.steps`, it goes to `stage: 'unreproducible'`: "This challenge didn't produce the same table on this device", with "Show the table anyway" (ordinary study mode). Locked while active: the mask controls and New random mask (hidden), Reveal (hidden and Alt+R ignored until `checkedOnce`), the Export menu (`ExportUnavailable`: "Exports are off during a challenge"), Print and the pack (the `beforeprint` handler renders a notice instead of a table). **End challenge** restores the visitor's own workspace. This is honest classroom friction, **not security**: the code is in the student's browser, and anyone can run it. The plan does not claim otherwise.
+
+**Print pack.** ExportMenu → **Print worksheet + answer key** → `setPrintJob('pack')` → `window.print()`. `PrintRegion` (`beforeprint`, `flushSync`, as today) renders:
+- `<section data-print-page="worksheet" class="print-page-break">`: title, the program (`ranInput.code`, never the editor), then the table with headers and **every** cell blank (D10), with the same number of rows as the key plus 2 spare, each 2.2 em tall.
+- `<section data-print-page="key">`: "Mark scheme", then the answer-key `TableModel`.
+
+`afterprint` resets the job to `'table'`, so Ctrl/⌘+P keeps printing the normal table. CSS in `index.css`: `.print-page-break { break-after: page; page-break-after: always }`. The existing `thead { display: table-header-group }` and `tr { break-inside: avoid }` cover long tables. Both sections build from `useTableData` → `buildTableModel`, so they match the screen. A new `blankAll` option in `buildTableModel` blanks every cell.
+
+**Projector mode.** `src/components/ui/projector.ts`: a tiny Zustand store (like `theme.ts`), key `tts:projector`, `try/catch` on every access. `index.css`: `@custom-variant projector (&:where(.projector, .projector *));`. The trace page adds the class to `<html>` on mount (when on) and removes it on unmount, so other tools are never affected. Styling:
+- Editor `text-sm` → `projector:text-[1.18rem]` (0.875 × 1.35).
+- `TD`/`TH` in `ui/tableStyles.ts` gain `projector:text-[1.18rem] projector:px-4 projector:py-2`.
+- Unwritten cells `text-slate-600` → `projector:text-slate-800 dark:projector:text-slate-200`.
+- Selected row gains a 4 px left bar.
+- `InputsPanel`, `WatchPanel`, `Welcome` and the pseudocode drawer get `projector:hidden`.
+- `print:` rules are untouched.
+
+Editor colours (`PALETTES`) do not change. If any colour does, `editorTheme.test.ts` must cover it.
+
+**Pseudocode.** `src/languages/python/pseudocode.py`: `to_pseudocode(code, dialect) -> str (JSON)`. It runs `ast.parse` only and catches `SyntaxError`/`RecursionError`/`MemoryError`. The worker runs it in its own namespace, next to tracer.py. Mapping table (deterministic; anything not listed is `unsupported`):
+
+| Python | AQA | OCR (J277 ERL) | SQA (Reference Language) |
+|--------|-----|----------------|--------------------------|
+| `x = e` | `x ← e` | `x = e` | `SET x TO e` |
+| `x = input(p)` | `OUTPUT p` · `x ← USERINPUT` | `x = input(p)` | `SEND p TO DISPLAY` · `RECEIVE x FROM KEYBOARD` |
+| `print(a, b)` | `OUTPUT a, b` | `print(a, b)` | `SEND a & b TO DISPLAY` |
+| `if/elif/else` | `IF c THEN` · `ELSE IF c THEN` · `ELSE` · `ENDIF` | `if c then` · `elseif c then` · `else` · `endif` | `IF c THEN` · `ELSE IF c THEN` · `ELSE` · `END IF` |
+| `while c:` | `WHILE c` · `ENDWHILE` | `while c` · `endwhile` | `WHILE c DO` · `END WHILE` |
+| `for i in range(a, b)` | `FOR i ← a TO b-1` · `ENDFOR` | `for i = a to b-1` · `next i` | `FOR i FROM a TO b-1 DO` · `END FOR` |
+| `for x in xs` | `FOR x IN xs` · `ENDFOR` | `for x in xs` · `next x` (marked "not in J277 ERL") | `FOR EACH x FROM xs DO` · `END FOR` |
+| `def f(p):` / `return e` | `SUBROUTINE f(p)` · `RETURN e` · `ENDSUBROUTINE` | `function f(p)` · `return e` · `endfunction` (`procedure` when nothing is returned) | `FUNCTION f(p) RETURNS …` / `PROCEDURE` · `RETURN e` · `END FUNCTION` |
+| `//` `%` `!=` `<=` `>=` `and or not` `len(s)` `str()` `int()` | `DIV MOD ≠ ≤ ≥ AND OR NOT LEN(s) INT_TO_STRING STRING_TO_INT` | `DIV MOD != <= >= AND OR NOT s.length str() int()` | `DIV`*, `MOD ≠ ≤ ≥ AND OR NOT LENGTH(s)` |
+
+`range(a, b)` with constant `b` writes the literal `b-1` (`range(5)` → `0 TO 4`). A step becomes `STEP k`. A negative or non-constant step is `unsupported`. Tuple swap `a, b = b, a` becomes three assignments through `temp` (and says so in a comment line). *SQA has no `DIV` keyword: it prints `INT(a / b)`. The exact keywords must be checked against the current published specifications before the goldens are accepted (this is the one place the plan can be wrong about facts outside the repo).
+
+UI: `src/components/editor/PseudocodePanel.tsx`, a collapsible `Panel` under the editor ("Exam pseudocode", closed by default) with a dialect `SegmentedToggle` (choice kept in `tts:pseudo-dialect`). It is read-only `<ol>` lines, each with `data-source-line`. The lines whose `sourceLine` equals the hovered or selected step's line get the same yellow highlight classes as table rows. It converts `ranInput.code` when a result exists (so it matches the table), otherwise the editor code, debounced 400 ms, with a "code changed since the last run" note like the table's.
+
+### 17.4 Decisions (defaults apply if unanswered)
+
+| # | Question | Default |
+|---|----------|---------|
+| D6 | Condition cell on `for` headers | Shown: `True` = an item was taken, `False` = exhausted. The column note says so. |
+| D7 | Condition column on by default? | No (opt-in `showCondition`). It is offered in the Column Manager. |
+| D8 | Does **Why?** cost marks? | No. It never contains the cell's answer. Only Reveal (unchanged) removes the cell from the score. |
+| D9 | Challenge link auto-starts? | **Never** (CLAUDE.md rule). One click on Start challenge. |
+| D10 | Student page of the print pack | Every cell blank (a clean exam grid) with key rows + 2 spare rows. Option "Use the Study mode blanks" in the Export menu. |
+| D11 | Mastery threshold | ≥ 80 % on a session where ≥ 50 % of the table's questions were scored (revealed cells don't count). Sticky. |
+| D12 | Enter direction in Study Mode | Unchanged: down the column (documented contract and tests). Tab goes along the row. |
+| D13 | Projector scope and memory | Trace page only, 135 %, remembered per device in `tts:projector`. |
+| D14 | Pseudocode dialect default | AQA (alphabetical); the choice is remembered. |
+
+### 17.5 File-by-file map
+
+New (`src/`):
+- `src/core/explain/stepExplainer.ts`: `explainCell`, `explanationText`
+- `src/core/mastery/types.ts`, `src/core/mastery/mastery.ts`: `sanitizeMastery`, `recordAttempt`, `isQualifying`, `presetProgress`, `nextUnfinished`
+- `src/core/pseudocode/types.ts`
+- `src/languages/python/pseudocode.py`
+- `src/components/study/WhyCallout.tsx`: the explanation under a red cell (`aria-describedby`)
+- `src/components/layout/ChallengePanel.tsx`: review / starting / unreproducible states
+- `src/components/layout/ChallengeLinkButton.tsx`: "Copy student challenge link" (popover like `ShareButton`)
+- `src/components/export/PrintPack.tsx`: the two print sections
+- `src/components/editor/PseudocodePanel.tsx`
+- `src/components/ui/projector.ts`, `src/components/ui/ProjectorToggle.tsx`
+- `src/app/useMastery.ts`: `useSyncExternalStore` over `hub:mastery:v1` plus the `storage` event; imports only `presets.json`
+- `src/app/MasteryStrip.tsx`: badge and "Practice next unfinished topic" CTA on the home page
+
+Modified (`src/`):
+- `src/languages/python/tracer.py`: `Static.line_info`, `_template`, elif detection, header span (if needed), `lines` in the first chunk and the result
+- `src/languages/python/protocol.ts`: `WireLineInfo`, `lines` on chunk/result, pseudocode messages
+- `src/languages/python/materialise.ts`: `lines` → `TraceResult.lines`
+- `src/languages/python/python.worker.ts`: load `pseudocode.py`, handle `pseudocode`
+- `src/languages/python/PythonTraceRunner.ts`: keep `lines` across chunks; `toPseudocode` with requestId, rejected on worker restart
+- `src/core/types.ts` (A), `src/core/runner.ts` (`toPseudocode?`), `src/core/fake/FakeTraceRunner.ts` (optional `lines` in fixtures)
+- `src/core/derive/columns.ts` (`CONDITION_COL`, `showCondition`), `src/core/derive/rows.ts` (Condition cell, compact keep rule)
+- `src/core/workspace.ts` (`showCondition`)
+- `src/core/study/types.ts`, `session.ts`, `mask.ts` (`'cells'`)
+- `src/core/share/urlState.ts` (D)
+- `src/core/export/tableModel.ts` (`blankAll`, `extraRows`)
+- `src/store/index.ts` (E; `studyStateFor` extracted from `startStudy`; `checkAnswers` records mastery and returns the first incorrect key)
+- `src/store/persistence.ts`: no version bump (`showCondition` has a sanitiser fallback)
+- `src/App.tsx`: ChallengePanel in place of the table, projector class, PseudocodePanel
+- `src/app/usePresetParam.ts`: `?study=1` (only with a valid built-in preset) → `studyOnRun`
+- `src/app/HomePage.tsx`: MasteryStrip, a badge on the trace card
+- `src/components/table/TraceTable.tsx`: no T/F chip when Condition is visible, Why? wiring, projector classes, `scroll-margin-top` on answer boxes
+- `src/components/table/ColumnManager.tsx`: "Condition (True/False)" checkbox
+- `src/components/study/AnswerCell.tsx`: Why? button (Alt+W), reveal hidden when locked, `data-part` rendering
+- `src/components/study/StudyToolbar.tsx`: `'cells'` mode, challenge lock, shortcut legend
+- `src/components/study/useAnswerGrid.ts`, `navigation.ts`: Tab on the last box → Check answers; Alt+W
+- `src/components/export/ExportMenu.tsx`, `PrintRegion.tsx`: print job, challenge lock
+- `src/components/layout/Toolbar.tsx`: ProjectorToggle, ChallengeLinkButton; `SharedBanner.tsx`: hidden for quiz links (ChallengePanel replaces it)
+- `src/components/editor/CodeEditor.tsx`: projector font class
+- `src/components/ui/tableStyles.ts`, `src/styles/index.css`: `projector:` variant, print-pack page break
+
+Tests:
+- `tests/tracer/test_line_info.py` (new), `tests/tracer/test_pseudocode.py` (new), `tests/tracer/make_wire_fixtures.py` (writes `lines`; a multi-line-condition fixture)
+- `tests/fixtures/wire/*.json` (regenerated, diff reviewed), `tests/fixtures/presets/linear-search.condition.txt` and `digit-sum.condition.txt` (new, worked by hand **before** the first run)
+- `tests/fixtures/pseudocode/<preset>.<aqa|ocr|sqa>.txt` (18 goldens, reviewed by hand)
+- `tests/fixtures/export/digit-sum.pack.md` (pack as text: worksheet page + key page)
+- `tests/unit/condition.test.ts`, `explain.test.ts`, `challengeUrl.test.ts`, `challengeMode.test.tsx`, `printPack.test.tsx`, `projector.test.tsx`, `mastery.test.ts`, `masteryHome.test.tsx`, `pseudocode.test.ts` (runner plumbing with the fake worker)
+- Updated: `workspace.test.ts`, `study.test.ts` (cells mask), `studyMode.test.tsx` (keyboard, Why?), `exportMenu.test.tsx`, `presets.test.ts`, `pythonRunner.test.ts`, `a11y.test.tsx`
+- E2E (new): `tests/e2e/condition.spec.ts`, `explain.spec.ts`, `pseudocode.spec.ts`, `challenge.spec.ts`, `classroom.spec.ts` (print + projector), `keyboard.spec.ts`, `mastery.spec.ts`. `hub.spec.ts` gains the projector state in its 375 px and axe runs.
+
+### 17.6 Tickets
+
+Every ticket ends with the §16.2 definition of done: typecheck, lint, `npm test`, `npm run build`, `npx playwright test` (stop any `vite preview` on :4173 first), hand-reviewed goldens, an implementation-notes entry here and one commit. Tracer tickets also run `npm run test:py` on **3.12, 3.13 and 3.14**.
+
+- [ ] **Ticket 1 (C1): Condition contract and column**
+  - Files: `tracer.py` (A.1–A.6), `protocol.ts`, `materialise.ts`, `PythonTraceRunner.ts`, `core/types.ts`, `derive/columns.ts`, `derive/rows.ts`, `workspace.ts`, `store/index.ts` (`setShowCondition`), `ColumnManager.tsx`, `TraceTable.tsx`, `make_wire_fixtures.py`, `test_line_info.py`.
+  - Edge cases:
+    - `elif` vs `else:` + nested `if`.
+    - A multi-line condition (write the test first; fix with `header_span` only if it fails).
+    - One-line bodies (`?`, not maskable).
+    - A header that raises (`if 1/0:`) has no branch.
+    - `while True:` ended by `break` has no final False row.
+    - `for` over an empty list gives a single False row.
+    - A recursive function's headers.
+    - Compact mode keeps header rows only while Condition is visible.
+    - The chip is hidden when the column is shown, including in study mode.
+    - Old fixtures without `lines` still load.
+    - The Condition cell is graded by the existing Python grader (`false` → "Almost").
+  - Verify:
+    - `npm run fixtures`. The wire diff only **adds** `lines`.
+    - The existing preset goldens are byte-identical.
+    - The new `*.condition.txt` goldens match the hand-worked table in 17.3.
+    - E2E `condition.spec.ts`: Linear search → Columns → Condition. The last line-5 row reads `False` and there are 15 rows. No T/F chip in the Line column. In Study mode the Condition cells are answer boxes: `False` is graded Correct, `false` Almost.
+    - The Condition column is off after a reload for a workspace saved before this ticket (seed `tts:v1` without the field).
+
+- [ ] **Ticket 2 (C2): Deterministic "Why was this wrong?"**
+  - Files: `core/explain/stepExplainer.ts`, `components/study/WhyCallout.tsx`, `AnswerCell.tsx`, `TraceTable.tsx`, `StudyToolbar.tsx` (legend: `Alt+W` why), `useAnswerGrid.ts` (Alt+W), `store/index.ts` (`why: Record<string, true>` in `StudyState`, cleared on edit like grades), `explain.test.ts`.
+  - Edge cases:
+    - The first step of a function (pre-state comes from the call step).
+    - Recursion (the innermost frame, not the outermost).
+    - Globals read inside a function.
+    - Values from masked, unanswered cells stay as names (`isHidden`).
+    - Long strings and collections stay as names.
+    - Impure expressions are never substituted.
+    - Tuple assignment `a, b = b, a`.
+    - Watch, Output, Return and Condition columns.
+    - No `lines` (the fake runner) falls back to the line source.
+    - Why? is offered only on cells graded **incorrect**, and disappears when the cell is edited.
+    - The callout must not push a later answer box out of keyboard order (it is text, not focusable).
+  - Verify:
+    - Unit: every row of the 17.3 table for linear search, digit sum and factorial (worked by hand).
+    - A structural test: `withResult: false` never yields a `result` part, for every maskable cell of every preset.
+    - E2E `explain.spec.ts`: Linear search, Study mode, a wrong `i` on the first line-9 row → Check → Why? shows "`i = i + 1`" and "`0 + 1`" with no `[data-part=result]`; Reveal then shows "becomes `1`".
+    - Axe light + dark with a callout open.
+
+- [ ] **Ticket 3 (C3): Exam pseudocode reference**
+  - Files: `pseudocode.py`, `test_pseudocode.py`, `protocol.ts`, `python.worker.ts`, `PythonTraceRunner.ts`, `core/runner.ts`, `core/pseudocode/types.ts`, `PseudocodePanel.tsx`, `App.tsx`.
+  - Edge cases:
+    - A syntax error shows the message, with no partial pseudocode.
+    - Unsupported constructs (comprehension, `try`, `with`, `class`, `lambda`, slicing) stay visible and marked.
+    - `range` with 1, 2 or 3 arguments, a negative step, or a non-constant bound.
+    - `else` on loops is unsupported.
+    - Deep nesting (`RecursionError`).
+    - Very long code (debounce; the request is dropped when a newer one is sent).
+    - The worker is busy with a run or restarted after a timeout (the pending request is rejected and the panel shows "try again").
+    - Shared code under review: parsing is allowed, running is not. Add a test that a pseudocode request never sends `run`.
+  - Verify:
+    - `test:py` on 3.12/3.13/3.14.
+    - 18 goldens reviewed by hand against the published AQA, OCR and SQA reference documents.
+    - E2E `pseudocode.spec.ts`: Linear search, open the panel, AQA shows `WHILE i < LEN(items) AND NOT found` and `ENDWHILE`; OCR shows `endwhile`. Clicking a table row for line 5 highlights the `WHILE` line.
+    - The home page network log still shows no Pyodide.
+    - Axe light + dark.
+
+- [ ] **Ticket 4 (C4): Student challenge links and the chosen-cells mask**
+  - Files: `core/share/urlState.ts`, `core/study/{types,session,mask}.ts`, `store/index.ts` (E, `studyStateFor`, `studyOnRun`, atomic set in `run()`), `ChallengePanel.tsx`, `ChallengeLinkButton.tsx`, `SharedBanner.tsx`, `StudyToolbar.tsx` (`cells` mode authoring: each unmasked question gets a "Blank this" toggle, each masked one a "Show" toggle, both `aria-pressed`), `AnswerCell.tsx` (locked reveal), `ExportMenu.tsx`, `PrintRegion.tsx`, `App.tsx`, `HomePage.tsx` (legacy `/#s=` forward already covers it; add a test).
+  - Edge cases (tampering and robustness):
+    - `mode` not exactly `'quiz'` → plain shared workspace.
+    - A missing or forged `ch` → a plain shared workspace with a note.
+    - `percent` out of range is clamped; an unknown `maskMode` falls back.
+    - Cell keys that fail `CELL_KEY` are dropped; more than 300 cells are capped.
+    - Unknown column ids mask nothing → "This challenge hides nothing" and it falls back to `all`.
+    - Oversized or truncated payloads → the existing invalid-link alert.
+    - A second link while one is under review keeps the **first** backup.
+    - The challenge hash is reopened by `hashchange`.
+    - A reload during a challenge goes back to review, then resumes the saved answers via `studySessions`.
+    - A different step count or a non-ok status → `unreproducible`.
+    - Editing the code mid-challenge shows the existing stale banner.
+    - End challenge restores the student's own workspace and table.
+    - The link length warning is shown (cells mode makes links longer).
+  - Verify:
+    - Unit `challengeUrl.test.ts`: a round trip, and every tampering case above built with `LZString` by hand.
+    - `challengeMode.test.tsx`: no render with rows and zero inputs.
+    - E2E `challenge.spec.ts`:
+      - The teacher builds a link from Linear search with Hide = Some columns (`i`).
+      - A fresh browser context (the student, with their own saved workspace) opens it and sees the banner with no table and no run.
+      - An init-script `MutationObserver` records any moment the trace table has body rows and no `input[data-study-key]`; it must never fire.
+      - After Start, only `i` cells are boxes; the mask controls and Reveal are absent; Export is disabled.
+      - After Check, Reveal appears.
+      - End challenge brings back the student's own code.
+      - A hand-tampered payload falls back safely and still does not run.
+    - Axe light + dark over review, active and unreproducible.
+
+- [ ] **Ticket 5 (C5): Printable worksheet + mark scheme, and projector mode**
+  - Files: `PrintPack.tsx`, `PrintRegion.tsx`, `ExportMenu.tsx`, `core/export/tableModel.ts` (`blankAll`, `extraRows`), `store/index.ts` (`printJob`), `styles/index.css`, `ui/projector.ts`, `ProjectorToggle.tsx`, `Toolbar.tsx`, `ui/tableStyles.ts`, `CodeEditor.tsx`, `TraceTable.tsx`, `App.tsx`, `InputsPanel.tsx`, `WatchPanel.tsx`, `Welcome.tsx`.
+  - Edge cases (print):
+    - Long tables (100+ rows): the header repeats, no row is split, and the key always starts on a new page.
+    - Long code wraps (`pre-wrap`).
+    - Every column is hidden but Line.
+    - Ctrl/⌘+P after a pack prints the normal table (`afterprint` reset).
+    - An Output cell with several lines.
+    - The pack uses `ranInput.code`, not the editor.
+    - Disabled during a challenge.
+    - Dark theme on screen still prints black on white.
+  - Edge cases (projector):
+    - 375 px (the toggle wraps, no horizontal scroll).
+    - Leaving the trace page removes the class.
+    - Storage that throws.
+    - The windowed table (`useRowWindow` row height changes, so re-measure on toggle).
+    - Study mode inputs grow with the text.
+    - Contrast in both themes.
+  - Verify:
+    - Unit: `printPack.test.tsx` (two sections; the worksheet has every body cell empty and rows = key + 2), the `digit-sum.pack.md` golden reviewed by hand, `projector.test.tsx`.
+    - E2E `classroom.spec.ts`, print: `window.print` is stubbed by an init script to dispatch `beforeprint`. With media emulated as `print`:
+      - `[data-print-page=worksheet]` has computed `break-after: page`.
+      - Its cells are empty, the key holds `10`.
+      - `page.pdf()` of a long program has ≥ 2 pages. This is a smoke check of Chromium's own paginator; real printers are still unverified (§15).
+    - E2E `classroom.spec.ts`, projector:
+      - The `.cm-content` and `td` font sizes are 1.30–1.40× the off state.
+      - The Inputs and Watches panels are hidden.
+      - It persists across a reload, and it is off on `/truth-tables`.
+    - `hub.spec.ts`: 375 px and axe light + dark with the projector on.
+
+- [ ] **Ticket 6 (C6): Keyboard-first Study Mode and the local mastery tracker**
+  - Files: `useAnswerGrid.ts`, `navigation.ts`, `TraceTable.tsx` (`scroll-margin-top` = header height on answer inputs), `StudyToolbar.tsx` (after Check, focus the first incorrect box, else the score), `core/mastery/*`, `store/index.ts` (`checkAnswers` → `recordAttempt` when `ranInput` equals a built-in preset's code and stdin, after normalising `\r\n` and trailing whitespace), `app/useMastery.ts`, `app/MasteryStrip.tsx`, `HomePage.tsx`, `usePresetParam.ts` (`?study=1`).
+  - Edge cases (keyboard):
+    - Tab on the last box → Check answers; Shift+Tab on the first box → the previous control (no trap).
+    - Revealed cells are skipped.
+    - The Hint/Reveal/Why buttons stay out of the Tab order.
+    - Ctrl/⌘+Enter still runs.
+    - Keys bubbling from inputs are ignored by row handlers (the existing Space fix).
+    - The editor line scrolls into view even when the code is longer than the editor.
+    - In projector mode the focused box is not hidden under the sticky header.
+  - Edge cases (mastery):
+    - Edited preset code doesn't count.
+    - Revealed cells don't count and a session below 50 % scored doesn't qualify.
+    - The best score only increases; mastered is sticky.
+    - Two tabs (`storage` event).
+    - Storage blocked or full; a corrupted or future-version file is ignored.
+    - Records for removed presets aren't counted.
+    - All presets mastered → the CTA becomes "Revisit <least recently practised>".
+    - `?study=1` without a valid preset is ignored.
+    - `?study=1` must never flash the unmasked table (reuses `studyOnRun` from C4).
+    - A "Reset my progress" button with a confirm.
+    - The home page still loads no CodeMirror or Pyodide.
+  - Verify:
+    - Unit: `mastery.test.ts` (sanitiser fuzz, qualifying rule, `nextUnfinished` order follows `presets.json`), `masteryHome.test.tsx`, keyboard cases in `studyMode.test.tsx` (using the `verdicts()` helper).
+    - E2E `keyboard.spec.ts`:
+      - Tab moves along a row; Enter moves down a column.
+      - The editor's `.cm-trace-selected` line number equals the focused row's `data-line`.
+      - In a 60-line program the selected line is inside the `.cm-scroller` viewport.
+      - Tab from the last box focuses Check answers.
+      - After Check, focus lands on the first wrong box.
+    - E2E `mastery.spec.ts`:
+      - A fresh home page shows "0/6 trace presets mastered" and "Practice next: Linear search".
+      - The CTA opens `/trace-table?preset=linear-search&study=1` in study mode; the `MutationObserver` check from C4 never fires.
+      - Typing the hand-worked answers and Check gives 100 %; back on home it shows "1/6" and the next CTA is Bubble sort.
+      - A seeded corrupt `hub:mastery:v1` is ignored.
+    - Axe light + dark on home with progress.
+
+### 17.7 Ticket order
+
+C1 → C2 → C3 → C4 → C5 → C6
+
+C2 needs C1's `lines`. C4 needs C1 (Condition cells can be masked) and C2 (Why? stays available in a locked challenge, Reveal does not). C5's print pack must respect C4's lock. C6 reuses C4's `studyOnRun` for `?study=1`. C3 depends on nothing and can move anywhere after C1. If C4 runs long, split the `cells` mask mode (C4b) from the link itself (C4a).
+
+### 17.8 Not in scope
+
+- Mastery for truth tables, number systems and sorting (the `MasteryTool` key already allows them).
+- Server-side or signed challenge links, and class rosters. These would need a backend, which the brief rules out; the plan says plainly that a client-side challenge can be bypassed.
+- Exam pseudocode → Python (only the reverse direction).
+- Reordering Study Mode navigation to row-major Enter (D12).
