@@ -1063,10 +1063,11 @@ Hub-wide rules (these join CLAUDE.md as they land):
 - Prerendering for non-JS crawlers is a later idea, not in scope.
 - Implementation notes: `app/PageMeta.tsx` (`<title>`, description, optional `noindex`, and a canonical link from `VITE_SITE_URL` + the pathname, query dropped) is used by every page; the descriptions live in `TOOLS` in `app/tools.ts`, which also gives `SITE_PATHS`. A `seo-files` plugin in `vite.config.ts` emits `robots.txt` (with a Sitemap line when the origin is set) and `sitemap.xml` (skipped with a warning when it is not). `index.html` has a default title and a `data-default` description for crawlers without JS; `main.tsx` removes that tag at startup because React does not de-duplicate hoisted metas against static ones. `tsconfig` gained `allowImportingTsExtensions` so the config can import `tools.ts`. Tests: `tests/unit/seo.test.tsx` (3), `tests/e2e/seo.spec.ts` (8). Full suite 961 unit, 84 E2E.
 
-**W5.4: Final E2E, accessibility and documentation pass**
+**W5.4: Final E2E, accessibility and documentation pass** ✅ DONE
 - `home.spec.ts`: every card navigates to its tool and every quick-start link opens the right preset; the document title changes per route; 404 page.
 - Real-page axe audits for all five routes, light + dark. Mobile-width (375 px) check of the nav and each tool.
 - Update README, CLAUDE.md (hub rules from 16.1) and the §16 status, with test counts.
+- Implementation notes: `tests/e2e/hub.spec.ts` adds an axe audit (light + dark) for all five routes plus the 404 page, and a 375 px check per route (every nav link and the theme toggle on screen, no page-level horizontal scroll). The per-route titles, the 404 and the card/quick-start navigation were already covered by `seo.spec.ts`, `shell.spec.ts` and `home.spec.ts`. **Bug found and fixed:** at 375 px the sorting page overflowed by 17 px because the toolbar's Algorithm/Example selects could not shrink (`max-w-full` on the labels, `min-w-0` on the selects). README now leads with the hub, CLAUDE.md has a "Hub rules" section. Full suite 961 unit, 102 E2E. **Phase 5 and the §16 plan are complete.**
 
 ### 16.4 Ticket order
 

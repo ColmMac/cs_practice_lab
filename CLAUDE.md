@@ -38,4 +38,4 @@ Client-side Python trace-table generator (React + TS + Vite, Pyodide in a Web Wo
 - Tables above 300 rows are windowed (`useRowWindow`), except in study mode.
 
 ## Status
-M0-M5 are done: the plan in PLAN.md is complete (see §9 and §11-§15). Not done / not verifiable here: LaTeX compilation, Lighthouse, real print pagination, Playwright E2E in CI (see PLAN.md §15). Ideas for later are listed at the end of §15.
+M0-M5 and the hub tickets H0-W5.4 (PLAN.md §16) are done: 961 unit and 102 E2E tests. M0-M5: the plan in PLAN.md is complete (see §9 and §11-§15). Not done / not verifiable here: LaTeX compilation, Lighthouse, real print pagination, Playwright E2E in CI (see PLAN.md §15). Ideas for later are listed at the end of §15.

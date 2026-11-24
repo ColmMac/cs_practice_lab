@@ -47,12 +47,12 @@ export function SortingPage() {
     <>
       <PageMeta title="Sorting & searching" description={toolDescription('/sorting-visualizer')} />
       <ToolHeader title="Sorting & searching">
-        <label className="flex items-center gap-2 text-xs">
+        <label className="flex max-w-full items-center gap-2 text-xs">
           <span className="text-slate-600 dark:text-slate-400">Algorithm</span>
           <select
             value={s.algo}
             onChange={(e) => s.setAlgo(e.target.value as AlgorithmId)}
-            className={`${fieldClass} ${okBorder}`}
+            className={`${fieldClass} ${okBorder} min-w-0`}
           >
             <optgroup label="Sorting">
               {ALGORITHM_INFO.filter((a) => a.kind === 'sort').map((a) => (
@@ -70,12 +70,12 @@ export function SortingPage() {
             </optgroup>
           </select>
         </label>
-        <label className="flex items-center gap-2 text-xs">
+        <label className="flex max-w-full items-center gap-2 text-xs">
           <span className="text-slate-600 dark:text-slate-400">Example</span>
           <select
             value={s.presetId}
             onChange={(e) => e.target.value !== 'custom' && s.choosePreset(e.target.value)}
-            className={`${fieldClass} ${okBorder}`}
+            className={`${fieldClass} ${okBorder} min-w-0`}
           >
             <option value="custom">Custom list</option>
             {LIST_PRESETS.map((p) => (
