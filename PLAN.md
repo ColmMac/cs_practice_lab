@@ -931,9 +931,10 @@ Hub-wide rules (these join CLAUDE.md as they land):
 
 - Implementation notes: `react-router` 8.5.2 (exact). `src/app/{AppShell,routes,pages,tools}.tsx`; `src/App.tsx` stays the trace page body (lazy-loaded; unit tests import it unchanged) and now fills the shell with `flex-1 min-h-0`. The shell owns the ONE ThemeToggle, so it was removed from the trace `Toolbar`. The legacy `/#s=` redirect is a `<Navigate replace>` in `HomePage` (it renders nothing else first). `buildShareUrl` needed no change: it uses `location.href`, which is already `/trace-table` on the trace page. Placeholder pages use React 19 hoisted `<title>`/`<meta name=robots>`. Routes are `/truth-tables`, `/number-systems`, `/sorting-visualizer`. E2E: `app.spec.ts`/`ui-primitives.spec.ts` now use `/trace-table`; new `shell.spec.ts` (5 tests).
 
-**H1.4: Static-hosting SPA fallback**
+**H1.4: Static-hosting SPA fallback** ✅ DONE
 - `public/_redirects`: `/*  /index.html  200` (Netlify and Cloudflare Pages). For Vercel, see D2.
 - A unit test that `_redirects` exists and is well-formed, and that `_headers` still has its `/*` block. Document the deploy in README.
+- Implementation notes: `public/_redirects` added; `tests/unit/deploy.test.ts`; README Deploy section updated. The existing deep-link-reload E2E (`shell.spec.ts`) exercises the fallback under `vite preview`.
 
 ### Phase 2: Truth tables (`/truth-tables`)
 

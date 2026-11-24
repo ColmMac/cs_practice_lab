@@ -41,6 +41,8 @@ It is a static site. Upload `dist/` to Netlify, Cloudflare Pages, or any static 
 - a strict **Content-Security-Policy**: scripts only from the site itself and the pinned Pyodide build on `cdn.jsdelivr.net` (`'wasm-unsafe-eval'` for WebAssembly, no `'unsafe-eval'`, no inline scripts), no framing, no form posts
 - `nosniff`, `Referrer-Policy: no-referrer`, and a `Permissions-Policy` that turns off camera, microphone and location
 
+`public/_redirects` (`/*  /index.html  200`) is the single-page-app fallback, so deep links such as `/trace-table` and reloads work on Netlify and Cloudflare Pages. Vercel ignores both files and would need a `vercel.json` with the same headers and a rewrite (see PLAN.md D2).
+
 On hosts that can't set headers (GitHub Pages) the app still works; you just don't get the CSP.
 
 The Python runtime (~10 MB) is downloaded from the CDN the first time and then cached by the browser. Offline first visits show a "Python couldn't be loaded" message with a retry button.
