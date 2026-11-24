@@ -23,5 +23,7 @@ export interface LanguageDescriptor {
   formatValue(v: Value): string
   /** Study Mode: user text → Value, or unparseable. Absent ⇒ Study Mode is unavailable for the language. */
   parseAnswer?(text: string): ParsedAnswer
+  /** Sloppy-but-recognisable answers (unquoted words, `true`, `none`): the value they mean and the slip to point out. */
+  looseParse?(text: string): { value: Value; slip: string } | null
   defaultOptions?: Partial<TraceOptions>
 }

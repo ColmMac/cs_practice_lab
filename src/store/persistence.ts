@@ -1,4 +1,5 @@
 import type { StateStorage } from 'zustand/middleware'
+import { sanitizeSessions, type StudySessionData } from '../core/study/session'
 import { defaultWorkspace, sanitizeWorkspace, type Workspace } from '../core/workspace'
 
 export const STORAGE_KEY = 'tts:v1'
@@ -41,6 +42,19 @@ export function migrateWorkspace(persisted: unknown, version: number): unknown {
 /** Merge for the persist middleware: untrusted stored data over the current defaults, field by field. */
 export function mergeWorkspace<T extends Workspace>(persisted: unknown, current: T): T {
   return { ...current, ...sanitizeWorkspace(persisted, current) }
+}
+
+/** What goes into localStorage: the workspace plus in-progress study sessions (5 most recent, by executionKey). */
+export interface PersistedState extends Workspace {
+  studySessions: Record<string, StudySessionData>
+  /** oldest → newest */
+  studyOrder: string[]
+}
+
+/** Merge for the persist middleware, including the saved study sessions. */
+export function mergePersisted<T extends PersistedState>(persisted: unknown, current: T): T {
+  const stored = typeof persisted === 'object' && persisted !== null ? (persisted as Record<string, unknown>) : {}
+  return { ...mergeWorkspace(persisted, current), ...sanitizeSessions(stored.studySessions, stored.studyOrder) }
 }
 
 export { defaultWorkspace }

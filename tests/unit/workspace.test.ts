@@ -26,6 +26,8 @@ const full: Workspace = {
     { id: 'w1', expr: 'n * 2', scope: { kind: 'function', name: 'f' }, enabled: true },
     { id: 'w2', expr: 'x', label: 'the x', scope: { kind: 'module' }, enabled: false },
   ],
+  studyConfig: { maskMode: 'random', percent: 40, columns: ['f:n'], outputOnly: true, closeCredit: 0 },
+  studySeed: 123456789,
 }
 
 describe('sanitizeWorkspace', () => {

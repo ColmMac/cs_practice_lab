@@ -26,6 +26,10 @@ Client-side Python trace-table generator (React + TS + Vite, Pyodide in a Web Wo
 - Shared-link code must never auto-run. While a shared workspace is under review the visitor's OWN workspace stays the persisted one (`shared.backup`). Anything that replaces the workspace must drop a queued re-run (`clearTimeout(rerunTimer)`) and bump `runToken`.
 - Tests: `userEvent.setup()` installs its own clipboard stub, so stub `navigator.clipboard` after it; `setState` on the persisted store writes localStorage immediately; call `useStore.getState().cancelScheduledRerun()` between tests.
 - If a Windows `Errno 22` hits a fixture write, just rerun (the generator already retries); it is antivirus/file locking, not a bug.
+- Study Mode grading lives in `src/core/study` (language-neutral). A language supplies `parseAnswer` (and optionally `looseParse`); never put language rules in core. Grading messages must never contain the ground truth.
+- Study Mode answer boxes: keep the keyboard contract (Enter/↓ next, Shift+Enter/↑ previous, Alt+H hint, Alt+R reveal, Ctrl/⌘+Enter still runs). A row's own keydown handler must ignore keys that bubble up from an input (it once swallowed Space).
+- In tests, `getAllByText(/Correct/)` also matches the always-rendered `<details>` table; read feedback through each box's `aria-describedby` (`verdicts()` in studyMode.test.tsx).
+- Playwright is installed but its browsers are not (a ~150 MB download needing approval). Real-browser checks have been done in the app's browser pane.
 
 ## Status
-M0, M1, M2 and M3 are done (see PLAN.md §9 and §11-§13). Next: **M4** — Study Mode (masking, answer entry, grading with `parseAnswer`, scores, hints), including `src/languages/python/literal.ts` and persisting study sessions by `executionKey`.
+M0-M4 are done (see PLAN.md §9 and §11-§14). Next: **M5** — exports (Markdown, CSV, LaTeX, JSON, PNG, print/PDF; answer key vs blank worksheet), virtualised long tables, accessibility pass, deploy headers/CSP.

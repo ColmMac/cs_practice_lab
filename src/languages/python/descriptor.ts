@@ -1,5 +1,6 @@
 import type { LanguageDescriptor } from '../../core/language'
 import { formatPythonValue } from './format'
+import { looseParsePython, parsePythonAnswer } from './literal'
 import { PythonTraceRunner } from './PythonTraceRunner'
 import { pythonPresets } from './presets'
 
@@ -10,4 +11,6 @@ export const pythonDescriptor: LanguageDescriptor = {
   createRunner: () => new PythonTraceRunner(),
   presets: pythonPresets,
   formatValue: formatPythonValue,
+  parseAnswer: parsePythonAnswer,
+  looseParse: looseParsePython,
 }

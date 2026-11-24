@@ -1,10 +1,10 @@
 import { useEffect, useId, useRef, useState } from 'react'
-import { moveColumn } from '../../core/derive/columns'
-import type { ColumnDef, TraceResult } from '../../core/types'
+import { columnLabel, moveColumn } from '../../core/derive/columns'
+import type { TraceResult } from '../../core/types'
 import { useStore } from '../../store'
 import { useColumns } from './useColumns'
 
-const label = (c: ColumnDef) => (c.kind === 'var' && c.group !== '<module>' ? `${c.group}.${c.header}` : c.header)
+const label = columnLabel
 const btn =
   'rounded border border-slate-300 px-1.5 py-0.5 text-xs hover:bg-slate-100 disabled:opacity-30 dark:border-slate-700 dark:hover:bg-slate-800'
 

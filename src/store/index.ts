@@ -1,17 +1,34 @@
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
-import { watchColumnId } from '../core/derive/columns'
+import { resolveColumns, watchColumnId } from '../core/derive/columns'
 import type { RunnerStatus, TraceRunner } from '../core/runner'
 import { buildShareUrl, decodeShare, parseShareHash } from '../core/share/urlState'
+import { gradeAnswer, type GradingLanguage } from '../core/study/grade'
+import { buildStudyModel, type StudyView } from '../core/study/model'
+import { rememberSession, sanitizeStudyConfig, MAX_ANSWER_LENGTH, type StudySessionData } from '../core/study/session'
+import { newSeed } from '../core/study/rng'
+import type { Grade, StudyConfig } from '../core/study/types'
 import { DEFAULT_TRACE_OPTIONS, type TraceOptions, type TraceResult, type WatchExpression } from '../core/types'
 import { defaultWorkspace, LIMITS, type Workspace } from '../core/workspace'
 import { getLanguage } from '../languages/registry'
-import { mergeWorkspace, migrateWorkspace, safeStorage, STORAGE_KEY, STORAGE_VERSION } from './persistence'
+import { mergePersisted, migrateWorkspace, safeStorage, STORAGE_KEY, STORAGE_VERSION, type PersistedState } from './persistence'
 import { getRunner } from './runner'
 
 export type Theme = 'light' | 'dark'
 
-interface AppState extends Workspace {
+/** A study session in progress. The view (columns, row options, masks) is FROZEN when it starts. */
+export interface StudyState extends StudyView {
+  executionKey: string
+  answers: Record<string, string>
+  revealed: Record<string, true>
+  hints: Record<string, true>
+  /** Set by Check answers; an entry disappears when that cell is edited. */
+  graded: Record<string, Grade> | null
+  /** Answers were restored from a saved session. */
+  resumed: boolean
+}
+
+interface AppState extends PersistedState {
   theme: Theme
 
   runnerStatus: RunnerStatus
@@ -23,6 +40,9 @@ interface AppState extends Workspace {
   /** stepIndex of the table row under the mouse / focused, and of the clicked row. */
   hoverStep: number | null
   selectedStep: number | null
+
+  /** Study Mode: null when off. */
+  study: StudyState | null
 
   /** Validation message per watch id (from the Python side), shown under the watch. */
   watchErrors: Record<string, string>
@@ -63,6 +83,19 @@ interface AppState extends Workspace {
   removeWatch(id: string): void
   validateWatch(id: string): Promise<void>
 
+  // study mode
+  startStudy(): void
+  exitStudy(): void
+  setStudyConfig(patch: Partial<StudyConfig>): void
+  /** A new random mask. Clears answers (they belonged to the old mask). */
+  reshuffleStudy(): void
+  setAnswer(key: string, text: string): void
+  revealCell(key: string): void
+  toggleHint(key: string): void
+  resetAnswers(): void
+  checkAnswers(): void
+  selectStepExclusive(i: number): void
+
   // sharing
   openSharedFromHash(): void
   shareLink(): { url: string; length: number; tooLong: boolean }
@@ -90,6 +123,8 @@ export function workspaceOf(s: Workspace): Workspace {
     showEphemeral: s.showEphemeral,
     showCallables: s.showCallables,
     watches: s.watches,
+    studyConfig: s.studyConfig,
+    studySeed: s.studySeed,
   }
 }
 
@@ -137,6 +172,14 @@ function without<T>(record: Record<string, T>, key: string): Record<string, T> {
   return copy
 }
 
+/** `graded` minus one cell (an edited cell goes back to ungraded). */
+function withoutKey(graded: Record<string, Grade> | null, key: string): Record<string, Grade> | null {
+  if (!graded || !(key in graded)) return graded
+  const copy = { ...graded }
+  delete copy[key]
+  return copy
+}
+
 let watchCounter = 0
 const newWatchId = (taken: Set<string>) => {
   let id: string
@@ -163,6 +206,18 @@ export const useStore = create<AppState>()(
         }, 500)
       }
 
+      /** Apply a new study state and remember the session (answers, mask settings) by executionKey, in one update. */
+      const commitStudy = (study: StudyState, extra: Partial<AppState> = {}) => {
+        const { studySessions, studyOrder } = get()
+        const data: StudySessionData = {
+          config: study.config,
+          seed: study.seed,
+          answers: study.answers,
+          revealed: Object.keys(study.revealed),
+        }
+        set({ ...extra, study, ...rememberSession(studySessions, studyOrder, study.executionKey, data) })
+      }
+
       return {
         ...defaultWorkspace(firstPreset?.code ?? '', (firstPreset?.stdin ?? []).join('\n')),
         theme: initialTheme(),
@@ -176,6 +231,9 @@ export const useStore = create<AppState>()(
         watchErrors: {},
         shared: null,
         sharedLinkInvalid: false,
+        study: null,
+        studySessions: {},
+        studyOrder: [],
 
         init() {
           applyTheme(get().theme)
@@ -217,6 +275,7 @@ export const useStore = create<AppState>()(
             hiddenColumns: defaultWorkspace().hiddenColumns,
             columnOrder: [],
             watchErrors: {},
+            study: null,
           })
           if (watches.length) watches.forEach((w) => void get().validateWatch(w.id))
         },
@@ -237,7 +296,17 @@ export const useStore = create<AppState>()(
           set({ running: true })
           try {
             const result = await runner.runTrace(code, options)
-            if (token === runToken) set({ result, ranSig: sig, running: false, hoverStep: null, selectedStep: null })
+            if (token === runToken) {
+              set((s) => ({
+                result,
+                ranSig: sig,
+                running: false,
+                hoverStep: null,
+                selectedStep: null,
+                // a session belongs to one exact program run; a different one ends it
+                study: s.study && s.study.executionKey === result.executionKey ? s.study : null,
+              }))
+            }
           } catch {
             // the runtime itself is broken; runnerStatus already says so
             if (token === runToken) set({ running: false })
@@ -323,6 +392,98 @@ export const useStore = create<AppState>()(
           if (res.ok) scheduleRerun() // a valid expression: show its column
         },
 
+        // ── study mode ──
+        startStudy() {
+          const s = get()
+          const r = s.result
+          if (s.study || !r || r.steps.length === 0 || s.running || s.ranSig !== runSignature(s)) return
+          if (!getLanguage(r.language).parseAnswer) return
+          const { visible } = resolveColumns(r, {
+            showEphemeral: s.showEphemeral,
+            watches: s.watches,
+            hidden: s.hiddenColumns,
+            order: s.columnOrder,
+          })
+          const saved = s.studySessions[r.executionKey]
+          const config = saved?.config ?? s.studyConfig
+          const seed = saved?.seed || s.studySeed || newSeed()
+          commitStudy(
+            {
+              executionKey: r.executionKey,
+              columns: visible,
+              granularity: s.granularity,
+              display: s.displayStyle,
+              config,
+              seed,
+              answers: saved?.answers ?? {},
+              revealed: Object.fromEntries((saved?.revealed ?? []).map((k) => [k, true as const])),
+              hints: {},
+              graded: null,
+              resumed: !!saved && (Object.keys(saved.answers).length > 0 || saved.revealed.length > 0),
+            },
+            { studyConfig: config, studySeed: seed, hoverStep: null, selectedStep: null },
+          )
+        },
+
+        exitStudy: () => set({ study: null, hoverStep: null }),
+
+        setStudyConfig(patch) {
+          const st = get().study
+          if (!st) return
+          const config = sanitizeStudyConfig({ ...st.config, ...patch }, st.config)
+          commitStudy({ ...st, config, graded: null, hints: {} }, { studyConfig: config })
+        },
+
+        reshuffleStudy() {
+          const st = get().study
+          if (!st) return
+          const seed = newSeed()
+          commitStudy({ ...st, seed, answers: {}, revealed: {}, hints: {}, graded: null, resumed: false }, { studySeed: seed })
+        },
+
+        setAnswer(key, text) {
+          const st = get().study
+          if (!st) return
+          commitStudy({ ...st, answers: { ...st.answers, [key]: text.slice(0, MAX_ANSWER_LENGTH) }, graded: withoutKey(st.graded, key) })
+        },
+
+        revealCell(key) {
+          const st = get().study
+          if (!st) return
+          commitStudy({ ...st, revealed: { ...st.revealed, [key]: true }, graded: withoutKey(st.graded, key) })
+        },
+
+        toggleHint(key) {
+          const st = get().study
+          if (!st) return
+          const hints = { ...st.hints }
+          if (hints[key]) delete hints[key]
+          else hints[key] = true
+          set({ study: { ...st, hints } })
+        },
+
+        resetAnswers() {
+          const st = get().study
+          if (!st) return
+          commitStudy({ ...st, answers: {}, revealed: {}, hints: {}, graded: null, resumed: false })
+        },
+
+        checkAnswers() {
+          const st = get().study
+          const r = get().result
+          if (!st || !r) return
+          const lang = getLanguage(r.language)
+          if (!lang.parseAnswer) return
+          const grader: GradingLanguage = { formatValue: lang.formatValue, parseAnswer: lang.parseAnswer, looseParse: lang.looseParse }
+          const graded: Record<string, Grade> = {}
+          for (const cell of buildStudyModel(r, st, lang.formatValue).masked) {
+            if (!st.revealed[cell.key]) graded[cell.key] = gradeAnswer(st.answers[cell.key] ?? '', cell.truth, grader)
+          }
+          set({ study: { ...st, graded } })
+        },
+
+        selectStepExclusive: (i) => set({ selectedStep: i }),
+
         // ── sharing ──
         /**
          * A #s= link loads into the workspace for review. The user's own workspace is kept aside and stays
@@ -353,6 +514,7 @@ export const useStore = create<AppState>()(
             watchErrors: {},
             hoverStep: null,
             selectedStep: null,
+            study: null,
           })
         },
         shareLink: () => buildShareUrl(location.href, workspaceOf(get())),
@@ -364,7 +526,7 @@ export const useStore = create<AppState>()(
           const backup = get().shared?.backup
           if (!backup) return
           clearTimeout(rerunTimer)
-          set({ ...backup, shared: null, result: null, ranSig: null, watchErrors: {} })
+          set({ ...backup, shared: null, result: null, ranSig: null, watchErrors: {}, study: null })
           clearShareHash()
           if (backup.code.trim() !== '') void get().run() // it is the visitor's own code: bring their table back
         },
@@ -376,9 +538,13 @@ export const useStore = create<AppState>()(
       version: STORAGE_VERSION,
       storage: createJSONStorage(() => safeStorage),
       // While a shared workspace is under review, keep persisting the user's OWN workspace.
-      partialize: (s): Workspace => (s.shared ? s.shared.backup : workspaceOf(s)),
+      partialize: (s): PersistedState => ({
+        ...(s.shared ? s.shared.backup : workspaceOf(s)),
+        studySessions: s.studySessions,
+        studyOrder: s.studyOrder,
+      }),
       migrate: migrateWorkspace as never,
-      merge: (persisted, current) => mergeWorkspace(persisted, current),
+      merge: (persisted, current) => mergePersisted(persisted, current),
     },
   ),
 )

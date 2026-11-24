@@ -78,3 +78,23 @@ export function moveColumn(current: readonly ColumnId[], id: ColumnId, delta: -1
   ;[next[i], next[j]] = [next[j]!, next[i]!]
   return next
 }
+
+export interface ColumnView extends ColumnPrefs, ColumnOptions {}
+
+/**
+ * `all`: every column that could be shown, in the user's order (what the Column Manager lists).
+ * `visible`: the ones the table shows. Shared by the table, the Column Manager and Study Mode.
+ */
+export function resolveColumns(result: TraceResult, view: ColumnView): { all: ColumnDef[]; visible: ColumnDef[] } {
+  const derived = deriveColumns(result, { showEphemeral: view.showEphemeral, watches: view.watches })
+  return {
+    all: applyColumnPrefs(derived, { hidden: [], order: view.order }),
+    visible: applyColumnPrefs(derived, { hidden: view.hidden, order: view.order }),
+  }
+}
+
+
+/** Human label for a column: `fact.n` for a variable in a function, plain header otherwise. */
+export function columnLabel(c: ColumnDef): string {
+  return c.kind === 'var' && c.group !== '<module>' ? `${c.group}.${c.header}` : c.header
+}

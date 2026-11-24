@@ -1,4 +1,6 @@
 import type { DisplayStyle, Granularity } from './derive/rows'
+import { sanitizeSeed, sanitizeStudyConfig } from './study/session'
+import { DEFAULT_STUDY_CONFIG, type StudyConfig } from './study/types'
 import type { LanguageId, WatchExpression } from './types'
 
 /**
@@ -18,6 +20,10 @@ export interface Workspace {
   showEphemeral: boolean
   showCallables: boolean
   watches: WatchExpression[]
+  /** Study Mode settings for NEW sessions (and what a teacher's share link carries). */
+  studyConfig: StudyConfig
+  /** Seed for the random mask; 0 = not chosen yet. */
+  studySeed: number
 }
 
 /** The call-stack column is opt-in. */
@@ -47,6 +53,8 @@ export function defaultWorkspace(code = '', stdinText = ''): Workspace {
     showEphemeral: false,
     showCallables: false,
     watches: [],
+    studyConfig: { ...DEFAULT_STUDY_CONFIG },
+    studySeed: 0,
   }
 }
 
@@ -108,5 +116,7 @@ export function sanitizeWorkspace(input: unknown, fallback: Workspace): Workspac
     showEphemeral: typeof o.showEphemeral === 'boolean' ? o.showEphemeral : fallback.showEphemeral,
     showCallables: typeof o.showCallables === 'boolean' ? o.showCallables : fallback.showCallables,
     watches: sanitizeWatches(o.watches) ?? fallback.watches,
+    studyConfig: sanitizeStudyConfig(o.studyConfig, fallback.studyConfig),
+    studySeed: sanitizeSeed(o.studySeed, fallback.studySeed),
   }
 }

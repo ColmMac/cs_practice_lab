@@ -762,3 +762,26 @@ Verified in a real browser (Pyodide, Python 3.14): reload restores the whole wor
 Gotchas worth remembering (also in CLAUDE.md): a zustand v5 selector must return a stable value (`?? []` makes React loop forever); `userEvent.setup()` installs its own clipboard stub, so stub the clipboard after it; `setState` on a persisted store writes to localStorage immediately; a module-level re-run timer leaks between tests unless it is cancelled (and a pending re-run must be dropped when the workspace is replaced).
 
 Test counts at the end of M3: 128 tracer tests (each on Python 3.12, 3.13, 3.14) and 208 unit tests.
+
+---
+
+## 14. M4 implementation notes (deviations from the plan above)
+
+Verified in a real browser (Pyodide, Python 3.14) with real key presses: Tab to the Study switch, Enter, type and Enter through all 15 answers of the digit-sum table, Enter on Check answers → 15 / 15 · 100%. Also checked live: right / almost / wrong colours in light and dark, Alt+H and Alt+R, every mask mode, saved answers restored after a full page reload, and the "code changed mid-session" warning.
+
+| Topic | Plan said | What was built / learned |
+|-------|-----------|--------------------------|
+| What gets masked | cells that contain something in the current display style | Only cells the program **writes** on that row, in both display styles. In "carry forward" the carried values stay visible as context instead of turning the whole grid into questions. Line and Call stack are never masked; a watch that failed (⚠) has nothing to predict, so it isn't either. |
+| Random mask | seeded percentage | An **exact** share (shuffle with `mulberry32`, take `round(n × p)`, at least one when p > 0) rather than a coin flip per cell. Same seed ⇒ same cells; verified every cell is reachable across seeds. |
+| Grading | three states, parseAnswer | `compareValues` (equal / close / different) is language-neutral and sits in `core/study`; a language only supplies `parseAnswer` and an optional `looseParse` for sloppy forms (`hi`, `true`, `none`), which can only ever score "close". Floats match within 1e-9 relative. `True` vs `1` and `{}` vs `set()` are plain wrong. A plain wrong answer carries **no message**; no message ever contains the answer. |
+| Output cells | line by line | One-line boxes: write `\n` between lines (a real newline works too). Trailing whitespace and trailing blank lines are ignored; right text with wrong case or spacing is "close". |
+| Literal parser | recursive-descent `ast.literal_eval` clone | Done, plus: hex/octal/binary and `_` in ints, all string escapes, adjacent-string concatenation, bare `1, 2` tuples, `set()` / `frozenset(...)`, `inf` / `nan`. Limited to 2,000 characters and 40 levels of nesting since it reads untrusted text. Property test: `parse(format(v)) ≡ v` for 1,500 random values (all kinds, nested, awkward strings, special floats). |
+| Frozen session | freeze executionKey, columns, granularity, display | Also freezes the column *definitions*. A re-run of the same program keeps the session; a run that yields a different `executionKey`, loading a preset, or opening a shared link ends it. Editing the code shows "the answers belong to the old program" with an End session button. |
+| Persistence | answers by executionKey, 5 most recent | Done: answers, revealed cells, mask settings and seed, sanitised on load (key formats, 500-char answers, 2,000 per session, 5 sessions). Study settings and seed also live in the `Workspace`, so **a teacher's share link carries the mask configuration**. |
+| Keyboard | Enter/↓ down, Tab across | Plus Shift+Enter / ↑ up, Alt+H hint, Alt+R reveal (hint and reveal buttons are out of the tab order so Tab hops answer to answer; rows are not tab stops while studying). Switching Study mode on moves focus to the first answer; the last Enter lands on Check answers. Ctrl/⌘+Enter still runs the program. |
+| E2E | Playwright quiz | **Not set up**: Playwright needs a ~150 MB browser download that I didn't want to make without asking. The keyboard-only quiz is covered by a Vitest test (Tab, type, Enter, Enter on Check answers) and was run by hand with real key presses in the app's browser pane. |
+| Score | `17 / 20 · 85%`, per-column breakdown | Done. Revealed cells leave the total; cells edited after a check are "pending" and score nothing until re-checked; "Almost" is worth half a mark (a checkbox sets it to zero). |
+
+Bugs found while building this (each now has a test): the table row's Enter/Space handler would have swallowed spaces typed in an answer box (it now only reacts to keys pressed on the row itself); a hyphenated unquoted word is a legitimate "forgot the quotes" case; the literal parser's nesting limit was off by one.
+
+Test counts at the end of M4: 128 tracer tests (each on Python 3.12, 3.13, 3.14) and 545 unit tests.

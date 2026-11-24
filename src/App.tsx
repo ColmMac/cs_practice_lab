@@ -4,6 +4,7 @@ import { InputsPanel } from './components/editor/InputsPanel'
 import { Toolbar } from './components/layout/Toolbar'
 import { ErrorBanner } from './components/table/ErrorBanner'
 import { InputPrompt } from './components/table/InputPrompt'
+import { StudyToolbar } from './components/study/StudyToolbar'
 import { TableControls } from './components/table/TableControls'
 import { TraceTable } from './components/table/TraceTable'
 import { SharedBanner } from './components/layout/SharedBanner'
@@ -11,7 +12,7 @@ import { WatchPanel } from './components/editor/WatchPanel'
 import { runSignature, useStore } from './store'
 
 export function App() {
-  const { init, result, ranSig, running } = useStore()
+  const { init, result, ranSig, running, study, exitStudy } = useStore()
   const signature = useStore((s) => runSignature(s))
   useEffect(() => init(), [init])
 
@@ -56,14 +57,22 @@ export function App() {
             </p>
           ) : (
             <>
-              {stale && (
+              {stale && !study && (
                 <p role="status" className="mb-2 text-xs text-amber-800 dark:text-amber-300">
                   The code, inputs or watches have changed since this table was generated — run again to update it.
                 </p>
               )}
+              {stale && study && (
+                <p role="alert" className="mb-2 flex flex-wrap items-center gap-2 text-xs text-amber-900 dark:text-amber-200">
+                  The code has changed since this study session began, so the answers below belong to the old program.
+                  <button type="button" onClick={exitStudy} className="rounded border border-amber-700 px-2 py-0.5 font-medium">
+                    End the session
+                  </button>
+                </p>
+              )}
               <ErrorBanner result={result} />
               {result.status === 'awaiting-input' && <InputPrompt prompt={result.inputRequest?.prompt ?? ''} />}
-              {result.steps.length > 0 && <TableControls result={result} />}
+              {result.steps.length > 0 && (study ? <StudyToolbar result={result} /> : <TableControls result={result} />)}
               <TraceTable result={result} stale={stale} />
             </>
           )}
