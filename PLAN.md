@@ -1012,11 +1012,12 @@ Hub-wide rules (these join CLAUDE.md as they land):
 
 ### Phase 4: Sorting and searching (`/sorting-visualizer`)
 
-**S4.1: Algorithm core (`src/core/algorithms/`)**
+**S4.1: Algorithm core (`src/core/algorithms/`)** ✅ DONE
 - Each algorithm is a pure function `(input, options) → Step[]`. Step kinds: `compare i,j`, `swap i,j`, `shift`/`insert` (insertion sort), `split`/`merge` (merge sort), `inspect i`, `range low,mid,high`, `found`/`not-found`, and `pass-end` (with a snapshot of the array).
 - Bubble sort (early-exit option), insertion sort, merge sort (top-down; one "pass" = one merge level), linear search and binary search (D5; it refuses an unsorted array with a clear message).
 - Counters: comparisons and swaps (or shifts).
 - Tests: the final state equals the sorted array for random inputs; golden pass tables for the textbook arrays (`[5,1,4,2,8]` and others), **checked by hand** against your own working; stability of merge and insertion sort.
+- Implementation notes: `types.ts` (`Step`, `Run`, `AlgorithmError`), `sorting.ts`, `searching.ts`, `index.ts` (`runAlgorithm`, `passSnapshots`, `sortedProblem`). Each algorithm returns a `Run` (`steps`, `final`, `comparisons`, `swaps`, `shifts`, `foundAt`) rather than a bare `Step[]`. Bubble swaps only on strictly greater; with early exit `[5,1,4,2,8]` takes 3 passes, 9 compares, 4 swaps (without: 4 passes, 10 compares). Insertion sort holds the key aside: `compare` has `i` = the item looked at, `j` = where the key started; a pass per key; 7 compares, 4 shifts. Merge sort emits all `split`s first, then merges one depth level at a time, deepest first (a pass = a level); `merge` steps carry `from` so stability is testable; 8 compares. Binary search counts one comparison per `range` probe (three-way) and has no `pass-end`; linear search counts one per `inspect`; an unsorted list throws `AlgorithmError` (`sortedProblem` gives the message for the UI). Inputs must be whole numbers, at most 200 items (the 2-12 and -99..999 UI limits are S4.2). Pure core with no route, so no E2E (S4.5 owns it). Goldens were worked by hand before the first run: `tests/unit/algorithms.test.ts` (31 tests). Full suite 906 unit, 43 E2E.
 
 **S4.2: Visualiser UI**
 - Card/bar view (cards for ≤ 12 items, values written on them). States: comparing, swapping, sorted, and out-of-range/discarded for binary search. State is shown by colour **and** an icon or label, never colour alone.
