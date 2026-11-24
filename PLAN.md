@@ -922,7 +922,7 @@ Hub-wide rules (these join CLAUDE.md as they land):
 - `src/components/ui/README.md`: the token cheat-sheet (surfaces, borders, accent, focus ring, spacing, type scale) that every new tool must use.
 - Implementation notes: `Segmented` moved to `ui/SegmentedToggle` (old path re-exports); `usePopover` moved to `ui/`; `ExportMenu` uses `Popover`; `Panel` is new and not used on the trace page yet. Before/after screenshots (light, dark, Export popover open) were byte-identical. One deliberate change: Share and Theme buttons now use the `toolbar` variant, so they gain the focus outline and disabled styles the Export button already had. Unit tests: `tests/unit/uiPrimitives.test.tsx`; E2E: `tests/e2e/ui-primitives.spec.ts`.
 
-**H1.3: Router and AppShell**
+**H1.3: Router and AppShell** ✅ DONE
 - Add `react-router` (exact version). `src/app/AppShell.tsx`: a sticky top nav (`print:hidden`) with the brand (→ `/`), four tool links (`NavLink`, `aria-current="page"`, wrapping or collapsing at phone width) and `ThemeToggle`, then `<Outlet>`, plus a skip-to-content link.
 - `src/app/routes.tsx`: `/trace-table` loads a lazy `TraceTablePage` (today's `App` body). The three new tools get lazy placeholder pages ("Coming soon", `noindex`) so the nav is complete from day one. `/` gets a placeholder directory. `*` gets a 404 page with links home.
 - Legacy share links: the `/` route forwards `#s=…` to `/trace-table#s=…` with `replace`, before anything renders. The trace store's hash handling is unchanged. `buildShareUrl` now produces `/trace-table#s=…`.
@@ -938,7 +938,7 @@ Hub-wide rules (these join CLAUDE.md as they land):
 
 ### Phase 2: Truth tables (`/truth-tables`)
 
-**T2.1: Boolean expression core (`src/core/logic/`)**
+**T2.1: Boolean expression core (`src/core/logic/`)** ✅ DONE
 - Tokenizer → recursive-descent parser → AST. No `eval`.
 - Operators: `NOT ! ~ ¬`, `AND && & · ∧`, `NAND`, `XOR ^ ⊕`, `OR || | + ∨`, `NOR`. Literals `0 1 TRUE FALSE`, parentheses, variables `A`–`D`. Keywords are case-insensitive.
 - Precedence, from tightest: NOT > AND/NAND > XOR > OR/NOR (left-associative). The page always shows the **fully bracketed reading** back, so a student can see how the expression was parsed.
@@ -946,6 +946,7 @@ Hub-wide rules (these join CLAUDE.md as they land):
 - Errors carry a position and a friendly message ("Expected a variable or '(' after AND"). Limits: 300 characters and nesting depth 40.
 - `evaluate`, `subexpressions(ast)` (post-order, deduplicated by canonical form, excluding bare variables) and `print(ast, notation)`.
 - Tests: precedence, associativity, every operator against its definition over all rows, De Morgan equivalences over all 2^n rows, error positions, limits, and a fuzz test that a print-then-parse round trip gives the same AST.
+- Implementation notes: `ast.ts` (types, limits, `LogicError`), `tokenizer.ts`, `parser.ts` (`parseProgram`, `parseExpression`), `evaluate.ts` (`evaluate`, `print` with notations `words|symbols|ascii`, `subexpressions`), re-exported from `index.ts`. Outputs may be separated by `;` or a newline; an unnamed output is `Q` (or `Q1..` when there are several). An output may be named after an input letter (the plan's `C = A AND B`) unless that letter is also used as an input in the program. `print` drops the outermost brackets unless `outer` is set; NOT is never bracketed. `subexpressions` excludes constants as well as variables. Depth counts nested brackets and stacked NOTs. Pure core, so no route and no E2E: covered by `tests/unit/logic.test.ts` (40 tests).
 
 **T2.2: Truth table model and presets**
 - `buildTruthTable(program, { intermediates, notation: '01' | 'TF' })` returns columns (inputs, intermediates, outputs) and rows in D4 order. An `equivalent` flag is set when all outputs agree (for De Morgan demos).
