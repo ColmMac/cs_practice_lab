@@ -97,3 +97,87 @@ test('the width toggle switches to 16 bits and back', async ({ page }) => {
   await expect(page.getByRole('group', { name: '8-bit register' }).getByRole('button')).toHaveCount(8)
   await expect(page.getByLabel(/^Hex/)).toHaveValue('FF')
 })
+
+test.describe('binary addition visualiser', () => {
+  const openAdd = async (page: import('@playwright/test').Page) => {
+    await page.goto('/number-systems')
+    await page.getByRole('radiogroup', { name: 'Mode' }).getByRole('radio', { name: 'Addition' }).click()
+    await expect(page.getByTestId('addition-table')).toBeVisible()
+  }
+  const fillOperands = async (page: import('@playwright/test').Page, a: string, b: string) => {
+    await page.getByRole('textbox', { name: /^Operand A/ }).fill(a)
+    await page.getByRole('textbox', { name: /^Operand B/ }).fill(b)
+  }
+
+  test('shows the carry row, operands and result in exam layout', async ({ page }) => {
+    await openAdd(page)
+    await fillOperands(page, '00100101', '00010010') // 37 + 18
+    await expect(page.getByTestId('result-bit')).toHaveText(['0', '0', '1', '1', '0', '1', '1', '1'])
+    await expect(page.getByTestId('verdict')).toContainText('37 + 18 = 55')
+    await expect(page.getByTestId('verdict')).toContainText('No carry out')
+    await expect(page.getByTestId('verdict')).toContainText('No overflow')
+  })
+
+  test('the overflow example flags signed overflow but not a carry out', async ({ page }) => {
+    await openAdd(page)
+    await fillOperands(page, '01111111', '00000001')
+    await expect(page.getByTestId('result-bit')).toHaveText(['1', '0', '0', '0', '0', '0', '0', '0'])
+    await expect(page.getByText('Overflow: two positives gave a negative.')).toBeVisible()
+    await expect(page.getByText('No carry out')).toBeVisible()
+    await expect(page.getByTestId('carry-out')).toHaveText('0')
+  })
+
+  test('the carry-out example explains the unsigned reading separately', async ({ page }) => {
+    await openAdd(page)
+    await page.getByRole('button', { name: 'Carry out' }).click()
+    await expect(page.getByTestId('carry-out')).toHaveText('1')
+    await expect(page.getByText(/^Carry out of the top column/)).toBeVisible()
+    await expect(page.getByText(/^No overflow/)).toBeVisible() // -1 + 1 = 0 is fine when signed
+  })
+
+  test('step-through reveals one column at a time, right to left', async ({ page }) => {
+    await openAdd(page)
+    await fillOperands(page, '00000011', '00000001')
+    await page.getByRole('button', { name: 'Step through' }).click()
+    await expect(page.getByTestId('verdict')).toContainText('Finish the last column')
+    await expect(page.getByTestId('result-bit')).toHaveText(['', '', '', '', '', '', '', ''])
+
+    await page.getByRole('button', { name: 'Next column' }).click()
+    await expect(page.getByTestId('step-text')).toHaveText('Column 0: 1 + 1 + carry 0 = 2, so write 0 and carry 1.')
+    await expect(page.getByTestId('result-bit')).toHaveText(['', '', '', '', '', '', '', '0'])
+    await page.getByRole('button', { name: 'Next column' }).click()
+    await expect(page.getByTestId('step-text')).toHaveText('Column 1: 1 + 0 + carry 1 = 2, so write 0 and carry 1.')
+    await expect(page.getByTestId('result-bit').nth(6)).toHaveAttribute('aria-current', 'step')
+
+    await page.getByRole('button', { name: 'Previous column' }).click()
+    await expect(page.getByTestId('result-bit')).toHaveText(['', '', '', '', '', '', '', '0'])
+
+    await page.getByRole('button', { name: 'Show all' }).click()
+    await expect(page.getByTestId('result-bit')).toHaveText(['0', '0', '0', '0', '0', '1', '0', '0'])
+    await expect(page.getByTestId('verdict')).toContainText('3 + 1 = 4')
+    await expect(page.getByRole('button', { name: 'Next column' })).toBeDisabled()
+  })
+
+  test('toggling operand bits updates the sum, and the width toggle keeps working', async ({ page }) => {
+    await openAdd(page)
+    await page.getByRole('button', { name: 'Operand A bit 0, weight 1' }).click()
+    await page.getByRole('button', { name: 'Operand B bit 0, weight 1' }).click()
+    await expect(page.getByRole('textbox', { name: /^Operand A/ })).toHaveValue('00000001')
+    await expect(page.getByTestId('verdict')).toContainText('1 + 1 = 2')
+
+    await page.getByRole('radio', { name: '16-bit' }).click()
+    await expect(page.getByTestId('result-bit')).toHaveCount(16)
+    await expect(page.getByRole('textbox', { name: /^Operand A/ })).toHaveValue('0000000000000001')
+    await page.getByRole('button', { name: 'Signed overflow' }).click()
+    await expect(page.getByRole('textbox', { name: /^Operand A/ })).toHaveValue('0111111111111111')
+    await expect(page.getByText(/^Overflow: two positives/)).toBeVisible()
+  })
+
+  test('a bad operand shows an error and leaves the sum alone', async ({ page }) => {
+    await openAdd(page)
+    await fillOperands(page, '00000101', '00000001')
+    await page.getByRole('textbox', { name: /^Operand A/ }).fill('123456789')
+    await expect(page.getByRole('textbox', { name: /^Operand A/ })).toHaveAttribute('aria-invalid', 'true')
+    await expect(page.getByTestId('verdict')).toContainText('5 + 1 = 6')
+  })
+})

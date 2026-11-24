@@ -2,10 +2,25 @@ import type { Bits } from '../../core/numbers'
 import type { View } from './useBitSandbox'
 
 /** A register of toggle buttons with its weights row, MSB first, as on an exam paper. */
-export function BitRegister({ bits, view, onToggle }: { bits: Bits; view: View; onToggle: (index: number) => void }) {
+export function BitRegister({
+  bits,
+  view,
+  onToggle,
+  name,
+}: {
+  bits: Bits
+  view: View
+  onToggle: (index: number) => void
+  /** Names a register when a page shows several (the addition operands). */
+  name?: string
+}) {
   const n = bits.length
   return (
-    <div role="group" aria-label={`${n}-bit register`} className="overflow-x-auto pb-1">
+    <div
+      role="group"
+      aria-label={name ? `${name}, ${n}-bit register` : `${n}-bit register`}
+      className="overflow-x-auto pb-1"
+    >
       <div className="inline-grid gap-1" style={{ gridTemplateColumns: `repeat(${n}, minmax(2.5rem, 1fr))` }}>
         {bits.map((b, i) => {
           const weight = i === 0 && view === 'signed' ? -(2 ** (n - 1)) : 2 ** (n - 1 - i)
@@ -15,7 +30,7 @@ export function BitRegister({ bits, view, onToggle }: { bits: Bits; view: View; 
               <button
                 type="button"
                 aria-pressed={b === 1}
-                aria-label={`bit ${n - 1 - i}, weight ${weight}`}
+                aria-label={`${name ? `${name} ` : ''}bit ${n - 1 - i}, weight ${weight}`}
                 onClick={() => onToggle(i)}
                 className={`rounded border px-2 py-2 font-mono text-base font-semibold focus-visible:outline-2 focus-visible:outline-emerald-700 ${
                   b === 1
