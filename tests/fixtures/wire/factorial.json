@@ -234,6 +234,7 @@
    }
   ],
   "rawSteps": 9,
+  "line": 7,
   "functions": [
    "fact"
   ],

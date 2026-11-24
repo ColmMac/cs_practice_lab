@@ -8,6 +8,7 @@ import type { FromWorker, ToWorker, WireChunk, WireResult } from './protocol'
 const ctx = self as unknown as DedicatedWorkerGlobalScope
 const post = (m: FromWorker) => ctx.postMessage(m)
 
+let validateWatchFn: ((expr: string) => string) | null = null
 let runTraceFn: ((code: string, optionsJson: string, emit: (chunkJson: string) => void) => string) | null = null
 
 async function init(indexURL: string) {
@@ -19,6 +20,7 @@ async function init(indexURL: string) {
   const ns = pyodide.globals.get('dict')()
   pyodide.runPython(tracerSource, { globals: ns })
   runTraceFn = ns.get('run_trace')
+  validateWatchFn = ns.get('validate_watch')
   ns.destroy()
   post({ type: 'status', status: 'ready' })
 }
@@ -28,9 +30,13 @@ ctx.onmessage = async (e: MessageEvent<ToWorker>) => {
   try {
     if (msg.type === 'init') {
       await init(msg.indexURL)
+    } else if (msg.type === 'validate-watch') {
+      if (!validateWatchFn) throw new Error('Python runtime is not ready')
+      const r = JSON.parse(validateWatchFn(msg.expr)) as { ok: boolean; message?: string }
+      post({ type: 'watch-validated', requestId: msg.requestId, ...r })
     } else if (msg.type === 'run') {
       if (!runTraceFn) throw new Error('Python runtime is not ready')
-      // The tracer calls `emit` every ~100 steps / 50 ms. postMessage delivers while Python is still
+      // The tracer calls `emit` as each row finishes. postMessage delivers while Python is still
       // running, so a worker killed mid-run has already handed over everything recorded so far.
       const emit = (chunkJson: string) =>
         post({ type: 'chunk', runId: msg.runId, chunk: JSON.parse(chunkJson) as WireChunk })
@@ -40,6 +46,8 @@ ctx.onmessage = async (e: MessageEvent<ToWorker>) => {
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     if (msg.type === 'run') post({ type: 'run-failed', runId: msg.runId, message })
+    // a failed validation is not a broken runtime: report it as a rejected watch
+    else if (msg.type === 'validate-watch') post({ type: 'watch-validated', requestId: msg.requestId, ok: false, message })
     else post({ type: 'fatal', message })
   }
 }

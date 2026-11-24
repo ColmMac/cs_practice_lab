@@ -1,0 +1,213 @@
+{
+ "code": "n = 3\ni = 0\nwhile i < n:\n    i += 1\n",
+ "options": {
+  "watches": [
+   {
+    "id": "cond",
+    "expr": "i < n",
+    "scope": {
+     "kind": "current"
+    }
+   }
+  ]
+ },
+ "wire": {
+  "status": "ok",
+  "error": null,
+  "inputRequest": null,
+  "steps": [
+   {
+    "i": 0,
+    "k": "l",
+    "ln": 1,
+    "f": 0,
+    "stk": [
+     0
+    ],
+    "w": [
+     [
+      0,
+      "n",
+      {
+       "k": "int",
+       "v": "3"
+      }
+     ]
+    ],
+    "wt": {
+     "cond": {
+      "ok": false,
+      "reason": "not-in-scope",
+      "message": "name 'i' is not defined"
+     }
+    }
+   },
+   {
+    "i": 1,
+    "k": "l",
+    "ln": 2,
+    "f": 0,
+    "stk": [
+     0
+    ],
+    "w": [
+     [
+      0,
+      "i",
+      {
+       "k": "int",
+       "v": "0"
+      }
+     ]
+    ],
+    "wt": {
+     "cond": {
+      "ok": true,
+      "value": {
+       "k": "bool",
+       "v": true
+      }
+     }
+    }
+   },
+   {
+    "i": 2,
+    "k": "l",
+    "ln": 3,
+    "f": 0,
+    "stk": [
+     0
+    ],
+    "b": true
+   },
+   {
+    "i": 3,
+    "k": "l",
+    "ln": 4,
+    "f": 0,
+    "stk": [
+     0
+    ],
+    "w": [
+     [
+      0,
+      "i",
+      {
+       "k": "int",
+       "v": "1"
+      }
+     ]
+    ]
+   },
+   {
+    "i": 4,
+    "k": "l",
+    "ln": 3,
+    "f": 0,
+    "stk": [
+     0
+    ],
+    "b": true
+   },
+   {
+    "i": 5,
+    "k": "l",
+    "ln": 4,
+    "f": 0,
+    "stk": [
+     0
+    ],
+    "w": [
+     [
+      0,
+      "i",
+      {
+       "k": "int",
+       "v": "2"
+      }
+     ]
+    ]
+   },
+   {
+    "i": 6,
+    "k": "l",
+    "ln": 3,
+    "f": 0,
+    "stk": [
+     0
+    ],
+    "b": true
+   },
+   {
+    "i": 7,
+    "k": "l",
+    "ln": 4,
+    "f": 0,
+    "stk": [
+     0
+    ],
+    "w": [
+     [
+      0,
+      "i",
+      {
+       "k": "int",
+       "v": "3"
+      }
+     ]
+    ],
+    "wt": {
+     "cond": {
+      "ok": true,
+      "value": {
+       "k": "bool",
+       "v": false
+      }
+     }
+    }
+   },
+   {
+    "i": 8,
+    "k": "l",
+    "ln": 3,
+    "f": 0,
+    "stk": [
+     0
+    ],
+    "b": false
+   }
+  ],
+  "frames": [
+   {
+    "id": 0,
+    "name": "<module>",
+    "depth": 0
+   }
+  ],
+  "variables": [
+   {
+    "columnId": "<module>:n",
+    "scopeName": "<module>",
+    "name": "n",
+    "firstStep": 0,
+    "ephemeral": false
+   },
+   {
+    "columnId": "<module>:i",
+    "scopeName": "<module>",
+    "name": "i",
+    "firstStep": 1,
+    "ephemeral": false
+   }
+  ],
+  "rawSteps": 9,
+  "line": 3,
+  "functions": [],
+  "stdout": "",
+  "stats": {
+   "rawSteps": 9,
+   "truncated": false,
+   "durationMs": 0
+  }
+ }
+}

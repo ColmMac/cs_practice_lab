@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { deriveColumns } from '../../src/core/derive/columns'
+import { applyColumnPrefs, deriveColumns } from '../../src/core/derive/columns'
 import { deriveRows } from '../../src/core/derive/rows'
 import { DEFAULT_TRACE_OPTIONS, type TraceResult } from '../../src/core/types'
+import { DEFAULT_HIDDEN_COLUMNS } from '../../src/core/workspace'
 import { formatPythonValue } from '../../src/languages/python/format'
 import { materialise } from '../../src/languages/python/materialise'
 import type { WireResult } from '../../src/languages/python/protocol'
@@ -24,12 +25,16 @@ function traceOf(id: string): { result: TraceResult; fixtureCode: string } {
   return { result, fixtureCode: f.code }
 }
 
+// The table as the app shows it by default (the call-stack column is opt-in).
+const defaultColumns = (r: TraceResult) =>
+  applyColumnPrefs(deriveColumns(r), { hidden: DEFAULT_HIDDEN_COLUMNS, order: [] })
+
 const compact = (r: TraceResult) => {
-  const cols = deriveColumns(r)
+  const cols = defaultColumns(r)
   return tableText(cols, deriveRows(r, cols, formatPythonValue))
 }
 const everyLine = (r: TraceResult) => {
-  const cols = deriveColumns(r)
+  const cols = defaultColumns(r)
   return tableText(cols, deriveRows(r, cols, formatPythonValue, { granularity: 'every-line', display: 'carry' }))
 }
 

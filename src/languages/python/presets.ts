@@ -14,10 +14,11 @@ interface ManifestEntry {
   description: string
   file: string
   stdin?: string[]
+  suggestedWatches?: string[]
 }
 
 export const pythonPresets: Preset[] = (manifest as ManifestEntry[]).map((m) => {
   const code = sources[`./presets/${m.file}`]
   if (code === undefined) throw new Error(`Preset file missing: presets/${m.file}`)
-  return { id: m.id, title: m.title, description: m.description, code, stdin: m.stdin }
+  return { id: m.id, title: m.title, description: m.description, code, stdin: m.stdin, suggestedWatches: m.suggestedWatches }
 })

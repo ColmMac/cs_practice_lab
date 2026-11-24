@@ -17,9 +17,9 @@ describe('deriveColumns', () => {
     expect(deriveColumns(traces.digitSum).map((c) => c.header)).toEqual(['Line', 'n', 'total', 'digit', 'Output'])
   })
 
-  it('groups variables by scope with module first, adds Return when functions return', () => {
+  it('groups variables by scope with module first, adds Return when functions return, and offers Call stack', () => {
     const cols = deriveColumns(traces.factorial)
-    expect(cols.map((c) => c.id)).toEqual(['line', '<module>:result', 'fact:n', 'return', 'output'])
+    expect(cols.map((c) => c.id)).toEqual(['line', '<module>:result', 'fact:n', 'return', 'output', 'stack'])
     expect(cols.find((c) => c.id === 'fact:n')?.group).toBe('fact')
   })
 

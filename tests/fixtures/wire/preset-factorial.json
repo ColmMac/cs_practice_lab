@@ -297,6 +297,7 @@
    }
   ],
   "rawSteps": 11,
+  "line": 8,
   "functions": [
    "fact"
   ],

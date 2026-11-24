@@ -3,13 +3,19 @@
     "id": "linear-search",
     "title": "Linear search (while + flag)",
     "description": "Scan a list for a target, stopping as soon as it is found.",
-    "file": "linear-search.py"
+    "file": "linear-search.py",
+    "suggestedWatches": [
+      "i < len(items)"
+    ]
   },
   {
     "id": "bubble-sort",
     "title": "Bubble sort (nested loops, swap)",
     "description": "Sort a short list by repeatedly swapping neighbours; stops early when a pass makes no swaps.",
-    "file": "bubble-sort.py"
+    "file": "bubble-sort.py",
+    "suggestedWatches": [
+      "nums[j] > nums[j + 1]"
+    ]
   },
   {
     "id": "digit-sum",
@@ -34,6 +40,8 @@
     "title": "Vowel counter (input, strings)",
     "description": "Read a word with input() and count its vowels. Uses the Program inputs box.",
     "file": "vowel-counter.py",
-    "stdin": ["education"]
+    "stdin": [
+      "education"
+    ]
   }
 ]

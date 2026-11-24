@@ -20,6 +20,12 @@ Client-side Python trace-table generator (React + TS + Vite, Pyodide in a Web Wo
 - Presets are real files in `src/languages/python/presets/` (`presets.json` + `*.py`). After editing one, run `npm run fixtures` and review the golden tables in `tests/fixtures/presets/*.txt` BY HAND against your own execution of the program before accepting a snapshot; a freshly written snapshot proves nothing. (This caught a real bug in M2.)
 - When writing Python test code via a shell heredoc, `\n` escapes get mangled. Use the Write/Edit tools for files that contain them.
 - The editor's lint machinery must stay a static extension (`linter(null)`); `setDiagnostics` alone is discarded when @uiw/react-codemirror reconfigures.
+- Zustand v5: a selector must return a STABLE value. `useStore(s => s.x ?? [])` creates a new array every call and loops React forever; use a module-level constant.
+- `Workspace` (src/core/workspace.ts) is the ONE shape for persistence and share links, always passed through `sanitizeWorkspace`. Never trust stored or linked data; never spread it into state.
+- Watch expressions must never change the program: keep the static allowlist AND the `__tt_method__` run-time guard in tracer.py.
+- Shared-link code must never auto-run. While a shared workspace is under review the visitor's OWN workspace stays the persisted one (`shared.backup`). Anything that replaces the workspace must drop a queued re-run (`clearTimeout(rerunTimer)`) and bump `runToken`.
+- Tests: `userEvent.setup()` installs its own clipboard stub, so stub `navigator.clipboard` after it; `setState` on the persisted store writes localStorage immediately; call `useStore.getState().cancelScheduledRerun()` between tests.
+- If a Windows `Errno 22` hits a fixture write, just rerun (the generator already retries); it is antivirus/file locking, not a bug.
 
 ## Status
-M0, M1 and M2 are done (see PLAN.md §9, §11 and §12). Next: **M3** — Column Manager, watch expressions, persistence, share links.
+M0, M1, M2 and M3 are done (see PLAN.md §9 and §11-§13). Next: **M4** — Study Mode (masking, answer entry, grading with `parseAnswer`, scores, hints), including `src/languages/python/literal.ts` and persisting study sessions by `executionKey`.

@@ -1,9 +1,10 @@
 import { useMemo } from 'react'
-import { deriveColumns, LINE_COL, OUTPUT_COL } from '../../core/derive/columns'
+import { LINE_COL, OUTPUT_COL } from '../../core/derive/columns'
 import { deriveRows } from '../../core/derive/rows'
 import type { TraceResult } from '../../core/types'
 import { getLanguage } from '../../languages/registry'
 import { useStore } from '../../store'
+import { useColumns } from './useColumns'
 
 const th = 'border border-slate-300 px-3 py-1.5 text-left font-semibold dark:border-slate-700'
 const td = 'border border-slate-300 px-3 py-1 font-mono dark:border-slate-700'
@@ -11,7 +12,7 @@ const td = 'border border-slate-300 px-3 py-1 font-mono dark:border-slate-700'
 export function TraceTable({ result, stale }: { result: TraceResult; stale: boolean }) {
   const { granularity, displayStyle, selectedStep, hoverStep, setHoverStep, selectStep } = useStore()
   const format = getLanguage(result.language).formatValue
-  const columns = useMemo(() => deriveColumns(result), [result])
+  const { visible: columns } = useColumns(result)
   const rows = useMemo(
     () => deriveRows(result, columns, format, { granularity, display: displayStyle }),
     [result, columns, format, granularity, displayStyle],
@@ -90,6 +91,7 @@ export function TraceTable({ result, stale }: { result: TraceResult; stale: bool
                   return (
                     <td
                       key={c.id}
+                      title={cell?.note}
                       className={`${td} ${cell?.written ? 'font-bold' : 'text-slate-600 dark:text-slate-400'} ${c.id === OUTPUT_COL ? 'whitespace-pre' : ''}`}
                       style={c.id === LINE_COL ? { paddingLeft: 12 + row.depth * 14 } : undefined}
                     >

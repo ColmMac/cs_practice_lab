@@ -18,11 +18,16 @@ export class FakeTraceRunner implements TraceRunner {
   private status: RunnerStatus = { state: 'uninitialised' }
   private listeners = new Set<(s: RunnerStatus) => void>()
 
+  /** Present only when a validator was supplied, like a runner that supports watch expressions. */
+  validateWatch?: (expr: string) => Promise<{ ok: true } | { ok: false; message: string }>
+
   constructor(
     private readonly result: TraceResult | ((code: string, options: TraceOptions) => TraceResult),
     language: LanguageId = 'python',
+    validate?: (expr: string) => { ok: true } | { ok: false; message: string },
   ) {
     this.language = language
+    if (validate) this.validateWatch = async (expr) => validate(expr)
   }
 
   getStatus(): RunnerStatus {

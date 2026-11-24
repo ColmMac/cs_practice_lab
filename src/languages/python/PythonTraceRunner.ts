@@ -37,7 +37,7 @@ let runCounter = 0
 export class PythonTraceRunner implements TraceRunner {
   readonly language = 'python' as const
   readonly capabilities: RunnerCapabilities = {
-    watchExpressions: false,
+    watchExpressions: true,
     stdin: true,
     inputMode: 'rerun',
     hardInterrupt: false,
@@ -50,6 +50,8 @@ export class PythonTraceRunner implements TraceRunner {
   private worker: Worker | null = null
   private ready: Promise<void> | null = null
   private current: ActiveRun | null = null
+  private validations = new Map<string, (r: { ok: true } | { ok: false; message: string }) => void>()
+  private validationCounter = 0
 
   constructor(
     private readonly indexURL: string = PYODIDE_INDEX_URL,
@@ -111,6 +113,19 @@ export class PythonTraceRunner implements TraceRunner {
     })
   }
 
+  /** Asks the Python side whether a watch expression is allowed (read-only, safe). */
+  async validateWatch(expr: string): Promise<{ ok: true } | { ok: false; message: string }> {
+    await this.init()
+    const worker = this.worker
+    if (!worker) return { ok: true }
+    const requestId = `v-${++this.validationCounter}`
+    return new Promise((resolve) => {
+      this.validations.set(requestId, resolve)
+      const msg: ToWorker = { type: 'validate-watch', requestId, expr }
+      worker.postMessage(msg)
+    })
+  }
+
   cancel(): void {
     if (this.current) this.stop('cancelled', 'Run cancelled.')
   }
@@ -120,6 +135,8 @@ export class PythonTraceRunner implements TraceRunner {
     this.worker?.terminate()
     this.worker = null
     this.ready = null
+    for (const resolve of this.validations.values()) resolve({ ok: true })
+    this.validations.clear()
     this.listeners.clear()
     this.status = { state: 'uninitialised' }
   }
@@ -128,6 +145,10 @@ export class PythonTraceRunner implements TraceRunner {
 
   private spawn(): Promise<void> {
     this.worker?.terminate()
+    // Validations that were waiting on the killed worker can never be answered. Resolve them as "fine":
+    // a bad watch is still reported, per step, by the next run.
+    for (const resolve of this.validations.values()) resolve({ ok: true })
+    this.validations.clear()
     const worker = this.createWorker()
     this.worker = worker
     this.setStatus({ state: 'loading', message: 'Starting Python runtime…' })
@@ -180,6 +201,12 @@ export class PythonTraceRunner implements TraceRunner {
           this.setStatus({ state: 'running', stepsExecuted: msg.chunk.rawSteps })
           run.options.onProgress?.({ stepsExecuted: msg.chunk.rawSteps })
         }
+        break
+      }
+      case 'watch-validated': {
+        const resolve = this.validations.get(msg.requestId)
+        this.validations.delete(msg.requestId)
+        resolve?.(msg.ok ? { ok: true } : { ok: false, message: msg.message ?? 'Not allowed in a watch expression.' })
         break
       }
       case 'done':
@@ -292,5 +319,6 @@ function toWireOptions(o: TraceOptions): WireOptions {
     randomSeed: o.randomSeed,
     valueLimits: o.valueLimits,
     showCallables: o.showCallables,
+    watches: o.watches.filter((w) => w.enabled).map(({ id, expr, scope }) => ({ id, expr, scope })),
   }
 }

@@ -8,6 +8,7 @@ contract. Presets are read from src/languages/python/presets/ (the same files th
 
 import json
 import sys
+import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -24,6 +25,21 @@ CASES = {
     "infinite-loop": ("i = 0\nwhile True:\n    i += 1\n", {"maxSteps": 12}),
     "syntax-error": ("if x\n    pass\n", {}),
     "needs-input": ("name = input('Name? ')\nprint(name)\n", {}),
+    # watch results: `cond` flips when the loop ends; `fn` is the innermost live fact() call; `bad` is rejected
+    "watches-loop": (
+        "n = 3\ni = 0\nwhile i < n:\n    i += 1\n",
+        {"watches": [{"id": "cond", "expr": "i < n", "scope": {"kind": "current"}}]},
+    ),
+    "watches-fn": (
+        "def fact(n):\n    if n <= 1:\n        return 1\n    return n * fact(n - 1)\n\nresult = fact(3)\n",
+        {
+            "watches": [
+                {"id": "cur", "expr": "n", "scope": {"kind": "current"}},
+                {"id": "fn", "expr": "n", "scope": {"kind": "function", "name": "fact"}},
+                {"id": "bad", "expr": "result.pop()", "scope": {"kind": "module"}},
+            ]
+        },
+    ),
 }
 
 
@@ -31,7 +47,15 @@ def write(name: str, code: str, opts: dict) -> None:
     res = json.loads(tracer.run_trace(code, json.dumps(opts)))
     res["stats"]["durationMs"] = 0  # keep fixtures stable
     text = json.dumps({"code": code, "options": opts, "wire": res}, indent=1) + "\n"
-    (OUT / f"{name}.json").write_text(text, encoding="utf-8", newline="\n")
+    target = OUT / f"{name}.json"
+    for attempt in range(5):  # Windows occasionally refuses a write right after a scan/lock (Errno 22)
+        try:
+            target.write_text(text, encoding="utf-8", newline="\n")
+            break
+        except OSError:
+            if attempt == 4:
+                raise
+            time.sleep(0.2)
     print("wrote", name, "->", res["status"], len(res["steps"]), "steps")
 
 

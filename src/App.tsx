@@ -6,11 +6,21 @@ import { ErrorBanner } from './components/table/ErrorBanner'
 import { InputPrompt } from './components/table/InputPrompt'
 import { TableControls } from './components/table/TableControls'
 import { TraceTable } from './components/table/TraceTable'
-import { useStore } from './store'
+import { SharedBanner } from './components/layout/SharedBanner'
+import { WatchPanel } from './components/editor/WatchPanel'
+import { runSignature, useStore } from './store'
 
 export function App() {
-  const { init, result, code, ranCode, running } = useStore()
+  const { init, result, ranSig, running } = useStore()
+  const signature = useStore((s) => runSignature(s))
   useEffect(() => init(), [init])
+
+  // A share link pasted into a tab that already has the app open only changes the #fragment (no reload).
+  useEffect(() => {
+    const onHash = () => useStore.getState().openSharedFromHash()
+    window.addEventListener('hashchange', onHash)
+    return () => window.removeEventListener('hashchange', onHash)
+  }, [])
 
   // Ctrl/⌘+Enter runs from anywhere. The editor binds it too and marks the event handled, so skip those.
   useEffect(() => {
@@ -24,17 +34,19 @@ export function App() {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
-  const stale = result !== null && ranCode !== code
+  const stale = result !== null && ranSig !== signature
 
   return (
     <div className="flex h-screen flex-col bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       <Toolbar />
+      <SharedBanner />
       <main className="grid min-h-0 flex-1 grid-cols-1 gap-4 p-4 lg:grid-cols-[minmax(320px,2fr)_3fr]">
         <section className="flex min-h-0 flex-col gap-3" aria-label="Code">
           <div className="min-h-[240px] flex-1 overflow-auto rounded border border-slate-300 dark:border-slate-700">
             <CodeEditor />
           </div>
           <InputsPanel />
+          <WatchPanel />
         </section>
 
         <section className="min-h-0 overflow-auto" aria-label="Trace">
@@ -46,12 +58,12 @@ export function App() {
             <>
               {stale && (
                 <p role="status" className="mb-2 text-xs text-amber-800 dark:text-amber-300">
-                  The code has changed since this table was generated — run again to update it.
+                  The code, inputs or watches have changed since this table was generated — run again to update it.
                 </p>
               )}
               <ErrorBanner result={result} />
               {result.status === 'awaiting-input' && <InputPrompt prompt={result.inputRequest?.prompt ?? ''} />}
-              {result.steps.length > 0 && <TableControls />}
+              {result.steps.length > 0 && <TableControls result={result} />}
               <TraceTable result={result} stale={stale} />
             </>
           )}

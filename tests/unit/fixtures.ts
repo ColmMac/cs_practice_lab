@@ -7,6 +7,8 @@ import factorial from '../fixtures/wire/factorial.json'
 import infiniteLoop from '../fixtures/wire/infinite-loop.json'
 import needsInput from '../fixtures/wire/needs-input.json'
 import syntaxError from '../fixtures/wire/syntax-error.json'
+import watchesFn from '../fixtures/wire/watches-fn.json'
+import watchesLoop from '../fixtures/wire/watches-loop.json'
 import zeroDivision from '../fixtures/wire/zero-division.json'
 
 interface Fixture {
@@ -31,4 +33,6 @@ export const traces = {
   infiniteLoop: load('infinite-loop', infiniteLoop as Fixture),
   syntaxError: load('syntax-error', syntaxError as Fixture),
   needsInput: load('needs-input', needsInput as Fixture),
+  watchesLoop: load('watches-loop', watchesLoop as Fixture),
+  watchesFn: load('watches-fn', watchesFn as Fixture),
 }

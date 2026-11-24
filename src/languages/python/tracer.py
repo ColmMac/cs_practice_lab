@@ -65,6 +65,7 @@ class Options:
         self.max_depth = int(lim.get("maxDepth", 4))
         self.max_str = int(lim.get("maxStringLength", 200))
         self.show_callables = bool(d.get("showCallables", False))
+        self.watches = list(d.get("watches", []))
 
 
 # ───────────────────────────── stdout capture ─────────────────────────────
@@ -302,6 +303,141 @@ class Static:
         self.body_range[n.lineno] = (first, max(getattr(s, "end_lineno", s.lineno) or s.lineno for s in n.body))
 
 
+# ───────────────────────────── watch expressions ─────────────────────────────
+#
+# A watch is a small read-only expression (``arr[i]``, ``len(items)``, ``i < n``) evaluated against the
+# program's state after every step. It must never change that state, so it is checked against an
+# allowlist before it is compiled, and method calls are routed through a guard at run time.
+
+SAFE_CALLS = frozenset(
+    "len abs min max sum sorted round int float str bool ord chr isinstance any all list tuple set dict divmod repr".split()
+)
+PURE_METHODS = frozenset(
+    (
+        "count index get keys values items copy upper lower title capitalize strip lstrip rstrip "
+        "find rfind startswith endswith isdigit isalpha isalnum isupper islower isspace split join format"
+    ).split()
+)
+MUTATING_METHODS = frozenset(
+    "pop append remove sort reverse clear update add extend insert discard setdefault popitem write".split()
+)
+_SAFE_LIST = ", ".join(sorted(SAFE_CALLS))
+_PURE_LIST = "count, index, get, keys, values, items, upper, lower, strip, find, startswith, endswith, split, join"
+
+_ALLOWED_NODES = (
+    ast.Expression, ast.Name, ast.Constant, ast.Subscript, ast.Slice, ast.Attribute, ast.BinOp, ast.UnaryOp,
+    ast.BoolOp, ast.Compare, ast.IfExp, ast.Tuple, ast.List, ast.Set, ast.Dict, ast.Call, ast.keyword, ast.Starred,
+    ast.expr_context, ast.operator, ast.unaryop, ast.boolop, ast.cmpop,
+)  # fmt: skip
+
+_COMPREHENSIONS = (ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)
+
+
+class WatchRejected(Exception):
+    """The expression isn't allowed in a watch; ``str(e)`` is a message for the student."""
+
+
+def _describe_rejected(n) -> str:
+    if isinstance(n, ast.Lambda):
+        return "Lambdas aren't allowed in a watch expression."
+    if isinstance(n, _COMPREHENSIONS):
+        return "Comprehensions aren't allowed in a watch expression."
+    if isinstance(n, ast.NamedExpr):
+        return "Assignments (:=) aren't allowed in a watch expression."
+    if isinstance(n, ast.JoinedStr):
+        return "f-strings aren't supported in a watch expression; use str(...) instead."
+    if isinstance(n, (ast.Await, ast.Yield, ast.YieldFrom)):
+        return "await / yield aren't allowed in a watch expression."
+    return f"{type(n).__name__} expressions aren't allowed in a watch."
+
+
+def _check_call(n: ast.Call) -> None:
+    f = n.func
+    if isinstance(f, ast.Name):
+        if f.id not in SAFE_CALLS:
+            raise WatchRejected(
+                f"Watch expressions can't call {f.id}() — it might change your program's state. "
+                f"You can call: {_SAFE_LIST}."
+            )
+    elif isinstance(f, ast.Attribute):
+        if f.attr in MUTATING_METHODS:
+            raise WatchRejected(
+                f"Watch expressions can't call .{f.attr}() — it would change your program's state. "
+                f"Read-only methods such as {_PURE_LIST} are fine."
+            )
+        if f.attr not in PURE_METHODS:
+            raise WatchRejected(
+                f".{f.attr}() isn't allowed in a watch expression. Read-only methods such as {_PURE_LIST} are."
+            )
+    else:
+        raise WatchRejected("Only simple function and method calls are allowed in a watch expression.")
+
+
+def check_watch(tree: ast.Expression) -> None:
+    for n in ast.walk(tree):
+        if not isinstance(n, _ALLOWED_NODES):
+            raise WatchRejected(_describe_rejected(n))
+        if isinstance(n, ast.Name) and n.id.startswith("__"):
+            raise WatchRejected("Names starting with __ aren't allowed in a watch expression.")
+        if isinstance(n, ast.Attribute) and n.attr.startswith("_"):
+            raise WatchRejected("Private / dunder attributes (starting with _) aren't allowed in a watch expression.")
+        if isinstance(n, ast.Call):
+            _check_call(n)
+
+
+def _tt_method(obj, name, *args, **kwargs):
+    """Run-time guard: only built-in types may have methods called from a watch.
+
+    A student's own class might define ``count()`` that mutates state, which the static allowlist can't see.
+    """
+    if type(obj).__module__ != "builtins":
+        raise TypeError(f"watch expressions can't call methods of {type(obj).__name__} objects")
+    return getattr(obj, name)(*args, **kwargs)
+
+
+class _MethodGuard(ast.NodeTransformer):
+    def visit_Call(self, node):
+        self.generic_visit(node)
+        if isinstance(node.func, ast.Attribute):
+            guard = ast.Name("__tt_method__", ast.Load())
+            node = ast.Call(guard, [node.func.value, ast.Constant(node.func.attr), *node.args], node.keywords)
+        return node
+
+
+def compile_watch(expr: str):
+    """Parse, check and compile a watch expression. Raises WatchRejected."""
+    if not expr.strip():
+        raise WatchRejected("Type an expression, for example  arr[i]  or  len(items).")
+    try:
+        tree = ast.parse(expr.strip(), mode="eval")
+    except SyntaxError as e:
+        raise WatchRejected(f"Not a valid expression: {e.msg}") from None
+    check_watch(tree)
+    tree = ast.fix_missing_locations(_MethodGuard().visit(tree))
+    return compile(tree, "<watch>", "eval")
+
+
+def validate_watch(expr: str) -> str:
+    """Entry point for the editor: JSON ``{"ok": true}`` or ``{"ok": false, "message": ...}``."""
+    try:
+        compile_watch(expr)
+    except WatchRejected as e:
+        return json.dumps({"ok": False, "message": str(e)})
+    return json.dumps({"ok": True})
+
+
+class Watch:
+    def __init__(self, spec: dict):
+        self.id = str(spec.get("id", ""))
+        self.scope = spec.get("scope") or {"kind": "current"}
+        self.code = None
+        self.error: dict | None = None
+        try:
+            self.code = compile_watch(str(spec.get("expr", "")))
+        except WatchRejected as e:
+            self.error = {"ok": False, "reason": "rejected", "message": str(e)}
+
+
 # ───────────────────────────── tracer ─────────────────────────────
 
 
@@ -313,6 +449,8 @@ class Tracer:
         self.emit_cb = emit_cb
         self.sent_steps = self.sent_frames = self.sent_vars = 0
         self.frame_objs: dict[int, object] = {}  # fid -> live frame object
+        self.watches = [Watch(s) for s in opts.watches]
+        self.last_watch: dict[str, str] = {}  # watch id -> canonical JSON of the last emitted result
         self.refs = RefTable()
         self.ser = Serialiser(self.refs, opts)
         self.out = StepBuffer(MAX_STDOUT)
@@ -414,7 +552,47 @@ class Tracer:
         info["argsLabel"] = f"{info['name']}({', '.join(parts)})"
         writes = [(fid, n, v) for n, v in cur.items()]
         self.last[fid] = cur
-        self.emit("c", frame.f_lineno, fid, writes, [], "")
+        self.emit("c", frame.f_lineno, fid, writes, [], "", watches=self.eval_watches(frame))
+
+    # ── watch expressions ──
+
+    def _watch_frame(self, w: Watch, frame):
+        kind = w.scope.get("kind")
+        if kind == "module":
+            return self.module_frame
+        if kind == "function":
+            for f in reversed(self.stack):  # innermost live call of that function
+                if self.frames[f]["name"] == w.scope.get("name") and f in self.frame_objs:
+                    return self.frame_objs[f]
+            return None
+        return frame
+
+    def _eval_watch(self, w: Watch, frame) -> dict:
+        if w.error is not None:
+            return w.error
+        target = self._watch_frame(w, frame)
+        if target is None:
+            return {"ok": False, "reason": "not-in-scope", "message": "not in scope here"}
+        ns = dict(target.f_locals)
+        ns["__tt_method__"] = _tt_method
+        try:
+            value = eval(w.code, target.f_globals, ns)
+        except NameError as e:
+            return {"ok": False, "reason": "not-in-scope", "message": str(e)}
+        except Exception as e:
+            return {"ok": False, "reason": "error", "message": f"{type(e).__name__}: {e}"}
+        return {"ok": True, "value": self.ser(value)}
+
+    def eval_watches(self, frame) -> dict:
+        """Results that CHANGED since the last step (the host carries unchanged ones forward)."""
+        out = {}
+        for w in self.watches:
+            res = self._eval_watch(w, frame)
+            sig = json.dumps(res, sort_keys=True)
+            if self.last_watch.get(w.id) != sig:
+                self.last_watch[w.id] = sig
+                out[w.id] = res
+        return out
 
     def on_return(self, frame) -> None:
         fid = self.fids.pop(id(frame))
@@ -489,9 +667,9 @@ class Tracer:
         elif closing and line in self.return_lines:
             kind, rv = "r", self.ser(ret)
         x = {"t": exc[0], "m": exc[1], "c": not closing} if exc else None
-        self.emit(kind, line, fid, writes, deletes, self.out.take(), rv, x, branch)
+        self.emit(kind, line, fid, writes, deletes, self.out.take(), rv, x, branch, self.eval_watches(frame))
 
-    def emit(self, kind, line, fid, writes, deletes, out, ret=None, exc=None, branch=None) -> None:
+    def emit(self, kind, line, fid, writes, deletes, out, ret=None, exc=None, branch=None, watches=None) -> None:
         i = len(self.steps)
         step = {"i": i, "k": kind, "ln": line, "f": fid, "stk": list(self.stack)}
         if writes:
@@ -506,6 +684,8 @@ class Tracer:
             step["x"] = exc
         if branch is not None:
             step["b"] = branch
+        if watches:
+            step["wt"] = watches
         self.steps.append(step)
         for f, n, _ in writes:
             scope = self.frames[f]["name"]

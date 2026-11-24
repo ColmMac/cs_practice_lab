@@ -38,6 +38,7 @@
   ],
   "variables": [],
   "rawSteps": 1,
+  "line": 1,
   "functions": [],
   "stdout": "Name? ",
   "stats": {

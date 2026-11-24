@@ -366,6 +366,7 @@
    }
   ],
   "rawSteps": 20,
+  "line": 7,
   "functions": [],
   "stdout": "10\n",
   "stats": {

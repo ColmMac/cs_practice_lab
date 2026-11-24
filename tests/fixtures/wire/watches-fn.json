@@ -1,0 +1,372 @@
+{
+ "code": "def fact(n):\n    if n <= 1:\n        return 1\n    return n * fact(n - 1)\n\nresult = fact(3)\n",
+ "options": {
+  "watches": [
+   {
+    "id": "cur",
+    "expr": "n",
+    "scope": {
+     "kind": "current"
+    }
+   },
+   {
+    "id": "fn",
+    "expr": "n",
+    "scope": {
+     "kind": "function",
+     "name": "fact"
+    }
+   },
+   {
+    "id": "bad",
+    "expr": "result.pop()",
+    "scope": {
+     "kind": "module"
+    }
+   }
+  ]
+ },
+ "wire": {
+  "status": "ok",
+  "error": null,
+  "inputRequest": null,
+  "steps": [
+   {
+    "i": 0,
+    "k": "l",
+    "ln": 1,
+    "f": 0,
+    "stk": [
+     0
+    ],
+    "wt": {
+     "cur": {
+      "ok": false,
+      "reason": "not-in-scope",
+      "message": "name 'n' is not defined"
+     },
+     "fn": {
+      "ok": false,
+      "reason": "not-in-scope",
+      "message": "not in scope here"
+     },
+     "bad": {
+      "ok": false,
+      "reason": "rejected",
+      "message": "Watch expressions can't call .pop() \u2014 it would change your program's state. Read-only methods such as count, index, get, keys, values, items, upper, lower, strip, find, startswith, endswith, split, join are fine."
+     }
+    }
+   },
+   {
+    "i": 1,
+    "k": "c",
+    "ln": 1,
+    "f": 1,
+    "stk": [
+     0,
+     1
+    ],
+    "w": [
+     [
+      1,
+      "n",
+      {
+       "k": "int",
+       "v": "3"
+      }
+     ]
+    ],
+    "wt": {
+     "cur": {
+      "ok": true,
+      "value": {
+       "k": "int",
+       "v": "3"
+      }
+     },
+     "fn": {
+      "ok": true,
+      "value": {
+       "k": "int",
+       "v": "3"
+      }
+     }
+    }
+   },
+   {
+    "i": 2,
+    "k": "l",
+    "ln": 2,
+    "f": 1,
+    "stk": [
+     0,
+     1
+    ],
+    "b": false
+   },
+   {
+    "i": 3,
+    "k": "c",
+    "ln": 1,
+    "f": 2,
+    "stk": [
+     0,
+     1,
+     2
+    ],
+    "w": [
+     [
+      2,
+      "n",
+      {
+       "k": "int",
+       "v": "2"
+      }
+     ]
+    ],
+    "wt": {
+     "cur": {
+      "ok": true,
+      "value": {
+       "k": "int",
+       "v": "2"
+      }
+     },
+     "fn": {
+      "ok": true,
+      "value": {
+       "k": "int",
+       "v": "2"
+      }
+     }
+    }
+   },
+   {
+    "i": 4,
+    "k": "l",
+    "ln": 2,
+    "f": 2,
+    "stk": [
+     0,
+     1,
+     2
+    ],
+    "b": false
+   },
+   {
+    "i": 5,
+    "k": "c",
+    "ln": 1,
+    "f": 3,
+    "stk": [
+     0,
+     1,
+     2,
+     3
+    ],
+    "w": [
+     [
+      3,
+      "n",
+      {
+       "k": "int",
+       "v": "1"
+      }
+     ]
+    ],
+    "wt": {
+     "cur": {
+      "ok": true,
+      "value": {
+       "k": "int",
+       "v": "1"
+      }
+     },
+     "fn": {
+      "ok": true,
+      "value": {
+       "k": "int",
+       "v": "1"
+      }
+     }
+    }
+   },
+   {
+    "i": 6,
+    "k": "l",
+    "ln": 2,
+    "f": 3,
+    "stk": [
+     0,
+     1,
+     2,
+     3
+    ],
+    "b": true
+   },
+   {
+    "i": 7,
+    "k": "r",
+    "ln": 3,
+    "f": 3,
+    "stk": [
+     0,
+     1,
+     2,
+     3
+    ],
+    "r": {
+     "k": "int",
+     "v": "1"
+    }
+   },
+   {
+    "i": 8,
+    "k": "r",
+    "ln": 4,
+    "f": 2,
+    "stk": [
+     0,
+     1,
+     2
+    ],
+    "r": {
+     "k": "int",
+     "v": "2"
+    },
+    "wt": {
+     "cur": {
+      "ok": true,
+      "value": {
+       "k": "int",
+       "v": "2"
+      }
+     },
+     "fn": {
+      "ok": true,
+      "value": {
+       "k": "int",
+       "v": "2"
+      }
+     }
+    }
+   },
+   {
+    "i": 9,
+    "k": "r",
+    "ln": 4,
+    "f": 1,
+    "stk": [
+     0,
+     1
+    ],
+    "r": {
+     "k": "int",
+     "v": "6"
+    },
+    "wt": {
+     "cur": {
+      "ok": true,
+      "value": {
+       "k": "int",
+       "v": "3"
+      }
+     },
+     "fn": {
+      "ok": true,
+      "value": {
+       "k": "int",
+       "v": "3"
+      }
+     }
+    }
+   },
+   {
+    "i": 10,
+    "k": "l",
+    "ln": 6,
+    "f": 0,
+    "stk": [
+     0
+    ],
+    "w": [
+     [
+      0,
+      "result",
+      {
+       "k": "int",
+       "v": "6"
+      }
+     ]
+    ],
+    "wt": {
+     "cur": {
+      "ok": false,
+      "reason": "not-in-scope",
+      "message": "name 'n' is not defined"
+     },
+     "fn": {
+      "ok": false,
+      "reason": "not-in-scope",
+      "message": "not in scope here"
+     }
+    }
+   }
+  ],
+  "frames": [
+   {
+    "id": 0,
+    "name": "<module>",
+    "depth": 0
+   },
+   {
+    "id": 1,
+    "name": "fact",
+    "depth": 1,
+    "callLine": 6,
+    "argsLabel": "fact(n=3)"
+   },
+   {
+    "id": 2,
+    "name": "fact",
+    "depth": 2,
+    "callLine": 4,
+    "argsLabel": "fact(n=2)"
+   },
+   {
+    "id": 3,
+    "name": "fact",
+    "depth": 3,
+    "callLine": 4,
+    "argsLabel": "fact(n=1)"
+   }
+  ],
+  "variables": [
+   {
+    "columnId": "fact:n",
+    "scopeName": "fact",
+    "name": "n",
+    "firstStep": 1,
+    "ephemeral": false
+   },
+   {
+    "columnId": "<module>:result",
+    "scopeName": "<module>",
+    "name": "result",
+    "firstStep": 10,
+    "ephemeral": false
+   }
+  ],
+  "rawSteps": 8,
+  "line": 3,
+  "functions": [
+   "fact"
+  ],
+  "stdout": "",
+  "stats": {
+   "rawSteps": 8,
+   "truncated": false,
+   "durationMs": 0
+  }
+ }
+}

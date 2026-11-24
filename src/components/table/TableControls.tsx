@@ -1,10 +1,13 @@
+import type { TraceResult } from '../../core/types'
 import { useStore } from '../../store'
+import { ColumnManager } from './ColumnManager'
 import { Segmented } from './Segmented'
 
-export function TableControls() {
+export function TableControls({ result }: { result: TraceResult }) {
   const { granularity, setGranularity, displayStyle, setDisplayStyle } = useStore()
   return (
     <div className="mb-2 flex flex-wrap items-center gap-x-5 gap-y-2">
+      <ColumnManager result={result} />
       <Segmented
         label="Rows"
         value={granularity}

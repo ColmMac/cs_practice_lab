@@ -1,5 +1,5 @@
-import type { Cell, ColumnDef, TraceResult, TraceRow, TraceStep, Value } from '../types'
-import { LINE_COL, OUTPUT_COL, RETURN_COL } from './columns'
+import type { Cell, ColumnDef, TraceResult, TraceRow, TraceStep, Value, WatchResult } from '../types'
+import { LINE_COL, OUTPUT_COL, RETURN_COL, STACK_COL, WATCH_PREFIX } from './columns'
 
 /**
  * compact     — a row only when something a visible column shows has changed (exam style).
@@ -27,6 +27,13 @@ export function formatOutput(delta: string): string {
   return delta.endsWith('\n') ? delta.slice(0, -1) : delta
 }
 
+/** Identity of a watch result, for "did it change?". Leaving scope is not a change (it would add noise rows). */
+function watchSig(r: WatchResult | undefined): string {
+  if (!r) return 'ns'
+  if (r.ok) return `v:${JSON.stringify(r.value)}`
+  return r.reason === 'not-in-scope' ? 'ns' : `e:${r.message}`
+}
+
 /**
  * Rows for the visible `columns`. A pure function of its inputs, so toggling granularity, display
  * style or column visibility never re-runs the program. Language-agnostic: the language supplies `format`.
@@ -41,21 +48,33 @@ export function deriveRows(
   const frameName = new Map<number, string>()
   for (const s of result.steps) for (const f of s.callStack) frameName.set(f.id, f.name)
   const visible = new Set(columns.map((c) => c.id))
+  const watchIds = columns.filter((c) => c.id.startsWith(WATCH_PREFIX)).map((c) => c.id.slice(WATCH_PREFIX.length))
 
   const writtenIds = (step: TraceStep) => new Set(step.writes.map((w) => `${frameName.get(w.frameId)}:${w.name}`))
 
-  const keep = (step: TraceStep, written: Set<string>): boolean => {
-    if (options.granularity === 'every-line') return true
-    for (const id of written) if (visible.has(id)) return true
-    if (step.stdoutDelta !== '' && visible.has(OUTPUT_COL)) return true
-    if (step.returnValue && visible.has(RETURN_COL)) return true
-    return step.exception !== undefined
-  }
+  /** Signature of each visible watch on the previous KEPT row, so "changed" means changed on screen. */
+  const prevWatch = new Map<string, string>(watchIds.map((id) => [id, 'ns']))
 
   const rows: TraceRow[] = []
   for (const step of result.steps) {
     const written = writtenIds(step)
-    if (!keep(step, written)) continue
+
+    const watchNow = new Map<string, { sig: string; changed: boolean }>()
+    for (const id of watchIds) {
+      const sig = watchSig(step.watches[id])
+      watchNow.set(id, { sig, changed: sig !== 'ns' && sig !== prevWatch.get(id) })
+    }
+
+    let keep = options.granularity === 'every-line'
+    if (!keep) {
+      for (const id of written) if (visible.has(id)) keep = true
+      if (step.stdoutDelta !== '' && visible.has(OUTPUT_COL)) keep = true
+      if (step.returnValue && visible.has(RETURN_COL)) keep = true
+      if (step.exception !== undefined) keep = true
+      for (const w of watchNow.values()) if (w.changed) keep = true
+    }
+    if (!keep) continue
+    for (const [id, w] of watchNow) prevWatch.set(id, w.sig)
 
     const cells: Record<string, Cell> = {}
     for (const col of columns) {
@@ -69,6 +88,21 @@ export function deriveRows(
         }
       } else if (col.id === OUTPUT_COL) {
         cells[col.id] = { display: formatOutput(step.stdoutDelta), written: step.stdoutDelta !== '' }
+      } else if (col.id === STACK_COL) {
+        const label = step.callStack.slice(1).map((f) => f.argsLabel ?? f.name).join(' › ')
+        cells[col.id] = { display: label, written: false }
+      } else if (col.id.startsWith(WATCH_PREFIX)) {
+        const id = col.id.slice(WATCH_PREFIX.length)
+        const res = step.watches[id]
+        const { changed } = watchNow.get(id)!
+        const show = options.display === 'carry' || changed
+        if (res?.ok) {
+          cells[col.id] = { value: res.value, display: show ? format(res.value) : '', written: changed }
+        } else if (res && res.reason !== 'not-in-scope') {
+          cells[col.id] = { display: show ? '⚠' : '', written: changed, note: res.message }
+        } else {
+          cells[col.id] = { display: options.display === 'carry' ? '–' : '', written: false, note: 'not in scope here' }
+        }
       } else {
         const m = meta.get(col.id)
         let value: Value | undefined

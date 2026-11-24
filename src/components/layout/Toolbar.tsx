@@ -1,6 +1,7 @@
 import { getLanguage } from '../../languages/registry'
 import { useStore } from '../../store'
 import { RuntimeStatusBadge } from './RuntimeStatusBadge'
+import { ShareButton } from './ShareButton'
 
 export function Toolbar() {
   const { language, run, cancel, running, runnerStatus, loadPreset, theme, toggleTheme } = useStore()
@@ -49,6 +50,7 @@ export function Toolbar() {
 
       <div className="ml-auto flex items-center gap-3">
         <RuntimeStatusBadge />
+        <ShareButton />
         <button
           type="button"
           onClick={toggleTheme}

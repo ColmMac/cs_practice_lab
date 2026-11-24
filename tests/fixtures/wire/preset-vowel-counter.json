@@ -466,6 +466,7 @@
    }
   ],
   "rawSteps": 27,
+  "line": 6,
   "functions": [],
   "stdout": "Enter a word: education\nVowels: 5\n",
   "stats": {

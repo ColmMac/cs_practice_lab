@@ -148,6 +148,8 @@ export interface Cell {
   display: string
   written: boolean
   stale?: boolean
+  /** Explanation for the cell (tooltip): why a watch failed, etc. */
+  note?: string
 }
 export interface TraceRow {
   rowIndex: number

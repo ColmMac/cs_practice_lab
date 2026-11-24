@@ -737,3 +737,28 @@ Verified in a real browser (Pyodide, Python 3.14): all six presets render tables
 | Alias badges (`a ≡ b`) | `ref` ids in the UI | Refs are in the data; no UI yet. |
 
 Test counts at the end of M2: 68 tracer tests (each on Python 3.12, 3.13, 3.14) and 107 unit tests.
+
+---
+
+## 13. M3 implementation notes (deviations from the plan above)
+
+Verified in a real browser (Pyodide, Python 3.14): reload restores the whole workspace and re-runs it; a share link reproduces the sender's table exactly (38 identical rows, same column order, watches and modes) both when opened in a fresh page and when pasted into a tab that already has the app open; `arr.pop()` is rejected by the real Python validator.
+
+| Topic | Plan said | What was built / learned |
+|-------|-----------|--------------------------|
+| Watch safety | AST allowlist | Allowlist **plus a run-time guard**: method calls are rewritten to `__tt_method__(obj, name, ...)`, which refuses objects that are not built-in types. The allowlist alone can't see that a student's own class defines a `count()` that mutates state. Tested: the method never runs. |
+| Watch results on the wire | per step | Only results that **changed** are sent (`wt` deltas); `materialise` carries the rest forward, so every `TraceStep.watches` is complete and unchanged maps are shared. |
+| Watch rows | keep a row if a watch differs from the previous kept row | Same, with one refinement: **leaving scope is not a change** (otherwise returning from a function would add a noise row for every watch on a local). |
+| Column model | one list | Two steps: `deriveColumns` = every column that *could* show (incl. watches and an opt-in Call stack); `applyColumnPrefs` = hide + reorder. The Column Manager lists the first, the table shows the second. The Call stack column exists but starts hidden. |
+| "Show functions" | a toggle | It changes what is recorded, so toggling it re-runs the program. |
+| Persistence | zustand `persist` | One `Workspace` shape shared by persistence **and** share links, with one field-by-field sanitiser (size limits, unknown language/scope rejected, never spreads input so `__proto__` keys can't leak). Storage access is wrapped so private windows and blocked storage never throw. Results are not persisted; the last table is re-run on load (own code only). |
+| Share links | `lz-string` hash | Measured LZ expansion: a 2.8 kB payload inflates to 1.5 MB (roughly quadratic), so payloads over 12,000 characters are refused before decompressing and decoded JSON is capped. A real 4,983-character bomb is rejected in ~160 ms. |
+| Shared workspace flow | Keep / Discard banner | The shared workspace loads into the editor; the visitor's own workspace is held as `backup` and **remains what is persisted** until they choose. A second link while one is under review does not become "mine". Shared code is never run automatically. Discard re-runs the visitor's own code. |
+| `hashchange` | not in plan | Found by testing in the browser: pasting a link into a tab that already has the app open changes only the fragment, so nothing reloads and the link was silently ignored. The app now listens for `hashchange`. |
+| Stale detection | code changed | The table is also stale when stdin, watches or "show functions" change (`runSignature`). |
+| Seed in share link | `seed` | Left out: the random seed isn't user-configurable yet, so there is nothing to share. |
+| Column reorder | drag | Move up/down buttons (keyboard and screen-reader friendly). Drag-and-drop can come later. |
+
+Gotchas worth remembering (also in CLAUDE.md): a zustand v5 selector must return a stable value (`?? []` makes React loop forever); `userEvent.setup()` installs its own clipboard stub, so stub the clipboard after it; `setState` on a persisted store writes to localStorage immediately; a module-level re-run timer leaks between tests unless it is cancelled (and a pending re-run must be dropped when the workspace is replaced).
+
+Test counts at the end of M3: 128 tracer tests (each on Python 3.12, 3.13, 3.14) and 208 unit tests.

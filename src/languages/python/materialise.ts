@@ -7,6 +7,7 @@ import type {
   TraceResult,
   TraceStep,
   Value,
+  WatchResult,
 } from '../../core/types'
 import type { WireResult } from './protocol'
 
@@ -25,6 +26,8 @@ export function materialise(
   const frameInfo = new Map<number, FrameInfo>(wire.frames.map((f) => [f.id, f]))
   const info = (id: number): FrameInfo => frameInfo.get(id) ?? { id, name: '?', depth: 0 }
   const live = new Map<number, Record<string, Value>>()
+  // The tracer only sends watch results that CHANGED; every step still exposes all of them.
+  let liveWatches: Record<string, WatchResult> = {}
 
   const steps: TraceStep[] = wire.steps.map((ws) => {
     for (const [fid, name, value] of ws.w ?? []) {
@@ -35,6 +38,7 @@ export function materialise(
       delete next[name]
       live.set(fid, next)
     }
+    if (ws.wt) liveWatches = { ...liveWatches, ...ws.wt }
     const callStack = ws.stk.map(info)
     const scopes: ScopeSnapshot[] = callStack.map((frame) => ({ frame, vars: live.get(frame.id) ?? {} }))
     const step: TraceStep = {
@@ -48,7 +52,7 @@ export function materialise(
       writes: (ws.w ?? []).map(([frameId, name]) => ({ frameId, name })),
       deletes: (ws.d ?? []).map(([frameId, name]) => ({ frameId, name })),
       stdoutDelta: ws.o ?? '',
-      watches: ws.wt ?? {},
+      watches: liveWatches,
     }
     if (ws.r) step.returnValue = ws.r
     if (ws.x) step.exception = { type: ws.x.t, message: ws.x.m, caught: ws.x.c }
