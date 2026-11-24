@@ -62,3 +62,22 @@ test('operator buttons insert at the cursor and the last expression is remembere
   await page.goto('/truth-tables')
   await expect(box).toHaveValue('A XOR B')
 })
+
+test('study mode: a right and a wrong answer are graded, then Exit restores the table', async ({ page }) => {
+  await page.goto('/truth-tables?preset=half-adder')
+  await page.getByRole('button', { name: /study mode/i }).click()
+  const boxes = page.getByRole('textbox', { name: /^Row \d+, / })
+  await expect(boxes).toHaveCount(8) // 4 rows × (S, C)
+  await expect(boxes.first()).toBeFocused()
+
+  await boxes.nth(0).fill('0') // row 1, S = 0 XOR 0 = 0: right
+  await boxes.nth(2).fill('0') // row 2, S = 0 XOR 1 = 1: wrong
+  await page.getByRole('button', { name: 'Check answers' }).click()
+  await expect(page.getByText(/Score: 1 \/ 8/)).toBeVisible()
+  await expect(boxes.nth(0)).toHaveAccessibleDescription(/Correct/)
+  await expect(boxes.nth(2)).toHaveAccessibleDescription(/Not correct/)
+
+  await page.getByRole('button', { name: 'Exit study mode' }).click()
+  await expect(boxes).toHaveCount(0)
+  await expect.poll(() => rowsOf(page)).toHaveLength(4)
+})

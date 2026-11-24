@@ -1,7 +1,7 @@
 import { formatPoints, type Score } from '../../core/study/score'
 
-/** The result of Check answers: points, counts, anything edited since, and a per-column breakdown. */
-export function ScoreSummary({ score }: { score: Score }) {
+/** The result of Check answers (tool-agnostic): points, counts, anything edited since, and a per-column breakdown. */
+export function ScoreBar({ score }: { score: Score }) {
   return (
     <section
       aria-label="Score"

@@ -1,12 +1,12 @@
-import { useMemo, type KeyboardEvent } from 'react'
+import { useMemo } from 'react'
 import { columnLabel, LINE_COL, OUTPUT_COL } from '../../core/derive/columns'
 import { hintFor } from '../../core/study/hint'
 import { cellKey } from '../../core/study/types'
 import type { TraceResult } from '../../core/types'
 import { useStore } from '../../store'
 import { TABLE, TD as td, TH as th, THEAD } from '../ui/tableStyles'
-import { focusInput, nextStudyInput } from '../study/navigation'
-import { StudyCell } from '../study/StudyCell'
+import { AnswerCell } from '../study/AnswerCell'
+import { answerGridKeyDown } from '../study/useAnswerGrid'
 import { useRowWindow, VIRTUALISE_ABOVE } from './useRowWindow'
 import { useTableData } from './useTableData'
 
@@ -39,30 +39,8 @@ export function TraceTable({ result, stale }: { result: TraceResult; stale: bool
       </tr>
     ) : null
 
-  /** Enter / ↓ next, Shift+Enter / ↑ previous, Alt+H hint, Alt+R reveal: all from inside an answer box. */
-  const onStudyKey = (e: KeyboardEvent<HTMLTableElement>) => {
-    const input = e.target
-    if (!(input instanceof HTMLInputElement) || !input.dataset.studyKey || e.ctrlKey || e.metaKey) return
-    const key = input.dataset.studyKey
-    const table = e.currentTarget
-
-    if (e.altKey && e.key.toLowerCase() === 'h') {
-      e.preventDefault()
-      toggleHint(key)
-    } else if (e.altKey && e.key.toLowerCase() === 'r') {
-      e.preventDefault()
-      const next = nextStudyInput(table, input, 1)
-      revealCell(key) // this box turns into plain text, so move on first
-      if (!focusInput(next)) focusInput(table.closest('section')?.querySelector<HTMLElement>('#study-check') ?? null)
-    } else if (!e.altKey && (e.key === 'Enter' || e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
-      e.preventDefault()
-      const delta = e.key === 'ArrowUp' || (e.key === 'Enter' && e.shiftKey) ? -1 : 1
-      const next = nextStudyInput(table, input, delta)
-      if (!focusInput(next) && delta > 0) {
-        focusInput(document.getElementById('study-check')) // end of the quiz: on to Check answers
-      }
-    }
-  }
+  /** Enter / ↓ next, Shift+Enter / ↑ previous, Alt+H hint, Alt+R reveal: shared with every answer grid. */
+  const onStudyKey = answerGridKeyDown({ onHint: toggleHint, onReveal: revealCell })
 
   return (
     <div className={`overflow-auto ${stale ? 'opacity-60' : ''}`} aria-busy={stale}>
@@ -154,7 +132,7 @@ export function TraceTable({ result, stale }: { result: TraceResult; stale: bool
                       style={c.id === LINE_COL ? { paddingLeft: 12 + row.depth * 14 } : undefined}
                     >
                       {question && study ? (
-                        <StudyCell
+                        <AnswerCell
                           cellKey={key}
                           colId={c.id}
                           label={`Row ${row.rowIndex + 1} (line ${row.lineNumber}), ${columnLabel(c)}`}

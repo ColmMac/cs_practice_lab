@@ -1,12 +1,16 @@
 import type { ColumnGroup, TruthTable } from '../../core/logic'
+import { TRUTH_HINT, truthCellKey } from '../../core/logic'
+import { AnswerCell } from '../study/AnswerCell'
 import { TABLE, TD, TH, THEAD } from '../ui/tableStyles'
+import type { TruthStudy } from './useTruthStudy'
 
 const GROUP_LABEL: Record<ColumnGroup, string> = { input: 'Inputs', intermediate: 'Intermediate', output: 'Outputs' }
 // A heavier left edge where a column group starts, as in mark schemes.
 const GROUP_EDGE = 'border-l-2 border-l-slate-500 dark:border-l-slate-400'
 
-export function TruthTableView({ table }: { table: TruthTable }) {
+export function TruthTableView({ table, study }: { table: TruthTable; study?: TruthStudy }) {
   const { columns, rows } = table
+  const grid = study?.active ? study.grid : null
   const edge = (i: number) => (i > 0 && columns[i]!.group !== columns[i - 1]!.group ? GROUP_EDGE : '')
 
   // Consecutive columns of one group share a spanning header cell.
@@ -19,7 +23,7 @@ export function TruthTableView({ table }: { table: TruthTable }) {
 
   return (
     <div className="overflow-auto">
-      <table aria-label="Truth table" className={`${TABLE} w-auto`}>
+      <table aria-label="Truth table" className={`${TABLE} w-auto`} onKeyDown={grid?.onKeyDown}>
         <thead className={THEAD}>
           <tr>
             {groups.map((g) => (
@@ -39,11 +43,31 @@ export function TruthTableView({ table }: { table: TruthTable }) {
         <tbody>
           {rows.map((r) => (
             <tr key={r.index}>
-              {r.cells.map((cell, i) => (
-                <td key={columns[i]!.key} className={`${TD} text-center ${edge(i)}`}>
-                  {cell}
-                </td>
-              ))}
+              {r.cells.map((cell, i) => {
+                const col = columns[i]!
+                const key = truthCellKey(r.index, col.key)
+                return (
+                  <td key={col.key} className={`${TD} text-center ${edge(i)}`}>
+                    {grid && study?.masked.has(key) ? (
+                      <AnswerCell
+                        cellKey={key}
+                        colId={col.key}
+                        label={`Row ${r.index + 1}, ${col.label}`}
+                        answer={grid.answers[key] ?? ''}
+                        grade={grid.graded?.[key]}
+                        revealed={!!grid.revealed[key]}
+                        truthText={cell}
+                        hint={grid.hints[key] ? TRUTH_HINT : null}
+                        onAnswer={(text) => grid.setAnswer(key, text)}
+                        onReveal={() => grid.reveal(key)}
+                        onHint={() => grid.toggleHint(key)}
+                      />
+                    ) : (
+                      cell
+                    )}
+                  </td>
+                )
+              })}
             </tr>
           ))}
         </tbody>

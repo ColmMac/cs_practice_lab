@@ -5,7 +5,7 @@ import type { MaskMode } from '../../core/study/types'
 import type { TraceResult } from '../../core/types'
 import { useStore } from '../../store'
 import { Segmented } from '../table/Segmented'
-import { ScoreSummary } from './ScoreSummary'
+import { ScoreBar } from './ScoreBar'
 import { useStudyModel } from './useStudyModel'
 
 const btn =
@@ -133,7 +133,7 @@ export function StudyToolbar({ result }: { result: TraceResult }) {
         </p>
       </div>
 
-      {score && <ScoreSummary score={score} />}
+      {score && <ScoreBar score={score} />}
     </section>
   )
 }

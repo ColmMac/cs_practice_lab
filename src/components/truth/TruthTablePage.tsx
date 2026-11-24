@@ -4,13 +4,17 @@ import { Badge } from '../ui/Badge'
 import { Panel } from '../ui/Panel'
 import { SegmentedToggle } from '../ui/SegmentedToggle'
 import { ToolHeader } from '../ui/ToolHeader'
+import { Button } from '../ui/Button'
 import { ExpressionInput } from './ExpressionInput'
+import { TruthStudyPanel } from './TruthStudyPanel'
 import { TruthTableView } from './TruthTableView'
+import { useTruthStudy } from './useTruthStudy'
 import { CUSTOM, useTruthPage } from './useTruthPage'
 
 export function TruthTablePage() {
   const s = useTruthPage()
   const preset = findLogicPreset(s.selectValue)
+  const study = useTruthStudy(s.table, s.notation)
 
   return (
     <>
@@ -50,6 +54,15 @@ export function TruthTablePage() {
             { value: 'on', label: 'On', hint: 'Add a column for each sub-expression' },
           ]}
         />
+        <Button
+          aria-pressed={study.active}
+          disabled={!study.active && !s.table}
+          title={study.active ? 'Leave study mode' : 'Hide the answers and fill the truth table in yourself.'}
+          onClick={study.active ? study.exit : study.start}
+          className={study.active ? '!border-emerald-700 !bg-emerald-700 !text-white hover:!bg-emerald-800' : '!border-emerald-700 !text-emerald-800 dark:!text-emerald-300'}
+        >
+          📝 Study mode{study.active ? ': on' : ''}
+        </Button>
       </ToolHeader>
       <main className="grid min-h-0 flex-1 content-start gap-4 overflow-auto p-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
         <div className="flex flex-col gap-3">
@@ -67,7 +80,8 @@ export function TruthTablePage() {
                 </ul>
               </Panel>
               {s.table.equivalent && <Badge tone="ok">All outputs are equivalent: they agree on every row.</Badge>}
-              <TruthTableView table={s.table} />
+              {study.active && <TruthStudyPanel study={study} />}
+              <TruthTableView table={study.table ?? s.table} study={study} />
             </>
           ) : (
             <p className="text-sm text-slate-700 dark:text-slate-300">

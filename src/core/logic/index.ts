@@ -12,3 +12,14 @@ export {
   type TruthTable,
 } from './table'
 export { logicPresets, findLogicPreset, type LogicPreset } from './presets'
+export {
+  askableCells,
+  DEFAULT_TRUTH_STUDY,
+  gradeTruthAnswer,
+  truthCellKey,
+  truthMasks,
+  TRUTH_HINT,
+  type TruthCell,
+  type TruthMask,
+  type TruthStudyConfig,
+} from './study'

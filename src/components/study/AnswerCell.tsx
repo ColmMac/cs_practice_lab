@@ -14,7 +14,7 @@ interface Props {
   onAnswer: (text: string) => void
   onReveal: () => void
   onHint: () => void
-  onFocusCell: () => void
+  onFocusCell?: () => void
 }
 
 const ICON = { correct: '✓', close: '≈', incorrect: '✗' } as const
@@ -29,8 +29,8 @@ const NEUTRAL = 'border-slate-400 bg-white text-slate-900 dark:border-slate-600 
 const iconBtn =
   'rounded border border-slate-300 px-1 text-[11px] leading-5 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800'
 
-/** One masked cell: a text box for the student's prediction, with Hint / Reveal and per-cell feedback after checking. */
-export function StudyCell({ cellKey, colId, label, answer, grade, revealed, truthText, hint, onAnswer, onReveal, onHint, onFocusCell }: Props) {
+/** One masked cell (tool-agnostic): a text box for the student's prediction, with Hint / Reveal and per-cell feedback after checking. */
+export function AnswerCell({ cellKey, colId, label, answer, grade, revealed, truthText, hint, onAnswer, onReveal, onHint, onFocusCell }: Props) {
   if (revealed) {
     return (
       <div className="flex items-center gap-2" data-testid="revealed-cell">
