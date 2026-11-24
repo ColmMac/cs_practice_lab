@@ -1,5 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { useStore } from '../../store'
+import { Button } from '../ui/Button'
+import { POPOVER_PANEL } from '../ui/Popover'
 
 type Link = { url: string; length: number; tooLong: boolean }
 
@@ -45,22 +47,20 @@ export function ShareButton() {
 
   return (
     <div ref={root} className="relative">
-      <button
-        type="button"
+      <Button
         onClick={open}
         aria-haspopup="dialog"
         aria-expanded={link !== null}
         aria-controls={link ? panelId : undefined}
-        className="rounded border border-slate-300 px-2 py-1 text-sm hover:bg-slate-200 dark:border-slate-700 dark:hover:bg-slate-800"
       >
         ⇪ Share
-      </button>
+      </Button>
       {link && (
         <div
           id={panelId}
           role="dialog"
           aria-label="Share link"
-          className="absolute right-0 z-30 mt-1 w-80 rounded border border-slate-300 bg-white p-3 text-sm shadow-lg dark:border-slate-700 dark:bg-slate-900"
+          className={POPOVER_PANEL}
         >
           <p role="status" className="mb-2 text-xs">
             {copied === 'yes' && 'Link copied to the clipboard.'}

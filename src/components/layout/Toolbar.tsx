@@ -4,7 +4,9 @@ import { RuntimeStatusBadge } from './RuntimeStatusBadge'
 import { ExportMenu } from '../export/ExportMenu'
 import { StudyToggle } from '../study/StudyToggle'
 import { ShareButton } from './ShareButton'
+import { Button } from '../ui/Button'
 import { ThemeToggle } from '../ui/ThemeToggle'
+import { ToolHeader } from '../ui/ToolHeader'
 
 export function Toolbar() {
   const { language, run, cancel, running, runnerStatus, loadPreset } = useStore()
@@ -12,27 +14,15 @@ export function Toolbar() {
   const notReady = runnerStatus.state !== 'ready' && runnerStatus.state !== 'running'
 
   return (
-    <header className="flex flex-wrap items-center gap-3 border-b border-slate-300 bg-slate-50 px-4 py-2 dark:border-slate-700 dark:bg-slate-900">
-      <h1 className="mr-2 text-base font-semibold">Trace Table Studio</h1>
-
+    <ToolHeader title="Trace Table Studio">
       {running ? (
-        <button
-          type="button"
-          onClick={cancel}
-          className="rounded bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600"
-        >
-          Cancel
-        </button>
+        <Button variant="danger" onClick={cancel}>
+Cancel
+        </Button>
       ) : (
-        <button
-          type="button"
-          onClick={() => void run()}
-          disabled={notReady}
-          title="Run (Ctrl/⌘ + Enter)"
-          className="rounded bg-emerald-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          ▶ Run
-        </button>
+        <Button variant="primary" onClick={() => void run()} disabled={notReady} title="Run (Ctrl/⌘ + Enter)">
+▶ Run
+        </Button>
       )}
 
       <label className="flex items-center gap-2 text-sm">
@@ -59,6 +49,6 @@ export function Toolbar() {
         <ShareButton />
         <ThemeToggle />
       </div>
-    </header>
+    </ToolHeader>
   )
 }

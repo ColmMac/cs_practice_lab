@@ -1,24 +1,19 @@
 import type { RunnerStatus } from '../../core/runner'
 import { useStore } from '../../store'
+import { Badge, type BadgeTone } from '../ui/Badge'
 
-function describe(s: RunnerStatus): { text: string; tone: string } {
+function describe(s: RunnerStatus): { text: string; tone: BadgeTone } {
   switch (s.state) {
     case 'uninitialised':
-      return { text: 'Python not started', tone: 'bg-slate-200 text-slate-800 dark:bg-slate-800 dark:text-slate-200' }
+      return { text: 'Python not started', tone: 'neutral' }
     case 'loading':
-      return {
-        text: `${s.message} (first visit downloads ~10 MB)`,
-        tone: 'bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200',
-      }
+      return { text: `${s.message} (first visit downloads ~10 MB)`, tone: 'warn' }
     case 'ready':
-      return { text: 'Python ready', tone: 'bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200' }
+      return { text: 'Python ready', tone: 'ok' }
     case 'running':
-      return { text: 'Running…', tone: 'bg-sky-100 text-sky-900 dark:bg-sky-950 dark:text-sky-200' }
+      return { text: 'Running…', tone: 'info' }
     case 'failed':
-      return {
-        text: `Python failed to load: ${s.message}`,
-        tone: 'bg-red-100 text-red-900 dark:bg-red-950 dark:text-red-200',
-      }
+      return { text: `Python failed to load: ${s.message}`, tone: 'error' }
   }
 }
 
@@ -27,13 +22,13 @@ export function RuntimeStatusBadge() {
   const retryRuntime = useStore((s) => s.retryRuntime)
   const { text, tone } = describe(status)
   return (
-    <span role="status" className={`inline-flex items-center gap-2 rounded px-2 py-1 text-xs font-medium ${tone}`}>
+    <Badge tone={tone}>
       {text}
       {status.state === 'failed' && (
         <button type="button" onClick={() => void retryRuntime()} className="rounded border border-current px-1.5 py-0.5">
           Retry
         </button>
       )}
-    </span>
+    </Badge>
   )
 }

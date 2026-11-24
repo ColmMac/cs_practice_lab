@@ -4,13 +4,12 @@ import { hintFor } from '../../core/study/hint'
 import { cellKey } from '../../core/study/types'
 import type { TraceResult } from '../../core/types'
 import { useStore } from '../../store'
+import { TABLE, TD as td, TH as th, THEAD } from '../ui/tableStyles'
 import { focusInput, nextStudyInput } from '../study/navigation'
 import { StudyCell } from '../study/StudyCell'
 import { useRowWindow, VIRTUALISE_ABOVE } from './useRowWindow'
 import { useTableData } from './useTableData'
 
-const th = 'border border-slate-300 px-3 py-1.5 text-left font-semibold dark:border-slate-700'
-const td = 'border border-slate-300 px-3 py-1 font-mono dark:border-slate-700'
 
 export function TraceTable({ result, stale }: { result: TraceResult; stale: boolean }) {
   const { selectedStep, hoverStep, setHoverStep, selectStep } = useStore()
@@ -73,13 +72,13 @@ export function TraceTable({ result, stale }: { result: TraceResult; stale: bool
         </p>
       )}
       <table
-        className="w-full border-collapse text-sm"
+        className={TABLE}
         aria-label="Trace table"
         // a windowed table must still tell assistive technology how long it really is
         aria-rowcount={win.active ? rows.length + headerRows : undefined}
         onKeyDown={study ? onStudyKey : undefined}
       >
-        <thead className="sticky top-0 z-10 bg-slate-100 dark:bg-slate-800">
+        <thead className={THEAD}>
           {showGroups && (
             <tr>
               {groups.map((g, i) =>

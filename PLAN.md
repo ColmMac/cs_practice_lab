@@ -915,11 +915,12 @@ Hub-wide rules (these join CLAUDE.md as they land):
 - Tests: initial theme from storage, then from the media query, then light; storage throwing; toggle persists.
 - Implementation notes: `bootTheme()` applies the class without writing storage (nothing chosen yet); the store previously wrote `tts:theme` on every `init()`, now only a toggle writes. `CodeEditor` reads `useTheme`. Unit tests in `tests/unit/theme.test.tsx`; one E2E test (toggle persists across reload) in `app.spec.ts`.
 
-**H1.2: UI primitives in `src/components/ui/`**
+**H1.2: UI primitives in `src/components/ui/`** ✅ DONE
 - `Button` (variants `primary` emerald, `danger` red, `toolbar` outline, `small`), `SegmentedToggle` (today's `Segmented` moved here, with the old path re-exporting it), `Badge` (tones: neutral, warn, ok, info, error, taken from `RuntimeStatusBadge`), `Panel` (bordered rounded section with an optional title), `ToolHeader` (title + toolbar slot, the strip that is `Toolbar`'s `<header>` today), `Popover` (wraps `usePopover`) and `DataTable` styles (the table classes from `TraceTable`, as shared class constants).
 - Refactor the trace components to use them with **identical class strings**.
 - Proof of no visual change: before/after Playwright screenshots of the trace page (light + dark, with a preset loaded) compared pixel by pixel in a throwaway script, plus a unit test asserting the primitives' class strings.
 - `src/components/ui/README.md`: the token cheat-sheet (surfaces, borders, accent, focus ring, spacing, type scale) that every new tool must use.
+- Implementation notes: `Segmented` moved to `ui/SegmentedToggle` (old path re-exports); `usePopover` moved to `ui/`; `ExportMenu` uses `Popover`; `Panel` is new and not used on the trace page yet. Before/after screenshots (light, dark, Export popover open) were byte-identical. One deliberate change: Share and Theme buttons now use the `toolbar` variant, so they gain the focus outline and disabled styles the Export button already had. Unit tests: `tests/unit/uiPrimitives.test.tsx`; E2E: `tests/e2e/ui-primitives.spec.ts`.
 
 **H1.3: Router and AppShell**
 - Add `react-router` (exact version). `src/app/AppShell.tsx`: a sticky top nav (`print:hidden`) with the brand (→ `/`), four tool links (`NavLink`, `aria-current="page"`, wrapping or collapsing at phone width) and `ThemeToggle`, then `<Outlet>`, plus a skip-to-content link.
