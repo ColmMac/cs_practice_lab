@@ -15,8 +15,6 @@ import { getLanguage } from '../languages/registry'
 import { mergePersisted, migrateWorkspace, safeStorage, STORAGE_KEY, STORAGE_VERSION, type PersistedState } from './persistence'
 import { getRunner } from './runner'
 
-export type Theme = 'light' | 'dark'
-
 /** A study session in progress. The view (columns, row options, masks) is FROZEN when it starts. */
 export interface StudyState extends StudyView {
   executionKey: string
@@ -30,8 +28,6 @@ export interface StudyState extends StudyView {
 }
 
 interface AppState extends PersistedState {
-  theme: Theme
-
   runnerStatus: RunnerStatus
   running: boolean
   result: TraceResult | null
@@ -76,7 +72,6 @@ interface AppState extends PersistedState {
   setHoverStep(i: number | null): void
   setExportOptions(patch: Partial<AppState['exportOptions']>): void
   selectStep(i: number | null): void
-  toggleTheme(): void
 
   // column manager
   toggleColumn(id: string): void
@@ -149,31 +144,12 @@ export function runSignature(s: Pick<Workspace, 'code' | 'stdinText' | 'watches'
   ])
 }
 
-function initialTheme(): Theme {
-  try {
-    const saved = localStorage.getItem('tts:theme')
-    if (saved === 'light' || saved === 'dark') return saved
-  } catch {
-    /* storage unavailable (private mode etc.) */
-  }
-  return typeof matchMedia === 'function' && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
-}
-
 const WELCOME_KEY = 'tts:welcomed'
 function initialWelcomed(): boolean {
   try {
     return localStorage.getItem(WELCOME_KEY) === '1'
   } catch {
     return false // storage blocked: show it (it just won't be remembered)
-  }
-}
-
-function applyTheme(theme: Theme) {
-  document.documentElement.classList.toggle('dark', theme === 'dark')
-  try {
-    localStorage.setItem('tts:theme', theme)
-  } catch {
-    /* ignore */
   }
 }
 
@@ -241,7 +217,6 @@ export const useStore = create<AppState>()(
 
       return {
         ...defaultWorkspace(firstPreset?.code ?? '', (firstPreset?.stdin ?? []).join('\n')),
-        theme: initialTheme(),
 
         runnerStatus: { state: 'uninitialised' },
         running: false,
@@ -260,8 +235,6 @@ export const useStore = create<AppState>()(
         studyOrder: [],
 
         init() {
-          applyTheme(get().theme)
-
           get().openSharedFromHash()
 
           const runner = getRunner(get().language)
@@ -378,12 +351,6 @@ export const useStore = create<AppState>()(
         setHoverStep: (hoverStep) => set({ hoverStep }),
         setExportOptions: (patch) => set((s) => ({ exportOptions: { ...s.exportOptions, ...patch } })),
         selectStep: (i) => set((s) => ({ selectedStep: s.selectedStep === i ? null : i })),
-
-        toggleTheme() {
-          const theme: Theme = get().theme === 'dark' ? 'light' : 'dark'
-          applyTheme(theme)
-          set({ theme })
-        },
 
         // ── column manager ──
         toggleColumn: (id) =>

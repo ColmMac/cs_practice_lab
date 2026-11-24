@@ -4,9 +4,10 @@ import { RuntimeStatusBadge } from './RuntimeStatusBadge'
 import { ExportMenu } from '../export/ExportMenu'
 import { StudyToggle } from '../study/StudyToggle'
 import { ShareButton } from './ShareButton'
+import { ThemeToggle } from '../ui/ThemeToggle'
 
 export function Toolbar() {
-  const { language, run, cancel, running, runnerStatus, loadPreset, theme, toggleTheme } = useStore()
+  const { language, run, cancel, running, runnerStatus, loadPreset } = useStore()
   const presets = getLanguage(language).presets
   const notReady = runnerStatus.state !== 'ready' && runnerStatus.state !== 'running'
 
@@ -56,14 +57,7 @@ export function Toolbar() {
         <RuntimeStatusBadge />
         <ExportMenu />
         <ShareButton />
-        <button
-          type="button"
-          onClick={toggleTheme}
-          aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-          className="rounded border border-slate-300 px-2 py-1 text-sm hover:bg-slate-200 dark:border-slate-700 dark:hover:bg-slate-800"
-        >
-          {theme === 'dark' ? '☀ Light' : '☾ Dark'}
-        </button>
+        <ThemeToggle />
       </div>
     </header>
   )

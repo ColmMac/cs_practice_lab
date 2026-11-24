@@ -64,3 +64,18 @@ test('Markdown export downloads a file', async ({ page }) => {
   ])
   expect(download.suggestedFilename()).toMatch(/^trace-table.*\.md$/)
 })
+
+test('theme toggle applies the dark class and persists across a reload (tts:theme)', async ({ page }) => {
+  await page.emulateMedia({ colorScheme: 'light' })
+  await page.goto('/')
+  const html = page.locator('html')
+  await expect(html).not.toHaveClass(/dark/)
+
+  await page.getByRole('button', { name: 'Switch to dark mode' }).click()
+  await expect(html).toHaveClass(/dark/)
+  expect(await page.evaluate(() => localStorage.getItem('tts:theme'))).toBe('dark')
+
+  await page.reload()
+  await expect(html).toHaveClass(/dark/)
+  await expect(page.getByRole('button', { name: 'Switch to light mode' })).toBeVisible()
+})

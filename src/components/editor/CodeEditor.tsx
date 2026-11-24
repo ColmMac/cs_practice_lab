@@ -5,12 +5,14 @@ import CodeMirror from '@uiw/react-codemirror'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { getLanguage } from '../../languages/registry'
 import { useStore } from '../../store'
+import { useTheme } from '../ui/theme'
 import { diagnosticsFor } from './diagnostics'
 import { darkTheme, editorChrome, lightTheme } from './editorTheme'
 import { setTraceLines, traceHighlight } from './traceHighlight'
 
 export function CodeEditor() {
-  const { code, setCode, language, theme, run, result, hoverStep, selectedStep } = useStore()
+  const { code, setCode, language, run, result, hoverStep, selectedStep } = useStore()
+  const theme = useTheme((s) => s.theme)
   const [langExt, setLangExt] = useState<Extension | null>(null)
   const [view, setView] = useState<EditorView | null>(null)
   const scrolledFor = useRef<number | null>(null)

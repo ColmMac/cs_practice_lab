@@ -908,11 +908,12 @@ Hub-wide rules (these join CLAUDE.md as they land):
 
 ### Phase 1: Design system, routing, shared shell
 
-**H1.1: Shared theme module**
+**H1.1: Shared theme module** ✅ DONE
 - `src/components/ui/theme.ts`: a tiny Zustand store `useTheme` with `theme` and `toggle`. Same `tts:theme` key and same `prefers-color-scheme` fallback. Applied to `<html>` in `main.tsx` before the first render.
 - `ThemeToggle` component (same markup and classes as today's button).
 - Remove `theme`/`toggleTheme` from the trace store. Fix the tests that use them.
 - Tests: initial theme from storage, then from the media query, then light; storage throwing; toggle persists.
+- Implementation notes: `bootTheme()` applies the class without writing storage (nothing chosen yet); the store previously wrote `tts:theme` on every `init()`, now only a toggle writes. `CodeEditor` reads `useTheme`. Unit tests in `tests/unit/theme.test.tsx`; one E2E test (toggle persists across reload) in `app.spec.ts`.
 
 **H1.2: UI primitives in `src/components/ui/`**
 - `Button` (variants `primary` emerald, `danger` red, `toolbar` outline, `small`), `SegmentedToggle` (today's `Segmented` moved here, with the old path re-exporting it), `Badge` (tones: neutral, warn, ok, info, error, taken from `RuntimeStatusBadge`), `Panel` (bordered rounded section with an optional title), `ToolHeader` (title + toolbar slot, the strip that is `Toolbar`'s `<header>` today), `Popover` (wraps `usePopover`) and `DataTable` styles (the table classes from `TraceTable`, as shared class constants).
