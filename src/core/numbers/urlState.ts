@@ -24,6 +24,9 @@ export interface NumberUrlState {
   bits: Bits | null
   topic: Topic | null
   seed: number | null
+  /** Addition operands from `?a=` / `?b=` (binary, right-aligned to `width`); null when absent or invalid. */
+  a: Bits | null
+  b: Bits | null
 }
 
 const get = (params: URLSearchParams, key: string): string => (params.get(key) ?? '').slice(0, 64)
@@ -32,12 +35,20 @@ export function parseNumberUrl(params: URLSearchParams): NumberUrlState {
   const m = get(params, 'mode')
   const mode: Mode = (MODES as readonly string[]).includes(m) ? (m as Mode) : 'sandbox'
 
-  const rawBits = get(params, 'bits').replace(/^0b/i, '')
-  const bitsOk = /^[01]+$/.test(rawBits) && rawBits.length <= 16
-  // An explicit width wins; otherwise a 9 to 16 digit register means 16-bit.
+  const binary = (key: string): string | null => {
+    const v = get(params, key).replace(/^0b/i, '')
+    return /^[01]+$/.test(v) && v.length <= 16 ? v : null
+  }
+  const rawBits = binary('bits')
+  const rawA = binary('a')
+  const rawB = binary('b')
+  const bitsOk = rawBits !== null
+  // An explicit width wins; otherwise a 9 to 16 digit register or operand means 16-bit.
   const w = get(params, 'width')
-  const width: Width = w === '16' ? 16 : w === '8' ? 8 : bitsOk && rawBits.length > 8 ? 16 : 8
-  const bits = bitsOk ? fromBinary(rawBits.slice(-width).padStart(width, '0'), width) : null
+  const longest = Math.max(rawBits?.length ?? 0, rawA?.length ?? 0, rawB?.length ?? 0)
+  const width: Width = w === '16' ? 16 : w === '8' ? 8 : longest > 8 ? 16 : 8
+  const fitBits = (v: string | null): Bits | null => (v === null ? null : fromBinary(v.slice(-width).padStart(width, '0'), width))
+  const bits = bitsOk ? fitBits(rawBits) : null
 
   const t = get(params, 'topic')
   const topic = Object.hasOwn(TOPICS, t) ? (t as Topic) : null
@@ -45,7 +56,7 @@ export function parseNumberUrl(params: URLSearchParams): NumberUrlState {
   const s = get(params, 'seed')
   const seed = /^\d{1,10}$/.test(s) && Number(s) <= 4294967295 ? Number(s) : null
 
-  return { mode, width, bits, topic, seed }
+  return { mode, width, bits, topic, seed, a: fitBits(rawA), b: fitBits(rawB) }
 }
 
 /** The query string for the current state; defaults are left out so a plain page keeps a plain URL. */

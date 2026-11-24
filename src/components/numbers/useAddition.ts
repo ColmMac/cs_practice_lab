@@ -55,9 +55,9 @@ export function columnWork(a: Bits, b: Bits, result: AddResult, index: number): 
 export const describeColumn = (w: ColumnWork): string =>
   `Column ${w.position}: ${w.a} + ${w.b} + carry ${w.carryIn} = ${w.sum}, so write ${w.write} and carry ${w.carryOut}.`
 
-export function useAddition(width: Width) {
-  const [rawA, setRawA] = useState<Bits>(() => fromUnsigned(0, 8))
-  const [rawB, setRawB] = useState<Bits>(() => fromUnsigned(0, 8))
+export function useAddition(width: Width, initial?: { a: Bits | null; b: Bits | null }) {
+  const [rawA, setRawA] = useState<Bits>(() => initial?.a ?? fromUnsigned(0, 8))
+  const [rawB, setRawB] = useState<Bits>(() => initial?.b ?? fromUnsigned(0, 8))
   /** Columns revealed so far (counted from the right); null means everything is shown. */
   const [step, setStep] = useState<number | null>(null)
   const [drafts, setDrafts] = useState<Partial<Record<Operand, string>>>({})

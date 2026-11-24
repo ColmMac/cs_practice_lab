@@ -52,6 +52,15 @@ const CARDS: Record<string, { tags: string[]; points: string[]; icon: ReactNode 
   },
 }
 
+/** Deep links into the tools. Every one is backed by that tool's sanitised URL parameters. */
+export const QUICK_STARTS: readonly { label: string; to: string }[] = [
+  { label: 'Trace Bubble Sort in Python', to: '/trace-table?preset=bubble-sort' },
+  { label: 'Half-Adder Truth Table', to: '/truth-tables?preset=half-adder' },
+  { label: 'Two’s Complement Overflow Check', to: '/number-systems?mode=add&a=01111111&b=00000001' },
+  { label: 'Binary Search for 23', to: '/sorting-visualizer?algo=binary&data=3,9,10,23,27,38,43,82&target=23' },
+  { label: 'Bubble Sort: predict each pass', to: '/sorting-visualizer?algo=bubble&quiz=1' },
+]
+
 function Icon({ children }: { children: ReactNode }) {
   return (
     <svg
@@ -89,6 +98,20 @@ export function HomePage() {
           <Link to="/trace-table" className={`mt-3 inline-block ${BUTTON_CLASSES.primary}`}>
             Start with a trace table
           </Link>
+        </section>
+        <section aria-labelledby="quick-heading" className="mb-6">
+          <h2 id="quick-heading" className="text-sm font-semibold">
+            Quick starts
+          </h2>
+          <ul aria-label="Quick starts" className="mt-2 flex flex-wrap gap-2">
+            {QUICK_STARTS.map((q) => (
+              <li key={q.to}>
+                <Link to={q.to} className={`inline-block ${BUTTON_CLASSES.toolbar}`}>
+                  {q.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
         </section>
         <ul aria-label="Tools" className="grid gap-4 sm:grid-cols-2">
           {TOOLS.map((t) => {

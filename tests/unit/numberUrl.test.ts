@@ -5,7 +5,7 @@ const parse = (q: string) => parseNumberUrl(new URLSearchParams(q))
 
 describe('parseNumberUrl', () => {
   it('defaults to the 8-bit sandbox', () => {
-    expect(parse('')).toEqual({ mode: 'sandbox', width: 8, bits: null, topic: null, seed: null })
+    expect(parse('')).toEqual({ mode: 'sandbox', width: 8, bits: null, topic: null, seed: null, a: null, b: null })
   })
   it('reads mode, bits, topic and seed', () => {
     const s = parse('mode=practice&topic=twos&seed=42')
@@ -22,7 +22,7 @@ describe('parseNumberUrl', () => {
   })
   it('ignores anything odd', () => {
     expect(parse('mode=admin&bits=012&topic=__proto__&seed=-1&width=7')).toEqual({
-      mode: 'sandbox', width: 8, bits: null, topic: null, seed: null,
+      mode: 'sandbox', width: 8, bits: null, topic: null, seed: null, a: null, b: null,
     })
     expect(parse('bits=' + '1'.repeat(17)).bits).toBeNull()
     expect(parse('seed=99999999999').seed).toBeNull()

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import type { Width } from '../../core/numbers'
+import type { Bits, Width } from '../../core/numbers'
 import { Badge } from '../ui/Badge'
 import { Button } from '../ui/Button'
 import { Panel } from '../ui/Panel'
@@ -58,8 +58,8 @@ function Reading({ title, children }: { title: string; children: ReactNode }) {
   )
 }
 
-export function AdditionView({ width }: { width: Width }) {
-  const s = useAddition(width)
+export function AdditionView({ width, initial }: { width: Width; initial?: { a: Bits | null; b: Bits | null } }) {
+  const s = useAddition(width, initial)
   const { a, b, result } = s
   const n = width
   const lo = n - s.revealed // index of the leftmost column worked so far

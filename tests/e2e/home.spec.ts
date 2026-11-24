@@ -63,3 +63,67 @@ test('one column at phone width', async ({ page }) => {
   const boxes = await page.getByRole('list', { name: 'Tools' }).locator('> li').evaluateAll((els) => els.map((e) => e.getBoundingClientRect().x))
   expect(new Set(boxes).size).toBe(1)
 })
+
+test.describe('quick starts', () => {
+  const strip = (page: import('@playwright/test').Page) => page.getByRole('list', { name: 'Quick starts' })
+  const open = async (page: import('@playwright/test').Page, name: string) => {
+    await page.goto('/')
+    await strip(page).getByRole('link', { name }).click()
+  }
+
+  test('lists the five deep links', async ({ page }) => {
+    await page.goto('/')
+    await expect(strip(page).getByRole('link')).toHaveText([
+      'Trace Bubble Sort in Python',
+      'Half-Adder Truth Table',
+      'Two’s Complement Overflow Check',
+      'Binary Search for 23',
+      'Bubble Sort: predict each pass',
+    ])
+  })
+
+  test('Trace Bubble Sort loads and runs the built-in, then drops ?preset', async ({ page }) => {
+    await open(page, 'Trace Bubble Sort in Python')
+    await expect(page.getByRole('table', { name: 'Trace table' })).toBeVisible({ timeout: 80_000 })
+    await expect(page.locator('.cm-content')).toContainText('nums = [5, 2, 4, 1]')
+    await expect(page).toHaveURL(/\/trace-table$/)
+  })
+
+  test('an unknown ?preset is ignored and removed', async ({ page }) => {
+    await page.goto('/trace-table?preset=nope')
+    await expect(page.locator('.cm-content')).toBeVisible()
+    await expect(page).toHaveURL(/\/trace-table$/)
+  })
+
+  test('Half-Adder Truth Table opens the half adder', async ({ page }) => {
+    await open(page, 'Half-Adder Truth Table')
+    await expect(page).toHaveURL(/\/truth-tables\?preset=half-adder/)
+    await expect(page.getByLabel('Example')).toHaveValue('half-adder')
+  })
+
+  test('Two’s Complement Overflow Check opens the addition with 127 + 1', async ({ page }) => {
+    await open(page, 'Two’s Complement Overflow Check')
+    await expect(page.getByTestId('addition-table')).toBeVisible()
+    await expect(page.getByRole('textbox', { name: /^Operand A/ })).toHaveValue('01111111')
+    await expect(page.getByRole('textbox', { name: /^Operand B/ })).toHaveValue('00000001')
+    await expect(page.getByTestId('result-bit')).toHaveText(['1', '0', '0', '0', '0', '0', '0', '0'])
+    await expect(page.getByText('Overflow: two positives gave a negative.')).toBeVisible()
+  })
+
+  test('Binary Search for 23 starts on the sorted list with target 23', async ({ page }) => {
+    await open(page, 'Binary Search for 23')
+    await expect(page.getByTestId('card')).toHaveCount(8)
+    await expect(page.getByLabel(/^Algorithm/)).toHaveValue('binary')
+    await expect(page.getByLabel(/^Target/)).toHaveValue('23')
+  })
+
+  test('Bubble Sort: predict each pass opens the quiz', async ({ page }) => {
+    await open(page, 'Bubble Sort: predict each pass')
+    await expect(page.getByRole('radio', { name: 'Quiz' })).toBeChecked()
+  })
+
+  test('a bad operand in the link is ignored', async ({ page }) => {
+    await page.goto('/number-systems?mode=add&a=2&b=xyz')
+    await expect(page.getByRole('textbox', { name: /^Operand A/ })).toHaveValue('00000000')
+  })
+})

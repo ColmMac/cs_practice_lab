@@ -96,7 +96,7 @@ export function NumberSystemsPage() {
       {mode === 'practice' ? (
         <PracticeView seed={seed} topic={topic} onTopic={setTopic} onSeed={setSeed} />
       ) : mode === 'add' ? (
-        <AdditionView width={s.width} />
+        <AdditionView width={s.width} initial={{ a: start.a, b: start.b }} />
       ) : (
         <main className="grid min-h-0 flex-1 content-start gap-4 overflow-auto p-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
           <div className="flex min-w-0 flex-col gap-3">

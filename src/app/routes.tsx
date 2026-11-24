@@ -5,7 +5,7 @@ import { HomePage } from './HomePage'
 import { NotFoundPage } from './pages'
 
 // Each tool is its own chunk, so `/` and the light tools never download CodeMirror or start Pyodide.
-const TraceTablePage = lazy(() => import('../App').then((m) => ({ default: m.App })))
+const TraceTablePage = lazy(() => import('./TraceTableRoute').then((m) => ({ default: m.TraceTableRoute })))
 
 const TruthTablePage = lazy(() => import('../components/truth/TruthTablePage').then((m) => ({ default: m.TruthTablePage })))
 

@@ -1043,18 +1043,19 @@ Hub-wide rules (these join CLAUDE.md as they land):
 
 ### Phase 5: Home page (`/`), built last
 
-**W5.1: Home page**
+**W5.1: Home page** ✅ DONE
 - Hero (one-line value proposition: zero login, nothing to install, everything runs in your browser) and a primary CTA.
 - A 2×2 tool directory (one column on phones). Each card has an inline-SVG icon, curriculum tags (`GCSE`, `SQA Higher`, `A-Level`, `CS1` as `Badge`s), 2–3 capabilities and a CTA `Link`.
 - The page must not load CodeMirror or Pyodide: check the network log in E2E.
 
-**W5.2: Quick-start exam presets strip**
+**W5.2: Quick-start exam presets strip** ✅ DONE
 - Deep links, each backed by the sanitised URL parameters above:
   - "Trace Bubble Sort in Python" → `/trace-table?preset=bubble-sort`. **New**: the trace page accepts `?preset=<built-in id>`, loads and runs that built-in preset (safe, not user code) and then removes the parameter.
   - "Half-Adder Truth Table" → `/truth-tables?preset=half-adder`
   - "Two's Complement Overflow Check" → `/number-systems?mode=add&a=01111111&b=00000001`
   - "Binary Search for 23" → `/sorting-visualizer?algo=binary&data=…&target=23`
   - "Bubble Sort: predict each pass" → `/sorting-visualizer?algo=bubble&quiz=1`
+- Implementation notes: `QUICK_STARTS` in `app/HomePage.tsx` (a "Quick starts" list of toolbar-style links above the tool cards). The trace route is now `app/TraceTableRoute.tsx` (lazy, so the home page still never loads the store), which calls `usePresetParam`: a known built-in id goes through `loadPreset` (so it runs) and the parameter is removed with `replace`; an unknown id is only removed; a share-link fragment or a shared workspace under review is left untouched. Number systems gained `?a=` / `?b=` (binary, up to 16 digits; more than 8 digits means 16-bit; invalid values ignored), read once into the addition view and not written back. The sorting and truth-table links needed no change. Tests: 8 new E2E in `home.spec.ts` and `tests/unit/numbersUrlOperands.test.ts` (3). Full suite 958 unit, 76 E2E.
 
 **W5.3: SEO and discoverability**
 - A per-route `<title>` and `<meta name="description">` through React 19's native metadata hoisting (a small `PageMeta` component in each page), plus `<link rel="canonical">` when `VITE_SITE_URL` is set. `index.html` keeps sensible defaults for crawlers that do not run JS.
