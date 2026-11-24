@@ -6,12 +6,15 @@ import {
   PYODIDE_INDEX_URL,
   type FromWorker,
   type ToWorker,
+  type WireChunk,
   type WireOptions,
   type WireResult,
 } from './protocol'
 
 /** Extra time past the tracer's own soft deadline before the worker is killed outright. */
 export const HARD_KILL_GRACE_MS = 1500
+/** Rows stream one at a time; progress is reported to the UI at most this often. */
+export const PROGRESS_INTERVAL_MS = 100
 
 const defaultWorker = () => new Worker(new URL('./python.worker.ts', import.meta.url), { type: 'module' })
 
@@ -23,6 +26,9 @@ interface ActiveRun {
   reject: (e: Error) => void
   timer: ReturnType<typeof setTimeout>
   detachAbort?: () => void
+  /** Everything streamed so far; what survives if the worker has to be killed. */
+  acc: Required<Pick<WireChunk, 'steps' | 'frames' | 'variables' | 'rawSteps' | 'line'>>
+  lastProgressAt: number
 }
 
 let runCounter = 0
@@ -81,6 +87,8 @@ export class PythonTraceRunner implements TraceRunner {
         options,
         resolve,
         reject,
+        acc: { steps: [], frames: [], variables: [], rawSteps: 0, line: 0 },
+        lastProgressAt: 0,
         // Hard backstop: the tracer enforces limits itself, but code blocked inside C (or a loop that
         // somehow evaded the tracer) can only be stopped by killing the worker.
         timer: setTimeout(() => {
@@ -157,6 +165,23 @@ export class PythonTraceRunner implements TraceRunner {
         this.fail(msg.message)
         rejectReady(new Error(msg.message))
         break
+      case 'chunk': {
+        const run = this.current
+        if (!run || run.runId !== msg.runId) break // late chunk from a run that was already stopped
+        run.acc.steps.push(...msg.chunk.steps)
+        run.acc.frames.push(...msg.chunk.frames)
+        run.acc.variables.push(...msg.chunk.variables)
+        run.acc.rawSteps = msg.chunk.rawSteps
+        run.acc.line = msg.chunk.line
+        // Rows arrive one by one; tell the UI about progress at most every PROGRESS_INTERVAL_MS.
+        const now = Date.now()
+        if (now - run.lastProgressAt >= PROGRESS_INTERVAL_MS) {
+          run.lastProgressAt = now
+          this.setStatus({ state: 'running', stepsExecuted: msg.chunk.rawSteps })
+          run.options.onProgress?.({ stepsExecuted: msg.chunk.rawSteps })
+        }
+        break
+      }
       case 'done':
         this.finish(msg.runId, (run) => this.toResult(msg.result, run))
         break
@@ -181,8 +206,27 @@ export class PythonTraceRunner implements TraceRunner {
     const run = this.current
     if (!run) return
     this.clear(run)
-    run.resolve(this.emptyResult(status, message, run.runId, run.code, run.options))
+    run.resolve(this.partialResult(status, message, run))
     if (respawn) this.spawn()
+  }
+
+  /** Result for a run that was killed: the rows streamed before the kill, plus why it stopped. */
+  private partialResult(status: TraceStatus, message: string, run: ActiveRun): TraceResult {
+    const { steps, frames, rawSteps, line } = run.acc
+    if (steps.length === 0) return this.emptyResult(status, message, run.runId, run.code, run.options)
+    const functions = [...new Set(frames.map((f) => f.name).filter((n) => n !== '<module>'))]
+    // toResult() prepends run.acc, so the "tail" here is empty
+    const wire: WireResult = {
+      status,
+      error: { kind: status, message, line: line || steps[steps.length - 1]?.ln },
+      steps: [],
+      frames: [],
+      variables: [],
+      functions,
+      stdout: steps.map((s) => s.o ?? '').join(''),
+      stats: { rawSteps, truncated: false, durationMs: 0 },
+    }
+    return this.toResult(wire, run)
   }
 
   private clear(run: ActiveRun) {
@@ -201,8 +245,15 @@ export class PythonTraceRunner implements TraceRunner {
     }
   }
 
+  /** Prepends anything streamed earlier: the final message only carries the tail. */
   private toResult(wire: WireResult, run: ActiveRun): TraceResult {
-    return materialise(wire, { runId: run.runId, code: run.code, options: run.options })
+    const merged: WireResult = {
+      ...wire,
+      steps: [...run.acc.steps, ...wire.steps],
+      frames: [...run.acc.frames, ...wire.frames],
+      variables: [...run.acc.variables, ...wire.variables],
+    }
+    return materialise(merged, { runId: run.runId, code: run.code, options: run.options })
   }
 
   private emptyResult(

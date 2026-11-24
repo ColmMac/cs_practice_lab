@@ -16,7 +16,7 @@ export function ErrorBanner({ result }: { result: TraceResult }) {
   const hasRows = result.steps.length > 0
   const hint =
     result.status === 'awaiting-input'
-      ? 'Add a line to "Program inputs" for each input() call, then run again.'
+      ? 'Type an answer below; the program runs again from the start with it added to Program inputs.'
       : hasRows && result.status !== 'cancelled'
         ? 'The table below shows the steps recorded before it stopped.'
         : ''

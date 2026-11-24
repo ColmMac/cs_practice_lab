@@ -39,6 +39,19 @@ export interface WireStep {
   wt?: Record<string, WatchResult>
 }
 
+/** Incremental batch streamed while the program runs (only items not sent before). */
+export interface WireChunk {
+  steps: WireStep[]
+  frames: WireFrame[]
+  variables: VariableMeta[]
+  rawSteps: number // line events executed so far (progress)
+  line: number // line executing right now: where a blocked / killed run is stuck
+}
+
+/**
+ * Final message. When chunks were streamed, `steps`/`frames`/`variables` hold only the TAIL not yet
+ * streamed; the adapter concatenates chunks + tail.
+ */
 export interface WireResult {
   status: TraceStatus
   error?: TraceError | null
@@ -59,6 +72,7 @@ export type ToWorker =
 // Worker → Main
 export type FromWorker =
   | { type: 'status'; status: 'loading' | 'ready'; message?: string }
+  | { type: 'chunk'; runId: string; chunk: WireChunk }
   | { type: 'done'; runId: string; result: WireResult }
   | { type: 'run-failed'; runId: string; message: string } // harness bug, not user-code failure
   | { type: 'fatal'; message: string } // Pyodide failed to load

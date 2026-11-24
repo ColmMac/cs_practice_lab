@@ -17,6 +17,9 @@ Client-side Python trace-table generator (React + TS + Vite, Pyodide in a Web Wo
 - `runTrace` resolves with a `status` for all user-code failures; it rejects only if the runtime is broken.
 - Code from share links must never auto-run.
 - Git: this folder is its own repo (`ColmMac/trace_table`), nested inside `C:\ip`. Commit from here.
+- Presets are real files in `src/languages/python/presets/` (`presets.json` + `*.py`). After editing one, run `npm run fixtures` and review the golden tables in `tests/fixtures/presets/*.txt` BY HAND against your own execution of the program before accepting a snapshot; a freshly written snapshot proves nothing. (This caught a real bug in M2.)
+- When writing Python test code via a shell heredoc, `\n` escapes get mangled. Use the Write/Edit tools for files that contain them.
+- The editor's lint machinery must stay a static extension (`linter(null)`); `setDiagnostics` alone is discarded when @uiw/react-codemirror reconfigures.
 
 ## Status
-M0 (scaffold) and M1 (vertical slice: tracer → worker → runner → table) are done; see PLAN.md §9 and its "M1 implementation notes". Strict `xfail` tests in `tests/tracer/test_tracer.py` mark the remaining M2 gaps; when one starts passing, pytest fails until you remove the marker.
+M0, M1 and M2 are done (see PLAN.md §9, §11 and §12). Next: **M3** — Column Manager, watch expressions, persistence, share links.

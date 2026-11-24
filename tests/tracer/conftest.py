@@ -8,7 +8,20 @@ import tracer  # noqa: E402
 
 
 def trace(code: str, **opts) -> dict:
-    """Run code through the tracer and return the parsed result."""
+    """Run code through the tracer WITH streaming (as the worker does) and return the merged result.
+
+    ``res["chunks"]`` is how many chunks were streamed before the final tail.
+    """
+    chunks: list[str] = []
+    res = json.loads(tracer.run_trace(code, json.dumps(opts), chunks.append))
+    parts = [json.loads(c) for c in chunks]
+    for key in ("steps", "frames", "variables"):
+        res[key] = [x for p in parts for x in p[key]] + res[key]
+    res["chunks"] = len(parts)
+    return res
+
+
+def trace_unstreamed(code: str, **opts) -> dict:
     return json.loads(tracer.run_trace(code, json.dumps(opts)))
 
 

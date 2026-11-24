@@ -22,6 +22,7 @@ import sys
 import time
 import traceback
 import types
+from collections import defaultdict
 
 USER_FILE = "<user>"
 TRANSPARENT = frozenset({"<genexpr>", "<lambda>", "<listcomp>", "<dictcomp>", "<setcomp>"})
@@ -215,19 +216,110 @@ def visible(name: str, val, show_callables: bool) -> bool:
     return not (callable(val) or isinstance(val, types.ModuleType))
 
 
+_IMMUTABLE = (int, float, str, bytes, tuple, frozenset, type(None), range)
+
+
+def is_mutable(v) -> bool:
+    """Could this binding's content change without the name being rebound?"""
+    return not isinstance(v, _IMMUTABLE) and not callable(v) and not isinstance(v, types.ModuleType)
+
+
+# ───────────────────────────── static analysis ─────────────────────────────
+
+
+def _target_names(t, out: set) -> None:
+    if isinstance(t, ast.Name):
+        out.add(t.id)
+    elif isinstance(t, (ast.Tuple, ast.List)):
+        for e in t.elts:
+            _target_names(e, out)
+    elif isinstance(t, ast.Starred):
+        _target_names(t.value, out)
+
+
+class Static:
+    """One AST pass collecting per-line facts the runtime tracer can't know.
+
+    assigns      line -> names (re)bound by the statement that starts on that line. Makes
+                 ``found = False`` a write even when the value didn't change (exam tables want that row).
+    return_lines lines holding an explicit ``return``.
+    body_range   header line -> (first, last) line of its body, so the line that runs next tells us
+                 whether an if/elif/while/for condition sent control into the body.
+    ephemeral    names bound only as comprehension targets (hidden by default).
+    """
+
+    def __init__(self, tree: ast.AST):
+        self.assigns: dict[int, set[str]] = defaultdict(set)
+        # A for-loop target is only (re)assigned when the body is entered, not when the loop is exhausted.
+        self.for_targets: dict[int, set[str]] = defaultdict(set)
+        self.return_lines: set[int] = set()
+        self.body_range: dict[int, tuple[int, int]] = {}
+        comp: set[str] = set()
+        params: set[str] = set()
+        for n in ast.walk(tree):
+            if isinstance(n, ast.Assign):
+                for t in n.targets:
+                    _target_names(t, self.assigns[n.lineno])
+            elif isinstance(n, ast.AugAssign):
+                _target_names(n.target, self.assigns[n.lineno])
+            elif isinstance(n, ast.AnnAssign):
+                if n.value is not None:
+                    _target_names(n.target, self.assigns[n.lineno])
+            elif isinstance(n, (ast.For, ast.AsyncFor)):
+                _target_names(n.target, self.for_targets[n.lineno])
+                self._range(n)
+            elif isinstance(n, (ast.If, ast.While)):
+                self._range(n)
+            elif isinstance(n, (ast.With, ast.AsyncWith)):
+                for item in n.items:
+                    if item.optional_vars is not None:
+                        _target_names(item.optional_vars, self.assigns[n.lineno])
+            elif isinstance(n, ast.NamedExpr):
+                _target_names(n.target, self.assigns[n.lineno])
+            elif isinstance(n, ast.Import):
+                for a in n.names:
+                    self.assigns[n.lineno].add(a.asname or a.name.split(".")[0])
+            elif isinstance(n, ast.ImportFrom):
+                for a in n.names:
+                    if a.name != "*":
+                        self.assigns[n.lineno].add(a.asname or a.name)
+            elif isinstance(n, ast.ExceptHandler):
+                if n.name:
+                    self.assigns[n.lineno].add(n.name)
+            elif isinstance(n, ast.Return):
+                self.return_lines.add(n.lineno)
+            elif isinstance(n, ast.comprehension):
+                _target_names(n.target, comp)
+            elif isinstance(n, ast.arg):
+                params.add(n.arg)
+        bound = params.union(*self.assigns.values(), *self.for_targets.values())
+        self.ephemeral = comp - bound
+
+    def _range(self, n) -> None:
+        first = n.body[0].lineno
+        if first == n.lineno:
+            return  # inline body (`if x: y`): the next line event can't tell us the outcome
+        self.body_range[n.lineno] = (first, max(getattr(s, "end_lineno", s.lineno) or s.lineno for s in n.body))
+
+
 # ───────────────────────────── tracer ─────────────────────────────
 
 
 class Tracer:
-    def __init__(self, opts: Options, return_lines: set[int]):
+    def __init__(self, opts: Options, static: Static, emit_cb=None):
         self.o = opts
-        self.return_lines = return_lines
+        self.static = static
+        self.return_lines = static.return_lines
+        self.emit_cb = emit_cb
+        self.sent_steps = self.sent_frames = self.sent_vars = 0
+        self.frame_objs: dict[int, object] = {}  # fid -> live frame object
         self.refs = RefTable()
         self.ser = Serialiser(self.refs, opts)
         self.out = StepBuffer(MAX_STDOUT)
         self.steps: list[dict] = []
         self.raw = 0
         self.last_line = 0
+        self.running_line = 0  # line about to execute / executing now; where a blocked run is stuck
         self.deadline = time.monotonic() + opts.timeout_ms / 1000
         self.abort_reason: str | None = None
         self.next_fid = 0
@@ -238,6 +330,8 @@ class Tracer:
         self.exc: dict[int, tuple[str, str]] = {}  # fid -> (type, message) raised in that frame
         self.last: dict[int, dict] = {}  # fid -> {name: Value} as of the last emitted step
         self.var_meta: dict[str, dict] = {}
+        self.frame_list: list[dict] = []  # append-only mirrors of frames / var_meta, in creation order
+        self.var_list: list[dict] = []
         self.module_frame = None
 
     # ── trace callbacks ──
@@ -261,7 +355,8 @@ class Tracer:
 
     def local_trace(self, frame, event, arg):
         if event == "line":
-            self.finalise(frame)
+            self.running_line = frame.f_lineno  # set first: the flush inside finalise() reports it
+            self.finalise(frame, next_line=frame.f_lineno)
             self.tick(frame)
             fid = self.fids[id(frame)]
             self.pending[fid] = (frame, frame.f_lineno)
@@ -306,6 +401,8 @@ class Tracer:
             if back is not None and back.f_code.co_filename == USER_FILE:
                 info["callLine"] = back.f_lineno
         self.frames[fid] = info
+        self.frame_list.append(info)
+        self.frame_objs[fid] = frame
         self.stack.append(fid)
         self.last[fid] = {}
         if is_module:
@@ -327,6 +424,7 @@ class Tracer:
             self.stack.remove(fid)
         self.last.pop(fid, None)
         self.exc.pop(fid, None)
+        self.frame_objs.pop(fid, None)
 
     # ── snapshots ──
 
@@ -341,27 +439,59 @@ class Tracer:
         self.last[fid] = cur
         return writes, deletes
 
-    def finalise(self, frame, closing: bool = False, ret=None) -> None:
+    def mutable_diff(self, fid: int, frame) -> list:
+        """Writes for mutable bindings of a SUSPENDED frame (a callee may have changed them in place)."""
+        show = self.o.show_callables
+        prev = self.last.setdefault(fid, {})
+        writes = []
+        for n, v in dict(frame.f_locals).items():
+            if is_mutable(v) and visible(n, v, show):
+                s = self.ser(v)
+                if prev.get(n, _MISSING) != s:
+                    prev[n] = s
+                    writes.append((fid, n, s))
+        return writes
+
+    def finalise(self, frame, closing: bool = False, ret=None, next_line=None) -> None:
         fid = self.fids.get(id(frame))
         p = self.pending.pop(fid, None) if fid is not None else None
         if p is None:
             return
         line = p[1]
-        writes, deletes = self.diff(fid, self.snapshot(frame))
-        if fid != 0 and self.module_frame is not None:  # a callee can rebind globals
+        cur = self.snapshot(frame)
+        writes, deletes = self.diff(fid, cur)
+
+        exc = self.exc.pop(fid, None)
+        branch = None
+        rng = self.static.body_range.get(line)
+        if rng is not None and exc is None:
+            branch = next_line is not None and rng[0] <= next_line <= rng[1]
+
+        # Assignments are writes even when the value didn't change (`found = False` twice).
+        names = set(self.static.assigns.get(line, ()))
+        if branch is not False:  # a for header that is exhausting does not rebind its target
+            names |= self.static.for_targets.get(line, set())
+        if names:
+            have = {n for _f, n, _v in writes}
+            writes += [(fid, n, cur[n]) for n in sorted(names) if n in cur and n not in have]
+
+        if fid != 0 and self.module_frame is not None:  # a callee can rebind / mutate globals
             w, d = self.diff(0, self.snapshot(self.module_frame))
             writes += w
             deletes += d
-        exc = self.exc.pop(fid, None)
+        for cfid in self.stack:  # ...and mutate lists/dicts held by suspended caller functions
+            if cfid != fid and cfid != 0 and cfid in self.frame_objs:
+                writes += self.mutable_diff(cfid, self.frame_objs[cfid])
+
         kind, rv = "l", None
         if closing and exc is not None:
             kind = "x"
         elif closing and line in self.return_lines:
             kind, rv = "r", self.ser(ret)
         x = {"t": exc[0], "m": exc[1], "c": not closing} if exc else None
-        self.emit(kind, line, fid, writes, deletes, self.out.take(), rv, x)
+        self.emit(kind, line, fid, writes, deletes, self.out.take(), rv, x, branch)
 
-    def emit(self, kind, line, fid, writes, deletes, out, ret=None, exc=None) -> None:
+    def emit(self, kind, line, fid, writes, deletes, out, ret=None, exc=None, branch=None) -> None:
         i = len(self.steps)
         step = {"i": i, "k": kind, "ln": line, "f": fid, "stk": list(self.stack)}
         if writes:
@@ -374,18 +504,47 @@ class Tracer:
             step["r"] = ret
         if exc is not None:
             step["x"] = exc
+        if branch is not None:
+            step["b"] = branch
         self.steps.append(step)
         for f, n, _ in writes:
             scope = self.frames[f]["name"]
             col = f"{scope}:{n}"
             if col not in self.var_meta:
-                self.var_meta[col] = {
+                meta = {
                     "columnId": col,
                     "scopeName": scope,
                     "name": n,
                     "firstStep": i,
-                    "ephemeral": False,
+                    "ephemeral": n in self.static.ephemeral,
                 }
+                self.var_meta[col] = meta
+                self.var_list.append(meta)
+        self.maybe_flush()
+
+    # ── streaming ──
+
+    def maybe_flush(self) -> None:
+        """Hand each finished row to the host immediately.
+
+        Rows are only complete once the NEXT line starts, so everything before the line that is currently
+        executing has already been delivered. If that line blocks inside C (``time.sleep``,
+        ``sum(range(10**10))``) and the worker has to be killed, the trace up to it survives.
+        """
+        if self.emit_cb is not None and len(self.steps) > self.sent_steps:
+            self.emit_cb(json.dumps(self.take_unsent()))
+
+    def take_unsent(self) -> dict:
+        frames, variables = self.frame_list, self.var_list
+        chunk = {
+            "steps": self.steps[self.sent_steps :],
+            "frames": frames[self.sent_frames :],
+            "variables": variables[self.sent_vars :],
+            "rawSteps": self.raw,
+            "line": self.running_line,
+        }
+        self.sent_steps, self.sent_frames, self.sent_vars = len(self.steps), len(frames), len(variables)
+        return chunk
 
     def flush_pending(self) -> None:
         """After an abort the tracer is switched off, so finalise whatever lines were mid-flight."""
@@ -484,14 +643,19 @@ def _empty_result(status: str, error: dict | None, t0: float) -> dict:
     }
 
 
-def run_trace(code: str, opts_json: str) -> str:
-    """Entry point. Returns a JSON string; never raises for problems in the user's program."""
+def run_trace(code: str, opts_json: str, emit=None) -> str:
+    """Entry point. Returns a JSON string; never raises for problems in the user's program.
+
+    With ``emit`` (a callable taking a JSON string) finished steps are streamed in chunks as the program
+    runs, and the return value holds only the tail not yet streamed plus the final status/metadata.
+    Without it the return value is the complete trace.
+    """
     t0 = time.perf_counter()
     opts = Options(json.loads(opts_json))
 
     try:
         tree = ast.parse(code, filename=USER_FILE)
-        return_lines = {n.lineno for n in ast.walk(tree) if isinstance(n, ast.Return)}
+        static = Static(tree)
         tree = ast.fix_missing_locations(_AbortGuard().visit(tree))
         code_obj = compile(tree, USER_FILE, "exec")
     except SyntaxError as e:
@@ -509,7 +673,7 @@ def run_trace(code: str, opts_json: str) -> str:
         err = {"kind": "syntax-error", "type": type(e).__name__, "message": f"{type(e).__name__}: {e}"}
         return json.dumps(_empty_result("syntax-error", err, t0))
 
-    tracer = Tracer(opts, return_lines)
+    tracer = Tracer(opts, static, emit)
     g = {"__name__": "__main__", "__builtins__": _make_builtins(opts, tracer)}
     saved = (sys.stdout, sys.stderr, sys.getrecursionlimit())
     status, error, input_request = "ok", None, None
@@ -573,9 +737,7 @@ def run_trace(code: str, opts_json: str) -> str:
         "status": status,
         "error": error,
         "inputRequest": input_request,
-        "steps": tracer.steps,
-        "frames": list(tracer.frames.values()),
-        "variables": list(tracer.var_meta.values()),
+        **tracer.take_unsent(),
         "functions": functions,
         "stdout": tracer.out.getvalue(),
         "stats": {

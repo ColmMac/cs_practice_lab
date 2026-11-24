@@ -3,12 +3,12 @@
 // Runs user code off the main thread so infinite loops / heavy recursion can never freeze the UI.
 import type { PyodideInterface } from 'pyodide'
 import tracerSource from './tracer.py?raw'
-import type { FromWorker, ToWorker, WireResult } from './protocol'
+import type { FromWorker, ToWorker, WireChunk, WireResult } from './protocol'
 
 const ctx = self as unknown as DedicatedWorkerGlobalScope
 const post = (m: FromWorker) => ctx.postMessage(m)
 
-let runTraceFn: ((code: string, optionsJson: string) => string) | null = null
+let runTraceFn: ((code: string, optionsJson: string, emit: (chunkJson: string) => void) => string) | null = null
 
 async function init(indexURL: string) {
   post({ type: 'status', status: 'loading', message: 'Downloading Python runtime…' })
@@ -30,7 +30,11 @@ ctx.onmessage = async (e: MessageEvent<ToWorker>) => {
       await init(msg.indexURL)
     } else if (msg.type === 'run') {
       if (!runTraceFn) throw new Error('Python runtime is not ready')
-      const result = JSON.parse(runTraceFn(msg.code, JSON.stringify(msg.options))) as WireResult
+      // The tracer calls `emit` every ~100 steps / 50 ms. postMessage delivers while Python is still
+      // running, so a worker killed mid-run has already handed over everything recorded so far.
+      const emit = (chunkJson: string) =>
+        post({ type: 'chunk', runId: msg.runId, chunk: JSON.parse(chunkJson) as WireChunk })
+      const result = JSON.parse(runTraceFn(msg.code, JSON.stringify(msg.options), emit)) as WireResult
       post({ type: 'done', runId: msg.runId, result })
     }
   } catch (err) {

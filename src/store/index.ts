@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { DEFAULT_ROW_OPTIONS, type DisplayStyle, type Granularity } from '../core/derive/rows'
 import type { RunnerStatus, TraceRunner } from '../core/runner'
 import { DEFAULT_TRACE_OPTIONS, type LanguageId, type TraceOptions, type TraceResult } from '../core/types'
 import { getLanguage } from '../languages/registry'
@@ -12,11 +13,19 @@ interface AppState {
   stdinText: string
   theme: Theme
 
+  // view settings: pure projections of the trace, so changing them never re-runs the program
+  granularity: Granularity
+  displayStyle: DisplayStyle
+
   runnerStatus: RunnerStatus
   running: boolean
   result: TraceResult | null
   /** Code that produced `result`; the editor differs from it ⇒ the table is stale. */
   ranCode: string | null
+
+  /** stepIndex of the table row under the mouse / focused, and of the clicked row. */
+  hoverStep: number | null
+  selectedStep: number | null
 
   init(): void
   setCode(code: string): void
@@ -24,6 +33,12 @@ interface AppState {
   loadPreset(id: string): void
   run(): Promise<void>
   cancel(): void
+  /** The program asked for input() beyond what was supplied: append the answer and run again. */
+  answerInput(text: string): Promise<void>
+  setGranularity(g: Granularity): void
+  setDisplayStyle(d: DisplayStyle): void
+  setHoverStep(i: number | null): void
+  selectStep(i: number | null): void
   toggleTheme(): void
 }
 
@@ -59,13 +74,18 @@ let boundRunner: TraceRunner | null = null
 export const useStore = create<AppState>((set, get) => ({
   language: 'python',
   code: firstPreset?.code ?? '',
-  stdinText: '',
+  stdinText: (firstPreset?.stdin ?? []).join('\n'),
   theme: initialTheme(),
+
+  granularity: DEFAULT_ROW_OPTIONS.granularity,
+  displayStyle: DEFAULT_ROW_OPTIONS.display,
 
   runnerStatus: { state: 'uninitialised' },
   running: false,
   result: null,
   ranCode: null,
+  hoverStep: null,
+  selectedStep: null,
 
   init() {
     applyTheme(get().theme)
@@ -98,7 +118,7 @@ export const useStore = create<AppState>((set, get) => ({
     set({ running: true })
     try {
       const result = await runner.runTrace(code, options)
-      if (token === runToken) set({ result, ranCode: code, running: false })
+      if (token === runToken) set({ result, ranCode: code, running: false, hoverStep: null, selectedStep: null })
     } catch {
       // the runtime itself is broken; runnerStatus already says so
       if (token === runToken) set({ running: false })
@@ -110,6 +130,18 @@ export const useStore = create<AppState>((set, get) => ({
     getRunner(get().language).cancel()
     set({ running: false })
   },
+
+  async answerInput(text) {
+    const { stdinText } = get()
+    const base = stdinText.replace(/\r\n/g, '\n').replace(/\n+$/, '')
+    set({ stdinText: base === '' ? text : `${base}\n${text}` })
+    await get().run()
+  },
+
+  setGranularity: (granularity) => set({ granularity }),
+  setDisplayStyle: (displayStyle) => set({ displayStyle }),
+  setHoverStep: (hoverStep) => set({ hoverStep }),
+  selectStep: (i) => set((s) => ({ selectedStep: s.selectedStep === i ? null : i })),
 
   toggleTheme() {
     const theme: Theme = get().theme === 'dark' ? 'light' : 'dark'

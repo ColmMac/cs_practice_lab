@@ -37,6 +37,7 @@
    }
   ],
   "variables": [],
+  "rawSteps": 1,
   "functions": [],
   "stdout": "Name? ",
   "stats": {

@@ -154,5 +154,7 @@ export interface TraceRow {
   stepIndices: number[]
   lineNumber: number
   depth: number
+  /** if/elif/while/for header rows: did the condition send control into the body? */
+  branch?: boolean
   cells: Record<ColumnId, Cell>
 }

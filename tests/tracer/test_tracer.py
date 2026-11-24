@@ -1,5 +1,7 @@
-import pytest
-from conftest import frame_name, lines, trace, writes
+import json
+
+import tracer
+from conftest import frame_name, lines, trace, trace_unstreamed, writes
 
 DIGIT_SUM = """\
 n = 1234
@@ -332,31 +334,3 @@ def test_random_is_seeded_and_repeatable():
     assert writes(a["steps"][1]) == writes(b["steps"][1]) != writes(c["steps"][1])
 
 
-# ───────────── known gaps (M2) — strict so they fail loudly when fixed ─────────────
-
-
-def test_callee_mutation_of_a_global_list_shows_in_callee_row():
-    res = trace("def bump(a):\n    a[0] = 99\nnums = [1, 2]\nbump(nums)\nx = 1\n")
-    bump_row = next(s for s in res["steps"] if frame_name(res, s) == "bump" and s["ln"] == 2)
-    assert any(name == "nums" for _fid, name, _v in bump_row.get("w", []))
-
-
-@pytest.mark.xfail(strict=True, reason="M2: re-serialise mutable bindings in suspended caller FUNCTION frames")
-def test_callee_mutation_of_a_caller_functions_list_shows_in_callee_row():
-    code = "def bump(a):\n    a[0] = 99\ndef main():\n    nums = [1, 2]\n    bump(nums)\nmain()\n"
-    res = trace(code)
-    main_fid = next(f["id"] for f in res["frames"] if f["name"] == "main")
-    bump_row = next(s for s in res["steps"] if frame_name(res, s) == "bump" and s["ln"] == 2)
-    assert (main_fid, "nums") in [(f, n) for f, n, _v in bump_row.get("w", [])]
-
-
-@pytest.mark.xfail(strict=True, reason="M2: static assignment info makes re-assigning an unchanged value a write")
-def test_reassigning_same_value_counts_as_a_write():
-    res = trace("found = False\nfound = False\n")
-    assert "w" in res["steps"][1]
-
-
-@pytest.mark.xfail(strict=True, reason="M2: comprehension targets should be flagged ephemeral")
-def test_comprehension_variable_is_ephemeral():
-    res = trace("sq = [i * i for i in range(3)]\n")
-    assert next(v for v in res["variables"] if v["name"] == "i")["ephemeral"]

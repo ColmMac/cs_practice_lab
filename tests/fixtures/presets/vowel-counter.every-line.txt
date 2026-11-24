@@ -1,0 +1,29 @@
+Line | word        | vowels | ch  | Output
+-----+-------------+--------+-----+------------------------
+1    | 'education' |        |     | Enter a word: education
+2    | 'education' | 0      |     |
+3 T  | 'education' | 0      | 'e' |
+4 T  | 'education' | 0      | 'e' |
+5    | 'education' | 1      | 'e' |
+3 T  | 'education' | 1      | 'd' |
+4 F  | 'education' | 1      | 'd' |
+3 T  | 'education' | 1      | 'u' |
+4 T  | 'education' | 1      | 'u' |
+5    | 'education' | 2      | 'u' |
+3 T  | 'education' | 2      | 'c' |
+4 F  | 'education' | 2      | 'c' |
+3 T  | 'education' | 2      | 'a' |
+4 T  | 'education' | 2      | 'a' |
+5    | 'education' | 3      | 'a' |
+3 T  | 'education' | 3      | 't' |
+4 F  | 'education' | 3      | 't' |
+3 T  | 'education' | 3      | 'i' |
+4 T  | 'education' | 3      | 'i' |
+5    | 'education' | 4      | 'i' |
+3 T  | 'education' | 4      | 'o' |
+4 T  | 'education' | 4      | 'o' |
+5    | 'education' | 5      | 'o' |
+3 T  | 'education' | 5      | 'n' |
+4 F  | 'education' | 5      | 'n' |
+3 F  | 'education' | 5      | 'n' |
+6    | 'education' | 5      | 'n' | Vowels: 5

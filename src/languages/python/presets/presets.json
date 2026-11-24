@@ -1,0 +1,39 @@
+[
+  {
+    "id": "linear-search",
+    "title": "Linear search (while + flag)",
+    "description": "Scan a list for a target, stopping as soon as it is found.",
+    "file": "linear-search.py"
+  },
+  {
+    "id": "bubble-sort",
+    "title": "Bubble sort (nested loops, swap)",
+    "description": "Sort a short list by repeatedly swapping neighbours; stops early when a pass makes no swaps.",
+    "file": "bubble-sort.py"
+  },
+  {
+    "id": "digit-sum",
+    "title": "Digit sum (while, %, //)",
+    "description": "Add up the digits of a number using modulo and integer division.",
+    "file": "digit-sum.py"
+  },
+  {
+    "id": "matrix-totals",
+    "title": "2D list row totals",
+    "description": "Traverse a 2D list with nested for loops and total each row.",
+    "file": "matrix-totals.py"
+  },
+  {
+    "id": "factorial",
+    "title": "Recursive factorial",
+    "description": "Call rows, call depth and return values.",
+    "file": "factorial.py"
+  },
+  {
+    "id": "vowel-counter",
+    "title": "Vowel counter (input, strings)",
+    "description": "Read a word with input() and count its vowels. Uses the Program inputs box.",
+    "file": "vowel-counter.py",
+    "stdin": ["education"]
+  }
+]

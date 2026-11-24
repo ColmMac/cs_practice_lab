@@ -3,6 +3,8 @@ import { CodeEditor } from './components/editor/CodeEditor'
 import { InputsPanel } from './components/editor/InputsPanel'
 import { Toolbar } from './components/layout/Toolbar'
 import { ErrorBanner } from './components/table/ErrorBanner'
+import { InputPrompt } from './components/table/InputPrompt'
+import { TableControls } from './components/table/TableControls'
 import { TraceTable } from './components/table/TraceTable'
 import { useStore } from './store'
 
@@ -48,6 +50,8 @@ export function App() {
                 </p>
               )}
               <ErrorBanner result={result} />
+              {result.status === 'awaiting-input' && <InputPrompt prompt={result.inputRequest?.prompt ?? ''} />}
+              {result.steps.length > 0 && <TableControls />}
               <TraceTable result={result} stale={stale} />
             </>
           )}
