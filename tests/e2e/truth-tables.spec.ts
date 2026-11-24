@@ -81,3 +81,28 @@ test('study mode: a right and a wrong answer are graded, then Exit restores the 
   await expect(boxes).toHaveCount(0)
   await expect.poll(() => rowsOf(page)).toHaveLength(4)
 })
+
+test('export: downloads the key and the worksheet as Markdown, and is disabled for an invalid expression', async ({ page }) => {
+  await page.goto('/truth-tables?preset=half-adder')
+  await expect(page.getByRole('table', { name: 'Truth table' }).locator('tbody tr')).toHaveCount(4)
+
+  await page.getByRole('button', { name: /export/i }).click()
+  const dialog = page.getByRole('dialog', { name: 'Export' })
+  const [key] = await Promise.all([page.waitForEvent('download'), dialog.getByRole('button', { name: 'Download .md' }).click()])
+  expect(key.suggestedFilename()).toBe('truth-table.md')
+  const { readFile } = await import('node:fs/promises')
+  const keyText = await readFile((await key.path())!, 'utf8')
+  expect(keyText).toContain('| `A` | `B` | `S` | `C` |')
+  expect(keyText).toContain('| `1` | `1` | `0` | `1` |')
+
+  await dialog.getByRole('radio', { name: 'Worksheet' }).click()
+  await expect(dialog.getByText('Blanks 8 cells')).toBeVisible()
+  const [sheet] = await Promise.all([page.waitForEvent('download'), dialog.getByRole('button', { name: 'Download .md' }).click()])
+  expect(sheet.suggestedFilename()).toBe('truth-table-worksheet.md')
+  const sheetText = await readFile((await sheet.path())!, 'utf8')
+  expect(sheetText).toContain('| `1` | `1` |  |  |')
+
+  await page.keyboard.press('Escape')
+  await page.locator('#truth-expr').fill('A AND')
+  await expect(page.getByRole('button', { name: /export/i })).toBeDisabled()
+})

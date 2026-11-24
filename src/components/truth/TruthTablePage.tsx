@@ -5,7 +5,9 @@ import { Panel } from '../ui/Panel'
 import { SegmentedToggle } from '../ui/SegmentedToggle'
 import { ToolHeader } from '../ui/ToolHeader'
 import { Button } from '../ui/Button'
+import { ExportUnavailable } from '../ui/ExportPanel'
 import { ExpressionInput } from './ExpressionInput'
+import { TruthExport } from './TruthExport'
 import { TruthStudyPanel } from './TruthStudyPanel'
 import { TruthTableView } from './TruthTableView'
 import { useTruthStudy } from './useTruthStudy'
@@ -54,6 +56,11 @@ export function TruthTablePage() {
             { value: 'on', label: 'On', hint: 'Add a column for each sub-expression' },
           ]}
         />
+        {s.table && s.parsed.ok ? (
+          <TruthExport table={s.table} expression={s.parsedSource} study={study} />
+        ) : (
+          <ExportUnavailable reason="Enter a valid expression first" />
+        )}
         <Button
           aria-pressed={study.active}
           disabled={!study.active && !s.table}
