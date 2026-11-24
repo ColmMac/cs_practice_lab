@@ -1,2 +1,32 @@
 @import 'tailwindcss';
 @custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * Printing / Save as PDF. The app itself is hidden (`print:hidden` in App) and only <PrintRegion> shows:
+ * a plain black-on-white table that is rebuilt just before printing.
+ */
+@page {
+  margin: 12mm;
+}
+
+@media print {
+  html,
+  body {
+    background: #fff !important;
+  }
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .print-region thead {
+    display: table-header-group; /* repeat the header row on every page */
+  }
+  .print-region tr {
+    break-inside: avoid; /* never split a row across two pages */
+    page-break-inside: avoid;
+  }
+  .print-region h2,
+  .print-region pre {
+    break-after: avoid;
+  }
+}

@@ -29,7 +29,13 @@ Client-side Python trace-table generator (React + TS + Vite, Pyodide in a Web Wo
 - Study Mode grading lives in `src/core/study` (language-neutral). A language supplies `parseAnswer` (and optionally `looseParse`); never put language rules in core. Grading messages must never contain the ground truth.
 - Study Mode answer boxes: keep the keyboard contract (Enter/↓ next, Shift+Enter/↑ previous, Alt+H hint, Alt+R reveal, Ctrl/⌘+Enter still runs). A row's own keydown handler must ignore keys that bubble up from an input (it once swallowed Space).
 - In tests, `getAllByText(/Correct/)` also matches the always-rendered `<details>` table; read feedback through each box's `aria-describedby` (`verdicts()` in studyMode.test.tsx).
-- Playwright is installed but its browsers are not (a ~150 MB download needing approval). Real-browser checks have been done in the app's browser pane.
+- Playwright is installed but its browsers are not (a ~150 MB download needing approval). Real-browser checks have been done in the app's browser pane (which can be throttled to ~2 animation frames/s and has no focus: wait for the `scroll` event plus a few frames, not a fixed 300 ms).
+- `useTableData(result)` is the ONE source of "the table as shown" (live, or the frozen study view). The screen, exports and print all read it. The exported program/input come from `ranInput` (what produced the table), never from the editor.
+- Exports (`src/core/export`) all build from one `TableModel`. Keep the CSV formula-injection guard, the Markdown code-span/pipe escaping and the LaTeX escaping. After changing an exporter, review the golden files in `tests/fixtures/export/` BY HAND.
+- Security headers live ONLY in `public/_headers` (also read by `vite.config.ts`). Test CSP changes with `npm run build` + `npm run preview` (the dev server omits the CSP on purpose). Note: devtools-evaluated JS bypasses the `eval` restriction, so it can't prove eval is blocked.
+- Editor colours are `PALETTES` in `editorTheme.ts` and are contrast-tested (including the row-highlight overlays). Change a colour, run `tests/unit/editorTheme.test.ts`. **Audit accessibility on the REAL page** (axe in the browser pane, light + dark), not just jsdom: the unit tests replace CodeMirror, and two real problems were only visible there.
+- React Compiler lint: don't return an object that mixes ref callbacks with plain values from a hook (`react-hooks/refs`); return them separately (see `useRowWindow`).
+- Tables above 300 rows are windowed (`useRowWindow`), except in study mode.
 
 ## Status
-M0-M4 are done (see PLAN.md §9 and §11-§14). Next: **M5** — exports (Markdown, CSV, LaTeX, JSON, PNG, print/PDF; answer key vs blank worksheet), virtualised long tables, accessibility pass, deploy headers/CSP.
+M0-M5 are done: the plan in PLAN.md is complete (see §9 and §11-§15). Not done / not verifiable here: LaTeX compilation, Lighthouse, real print pagination, Playwright E2E (see PLAN.md §15). Ideas for later are listed at the end of §15.

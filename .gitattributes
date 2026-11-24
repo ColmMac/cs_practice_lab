@@ -1,1 +1,3 @@
 * text=auto eol=lf
+# Golden CSV files are CRLF on purpose (RFC 4180): keep them byte-exact, do not normalise line endings.
+tests/fixtures/export/*.csv -text

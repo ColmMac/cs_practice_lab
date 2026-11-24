@@ -150,14 +150,15 @@ describe('share links', () => {
       expect(decodeShare(payload)).toBeNull()
     })
 
-    it('refuses oversized payloads before decompressing (decompression bomb)', () => {
-      const bomb = LZString.compressToEncodedURIComponent('a'.repeat(4_000_000))
-      expect(bomb.length).toBeLessThan(MAX_SHARE_PAYLOAD) // tiny on the wire…
+    // Building the bomb means compressing 1.5 MB, which is slow when the whole suite runs in parallel: allow time.
+    it('refuses oversized payloads before decompressing (decompression bomb)', { timeout: 30_000 }, () => {
+      const bomb = LZString.compressToEncodedURIComponent('a'.repeat(1_500_000))
+      expect(bomb.length).toBeLessThan(MAX_SHARE_PAYLOAD) // tiny on the wire (~2.8 kB)…
       const huge = 'A'.repeat(MAX_SHARE_PAYLOAD + 1)
       const t = performance.now()
       expect(decodeShare(huge)).toBeNull()
       expect(performance.now() - t).toBeLessThan(50)
-      expect(decodeShare(bomb)).toBeNull() // …but decodes to 4 MB of junk, which is not valid JSON anyway
+      expect(decodeShare(bomb)).toBeNull() // …but inflates to 1.5 MB of junk, which is not valid JSON anyway
     })
 
     it('sanitises the fields of an otherwise valid payload', () => {

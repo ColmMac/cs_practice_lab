@@ -7,6 +7,7 @@ import { gradeAnswer, type GradingLanguage } from '../core/study/grade'
 import { buildStudyModel, type StudyView } from '../core/study/model'
 import { rememberSession, sanitizeStudyConfig, MAX_ANSWER_LENGTH, type StudySessionData } from '../core/study/session'
 import { newSeed } from '../core/study/rng'
+import type { ExportVariant } from '../core/export/tableModel'
 import type { Grade, StudyConfig } from '../core/study/types'
 import { DEFAULT_TRACE_OPTIONS, type TraceOptions, type TraceResult, type WatchExpression } from '../core/types'
 import { defaultWorkspace, LIMITS, type Workspace } from '../core/workspace'
@@ -36,6 +37,12 @@ interface AppState extends PersistedState {
   result: TraceResult | null
   /** What produced `result` (code, inputs, watches, options); if the current signature differs, the table is stale. */
   ranSig: string | null
+  /** The exact program and input behind `result`: exports use these, never the (possibly edited) editor text. */
+  ranInput: { code: string; stdin: string[] } | null
+  /** The first-visit welcome has been dismissed (remembered in its own localStorage key, not in the workspace). */
+  welcomed: boolean
+  /** Export dialog choices (not persisted). */
+  exportOptions: { variant: ExportVariant; includeCode: boolean }
 
   /** stepIndex of the table row under the mouse / focused, and of the clicked row. */
   hoverStep: number | null
@@ -55,6 +62,9 @@ interface AppState extends PersistedState {
   sharedLinkInvalid: boolean
 
   init(): void
+  /** Try loading Python again after it failed (offline, blocked CDN…). */
+  retryRuntime(): Promise<void>
+  dismissWelcome(): void
   setCode(code: string): void
   setStdinText(text: string): void
   loadPreset(id: string): void
@@ -64,6 +74,7 @@ interface AppState extends PersistedState {
   setGranularity(g: Workspace['granularity']): void
   setDisplayStyle(d: Workspace['displayStyle']): void
   setHoverStep(i: number | null): void
+  setExportOptions(patch: Partial<AppState['exportOptions']>): void
   selectStep(i: number | null): void
   toggleTheme(): void
 
@@ -148,6 +159,15 @@ function initialTheme(): Theme {
   return typeof matchMedia === 'function' && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
 }
 
+const WELCOME_KEY = 'tts:welcomed'
+function initialWelcomed(): boolean {
+  try {
+    return localStorage.getItem(WELCOME_KEY) === '1'
+  } catch {
+    return false // storage blocked: show it (it just won't be remembered)
+  }
+}
+
 function applyTheme(theme: Theme) {
   document.documentElement.classList.toggle('dark', theme === 'dark')
   try {
@@ -202,7 +222,8 @@ export const useStore = create<AppState>()(
         clearTimeout(rerunTimer)
         rerunTimer = setTimeout(() => {
           const s = get()
-          if (s.result && !s.running) void s.run()
+          // only if the table is really out of date (e.g. loading an example already ran it)
+          if (s.result && !s.running && s.ranSig !== runSignature(s)) void s.run()
         }, 500)
       }
 
@@ -226,6 +247,9 @@ export const useStore = create<AppState>()(
         running: false,
         result: null,
         ranSig: null,
+        ranInput: null,
+        welcomed: initialWelcomed(),
+        exportOptions: { variant: 'key', includeCode: false },
         hoverStep: null,
         selectedStep: null,
         watchErrors: {},
@@ -254,6 +278,26 @@ export const useStore = create<AppState>()(
             .catch(() => {}) // failure is surfaced through runnerStatus
         },
 
+        async retryRuntime() {
+          const runner = getRunner(get().language)
+          try {
+            await runner.init() // a failed runtime starts a fresh worker on the next init()
+          } catch {
+            return // still failing: runnerStatus keeps saying so
+          }
+          const s = get()
+          if (!s.shared && !s.result && s.code.trim() !== '') void s.run()
+        },
+
+        dismissWelcome() {
+          try {
+            localStorage.setItem(WELCOME_KEY, '1')
+          } catch {
+            /* ignore: it just won't be remembered */
+          }
+          set({ welcomed: true })
+        },
+
         setCode: (code) => set({ code }),
         setStdinText: (stdinText) => set({ stdinText }),
 
@@ -278,6 +322,9 @@ export const useStore = create<AppState>()(
             study: null,
           })
           if (watches.length) watches.forEach((w) => void get().validateWatch(w.id))
+          // Built-in examples are safe to run, and a student who picks one expects to see its table.
+          if (get().running) get().cancel()
+          void get().run()
         },
 
         async run() {
@@ -300,6 +347,7 @@ export const useStore = create<AppState>()(
               set((s) => ({
                 result,
                 ranSig: sig,
+                ranInput: { code, stdin: options.stdin },
                 running: false,
                 hoverStep: null,
                 selectedStep: null,
@@ -328,6 +376,7 @@ export const useStore = create<AppState>()(
         setGranularity: (granularity) => set({ granularity }),
         setDisplayStyle: (displayStyle) => set({ displayStyle }),
         setHoverStep: (hoverStep) => set({ hoverStep }),
+        setExportOptions: (patch) => set((s) => ({ exportOptions: { ...s.exportOptions, ...patch } })),
         selectStep: (i) => set((s) => ({ selectedStep: s.selectedStep === i ? null : i })),
 
         toggleTheme() {
@@ -511,6 +560,7 @@ export const useStore = create<AppState>()(
             running: false,
             result: null,
             ranSig: null,
+            ranInput: null,
             watchErrors: {},
             hoverStep: null,
             selectedStep: null,
@@ -526,7 +576,7 @@ export const useStore = create<AppState>()(
           const backup = get().shared?.backup
           if (!backup) return
           clearTimeout(rerunTimer)
-          set({ ...backup, shared: null, result: null, ranSig: null, watchErrors: {}, study: null })
+          set({ ...backup, shared: null, result: null, ranSig: null, ranInput: null, watchErrors: {}, study: null })
           clearShareHash()
           if (backup.code.trim() !== '') void get().run() // it is the visitor's own code: bring their table back
         },

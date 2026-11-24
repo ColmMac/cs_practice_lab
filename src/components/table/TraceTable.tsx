@@ -1,34 +1,26 @@
 import { useMemo, type KeyboardEvent } from 'react'
 import { columnLabel, LINE_COL, OUTPUT_COL } from '../../core/derive/columns'
-import { deriveRows } from '../../core/derive/rows'
 import { hintFor } from '../../core/study/hint'
 import { cellKey } from '../../core/study/types'
 import type { TraceResult } from '../../core/types'
-import { getLanguage } from '../../languages/registry'
 import { useStore } from '../../store'
 import { focusInput, nextStudyInput } from '../study/navigation'
 import { StudyCell } from '../study/StudyCell'
-import { useStudyModel } from '../study/useStudyModel'
-import { useColumns } from './useColumns'
+import { useRowWindow, VIRTUALISE_ABOVE } from './useRowWindow'
+import { useTableData } from './useTableData'
 
 const th = 'border border-slate-300 px-3 py-1.5 text-left font-semibold dark:border-slate-700'
 const td = 'border border-slate-300 px-3 py-1 font-mono dark:border-slate-700'
 
 export function TraceTable({ result, stale }: { result: TraceResult; stale: boolean }) {
-  const { granularity, displayStyle, selectedStep, hoverStep, setHoverStep, selectStep } = useStore()
+  const { selectedStep, hoverStep, setHoverStep, selectStep } = useStore()
   const { setAnswer, revealCell, toggleHint, selectStepExclusive } = useStore()
   const study = useStore((s) => s.study)
-  const format = getLanguage(result.language).formatValue
-  const { visible } = useColumns(result)
-  const model = useStudyModel(result)
-
-  // In a study session the table is FROZEN: it uses the columns/modes captured when the session began.
-  const columns = study ? study.columns : visible
-  const rows = useMemo(
-    () => model?.rows ?? deriveRows(result, columns, format, { granularity, display: displayStyle }),
-    [model, result, columns, format, granularity, displayStyle],
-  )
+  // In a study session the table is FROZEN: useTableData returns the columns/modes captured when it began.
+  const { columns, rows, model } = useTableData(result)
   const questions = useMemo(() => new Map((model?.cells ?? []).map((c) => [c.key, c])), [model])
+  // Long traces render only the rows near the viewport. Study mode renders them all (keyboard navigation needs the boxes).
+  const { view: win, refs: { body: bodyRef, row: rowRef } } = useRowWindow(rows.length, !study && rows.length > VIRTUALISE_ABOVE)
 
   if (result.steps.length === 0) return null
 
@@ -40,6 +32,13 @@ export function TraceTable({ result, stale }: { result: TraceResult; stale: bool
     else groups.push({ label, span: 1 })
   }
   const showGroups = new Set(columns.filter((c) => c.kind === 'var').map((c) => c.group)).size > 1
+  const headerRows = showGroups ? 2 : 1
+  const spacer = (height: number) =>
+    height > 0 ? (
+      <tr aria-hidden="true" style={{ height }}>
+        <td colSpan={columns.length} style={{ padding: 0, border: 0 }} />
+      </tr>
+    ) : null
 
   /** Enter / ↓ next, Shift+Enter / ↑ previous, Alt+H hint, Alt+R reveal: all from inside an answer box. */
   const onStudyKey = (e: KeyboardEvent<HTMLTableElement>) => {
@@ -73,15 +72,26 @@ export function TraceTable({ result, stale }: { result: TraceResult; stale: bool
           No rows to show in Compact mode (nothing changed). Switch to “Every line” to see each executed line.
         </p>
       )}
-      <table className="w-full border-collapse text-sm" aria-label="Trace table" onKeyDown={study ? onStudyKey : undefined}>
+      <table
+        className="w-full border-collapse text-sm"
+        aria-label="Trace table"
+        // a windowed table must still tell assistive technology how long it really is
+        aria-rowcount={win.active ? rows.length + headerRows : undefined}
+        onKeyDown={study ? onStudyKey : undefined}
+      >
         <thead className="sticky top-0 z-10 bg-slate-100 dark:bg-slate-800">
           {showGroups && (
             <tr>
-              {groups.map((g, i) => (
-                <th key={i} colSpan={g.span} className={`${th} text-center text-xs text-slate-600 dark:text-slate-400`}>
-                  {g.label}
-                </th>
-              ))}
+              {groups.map((g, i) =>
+                g.label === '' ? (
+                  // columns with no group (Line, Return, Output…): a plain empty cell, not an empty header
+                  <td key={i} colSpan={g.span} aria-hidden="true" className={th} />
+                ) : (
+                  <th key={i} colSpan={g.span} scope="colgroup" className={`${th} text-center text-xs text-slate-600 dark:text-slate-400`}>
+                    {g.label}
+                  </th>
+                ),
+              )}
             </tr>
           )}
           <tr>
@@ -92,14 +102,19 @@ export function TraceTable({ result, stale }: { result: TraceResult; stale: bool
             ))}
           </tr>
         </thead>
-        <tbody>
-          {rows.map((row) => {
+        <tbody ref={bodyRef}>
+          {spacer(win.padTop)}
+          {(win.indices ?? rows.map((_, i) => i)).map((index) => {
+            const row = rows[index]!
             const step = row.stepIndices[0]!
             const selected = selectedStep !== null && row.stepIndices.includes(selectedStep)
             const hovered = hoverStep !== null && row.stepIndices.includes(hoverStep)
             return (
               <tr
                 key={row.rowIndex}
+                ref={win.active ? rowRef : undefined}
+                data-index={index}
+                aria-rowindex={win.active ? index + 1 + headerRows : undefined}
                 // in study mode Tab should hop from answer to answer, not stop on every row first
                 tabIndex={study ? -1 : 0}
                 aria-current={selected || undefined}
@@ -123,7 +138,9 @@ export function TraceTable({ result, stale }: { result: TraceResult; stale: bool
                     ? 'bg-yellow-200 dark:bg-yellow-900/50'
                     : hovered
                       ? 'bg-yellow-100 dark:bg-yellow-900/25'
-                      : 'odd:bg-white even:bg-slate-50 dark:odd:bg-slate-950 dark:even:bg-slate-900'
+                      : index % 2 === 0
+                        ? 'bg-white dark:bg-slate-950'
+                        : 'bg-slate-50 dark:bg-slate-900' // by index, not CSS odd/even: the window slides and CSS parity would flicker
                 }`}
               >
                 {columns.map((c) => {
@@ -174,6 +191,7 @@ export function TraceTable({ result, stale }: { result: TraceResult; stale: bool
               </tr>
             )
           })}
+          {spacer(win.padBottom)}
         </tbody>
       </table>
     </div>

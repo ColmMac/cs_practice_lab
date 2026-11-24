@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { getLanguage } from '../../languages/registry'
 import { useStore } from '../../store'
 import { diagnosticsFor } from './diagnostics'
+import { darkTheme, editorChrome, lightTheme } from './editorTheme'
 import { setTraceLines, traceHighlight } from './traceHighlight'
 
 export function CodeEditor() {
@@ -28,6 +29,7 @@ export function CodeEditor() {
     () => [
       ...(langExt ? [langExt] : []),
       traceHighlight,
+      editorChrome,
       // Installs the lint state + underline decorations permanently. Without it, setDiagnostics() would
       // append them to the config at runtime, and @uiw/react-codemirror's reconfigures would discard them.
       linter(null),
@@ -72,7 +74,7 @@ export function CodeEditor() {
       onChange={setCode}
       onCreateEditor={setView}
       extensions={extensions}
-      theme={theme}
+      theme={theme === 'dark' ? darkTheme : lightTheme}
       height="100%"
       className="h-full text-sm"
       aria-label="Code editor"

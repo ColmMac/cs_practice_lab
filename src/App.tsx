@@ -1,6 +1,9 @@
 import { useEffect } from 'react'
 import { CodeEditor } from './components/editor/CodeEditor'
 import { InputsPanel } from './components/editor/InputsPanel'
+import { PrintRegion } from './components/export/PrintRegion'
+import { Welcome } from './components/layout/Welcome'
+import { EmptyState } from './components/table/EmptyState'
 import { Toolbar } from './components/layout/Toolbar'
 import { ErrorBanner } from './components/table/ErrorBanner'
 import { InputPrompt } from './components/table/InputPrompt'
@@ -12,7 +15,7 @@ import { WatchPanel } from './components/editor/WatchPanel'
 import { runSignature, useStore } from './store'
 
 export function App() {
-  const { init, result, ranSig, running, study, exitStudy } = useStore()
+  const { init, result, ranSig, study, exitStudy, shared } = useStore()
   const signature = useStore((s) => runSignature(s))
   useEffect(() => init(), [init])
 
@@ -38,7 +41,8 @@ export function App() {
   const stale = result !== null && ranSig !== signature
 
   return (
-    <div className="flex h-screen flex-col bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+    <>
+    <div className="flex h-screen flex-col bg-white text-slate-900 print:hidden dark:bg-slate-950 dark:text-slate-100">
       <Toolbar />
       <SharedBanner />
       <main className="grid min-h-0 flex-1 grid-cols-1 gap-4 p-4 lg:grid-cols-[minmax(320px,2fr)_3fr]">
@@ -50,11 +54,9 @@ export function App() {
           <WatchPanel />
         </section>
 
-        <section className="min-h-0 overflow-auto" aria-label="Trace">
+        <section className="min-h-0 overflow-auto" aria-label="Trace" data-scroll-parent>
           {result === null ? (
-            <p className="rounded border border-dashed border-slate-300 p-6 text-sm text-slate-600 dark:border-slate-700 dark:text-slate-400">
-              {running ? 'Running…' : 'Press ▶ Run (or Ctrl/⌘ + Enter) to generate the trace table.'}
-            </p>
+            <EmptyState />
           ) : (
             <>
               {stale && !study && (
@@ -70,6 +72,7 @@ export function App() {
                   </button>
                 </p>
               )}
+              {!shared && <Welcome />}
               <ErrorBanner result={result} />
               {result.status === 'awaiting-input' && <InputPrompt prompt={result.inputRequest?.prompt ?? ''} />}
               {result.steps.length > 0 && (study ? <StudyToolbar result={result} /> : <TableControls result={result} />)}
@@ -79,5 +82,7 @@ export function App() {
         </section>
       </main>
     </div>
+    <PrintRegion />
+    </>
   )
 }

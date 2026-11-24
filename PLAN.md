@@ -785,3 +785,58 @@ Verified in a real browser (Pyodide, Python 3.14) with real key presses: Tab to 
 Bugs found while building this (each now has a test): the table row's Enter/Space handler would have swallowed spaces typed in an answer box (it now only reacts to keys pressed on the row itself); a hyphenated unquoted word is a legitimate "forgot the quotes" case; the literal parser's nesting limit was off by one.
 
 Test counts at the end of M4: 128 tracer tests (each on Python 3.12, 3.13, 3.14) and 545 unit tests.
+
+---
+
+## 15. M5 implementation notes (deviations from the plan above)
+
+### What was verified, and how
+
+| Claim | Evidence |
+|-------|----------|
+| Every export is correct | `tests/fixtures/export/*` are real tables in each format, **read by hand** before being accepted (same rule as the preset goldens). The digit-sum Markdown/CSV/LaTeX match the table verified in M2; the factorial LaTeX document shows `fact.n`, Return and `result`. Plus 120+ unit tests of escaping, and downloads captured and inspected in the production build under the production CSP (BOM bytes `ef bb bf`, CRLF, JSON schema, 963×1617 PNGs on white). |
+| The PNGs look right | The exported images were displayed and viewed: black-on-white exam tables, answer key and worksheet, independent of the app theme. |
+| Print works | The print rules are in the shipped CSS, firing `beforeprint` builds the region, and applying the print rules on screen hides the whole app and shows only the table. |
+| Accessibility | axe-core (the engine behind Lighthouse's accessibility audit): 16 jsdom states in the unit suite, and **12 real-browser audits** (6 states × light and dark, including colour contrast, the real CodeMirror editor and the row-highlight overlay), all with zero violations. |
+| The CSP is enforced and sufficient | Forbidden loads produced real `securitypolicyviolation` events (`connect-src`, `script-src-elem`, `img-src`) while Pyodide ran in its worker and `data:` images (PNG export) worked, with no console violations. Neither our bundles nor Pyodide's loader use `eval` / `new Function`. |
+| Long tables | 1,000 rows → 28–54 in the DOM; at 11 scroll positions every rendered row matched the full CSV export, rows were contiguous, and the viewport was full. |
+
+### Not verified (honest limits)
+
+- **LaTeX was not compiled**: no TeX installation here. The output is checked by a structural linter (balanced braces and environments, no unescaped specials, hostile `\end{verbatim}`) and by reading it, but "opens in Overleaf" is not demonstrated.
+- **Lighthouse was not run** (not installed). axe-core is the evidence instead, and it matches the plan's goal (no accessibility violations) rather than the literal "score ≥ 95".
+- **Real print pagination** (header repeated per page, rows not split) needs a print engine; only the CSS and the DOM were checked.
+- **Scroll smoothness at 60 fps**: the browser pane used for checking was throttled to ~2 animation frames per second (and scroll events are delivered per frame), so only the *settled* result could be verified.
+- **Playwright** is still not set up (needs a ~150 MB browser download).
+
+### Deviations and discoveries
+
+| Topic | Plan said | What was built / learned |
+|-------|-----------|--------------------------|
+| Worksheet | masked cells blank | The mask is the **Study mode mask** (running session's, else the saved study settings), so a teacher configures it once and gets a matching worksheet. Line numbers always stay. |
+| What is exported | the visible table | Exactly what is shown: `useTableData` is the single source for the screen, exports and print, and returns the *frozen* table during a study session. The program and input exported are those that **produced** the table (`ranInput`), not the possibly-edited editor. |
+| CSV | RFC 4180 + BOM | Also **formula injection** defence: a cell starting with `= + - @` (a printed `=1+1`) gets a leading apostrophe; genuine numbers like `-5` do not. BOM is only on downloads. |
+| Markdown | GFM table | Values are code spans (so `_x_`, `*`, `<b>` stay literal), pipes escaped even in headers (a watch can be `a \| b`), multi-line cells joined with `<br>`, fences longer than any backtick run. |
+| LaTeX | booktabs tabular | Also a standalone document download, `longtable` above 40 rows, nested one-column tabulars for multi-line cells, explicit spaces, control characters made visible, and T1-safe symbol mapping. |
+| PNG | `html-to-image` on a hidden `ExportTable` | Rendered off-screen at 3× on white with inline styles (no CSS or font fetching), the whole table, not the scrolled rows. |
+| Print | `@media print` | The print region is built only on `beforeprint` (works for Ctrl+P too) and removed on `afterprint`. |
+| Virtualisation | above ~300 rows | `useRowWindow` (TanStack Virtual); off during study mode (keyboard navigation needs every box); the scroll container also holds the controls, hence `scrollMargin`; `aria-rowcount`/`aria-rowindex` keep the real size visible to assistive tech; striping by row index, not CSS `odd:`. |
+| Loading an example | not specified | **Runs it immediately** (built-in code is safe); the delayed re-run now skips when the table is already current, so examples with suggested watches run once. |
+| First visit | empty states | Welcome note (dismissible, remembered), "Getting Python ready…" instead of "Press Run", and a clear failed-to-load panel with **Try again** (also on the status badge). |
+| Editor palettes | stock themes | Replaced by explicit light and dark palettes whose contrast is **unit-tested against the background, the active line and both row-highlight overlays** (the stock dark theme was 3.86:1 for line numbers). |
+| Deploy headers | COOP/COEP + CSP in `_headers` | One file, `public/_headers`, also read by `vite.config.ts` so `vite preview` serves exactly what production will; the dev server omits only the CSP (it needs inline scripts and a websocket for hot reload). |
+
+### Bugs found by verification (each now has a test)
+
+- The group-label header row rendered **empty `<th>` cells** (screen readers announce blank headers).
+- The real editor had **no accessible name** (the `aria-label` landed on a wrapper), invisible to the unit tests because they replace the editor; found only by auditing the real page.
+- Editor contrast failures (stock dark theme) and dim helper text (`text-slate-500` on dark), and placeholders without an explicit colour.
+- A trap in my own export test: `Blob.text()` silently strips a UTF-8 BOM, so BOM presence must be checked on the bytes.
+- A flaky share-link bomb test (it built a 4 MB bomb); now smaller with a generous timeout.
+- A React Compiler lint rule (`react-hooks/refs`) treated any hook result containing ref callbacks as ref-carrying; refs are now returned separately from layout numbers.
+
+Test counts at the end of M5: 128 tracer tests (each on Python 3.12, 3.13, 3.14) and 739 unit tests.
+
+### Remaining ideas (not started)
+
+JavaScript / Java / C++ runners (see the adapter notes above), study mode for languages beyond Python, a worksheet "answer sheet" layout with the program beside the table, drag-and-drop column reordering, Playwright E2E in CI, and a Lighthouse run once it is installed.

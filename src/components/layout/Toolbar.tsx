@@ -1,6 +1,7 @@
 import { getLanguage } from '../../languages/registry'
 import { useStore } from '../../store'
 import { RuntimeStatusBadge } from './RuntimeStatusBadge'
+import { ExportMenu } from '../export/ExportMenu'
 import { StudyToggle } from '../study/StudyToggle'
 import { ShareButton } from './ShareButton'
 
@@ -53,6 +54,7 @@ export function Toolbar() {
 
       <div className="ml-auto flex items-center gap-3">
         <RuntimeStatusBadge />
+        <ExportMenu />
         <ShareButton />
         <button
           type="button"

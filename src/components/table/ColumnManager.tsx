@@ -90,11 +90,11 @@ export function ColumnManager({ result }: { result: TraceResult }) {
           <div className="mt-3 space-y-1.5 border-t border-slate-200 pt-3 dark:border-slate-700">
             <label className="flex items-start gap-2">
               <input type="checkbox" checked={showEphemeral} onChange={(e) => setShowEphemeral(e.target.checked)} className="mt-0.5" />
-              <span>Show temporary variables <span className="text-xs text-slate-500">(loop variables inside comprehensions)</span></span>
+              <span>Show temporary variables <span className="text-xs text-slate-600 dark:text-slate-400">(loop variables inside comprehensions)</span></span>
             </label>
             <label className="flex items-start gap-2">
               <input type="checkbox" checked={showCallables} onChange={(e) => setShowCallables(e.target.checked)} className="mt-0.5" />
-              <span>Show functions &amp; modules <span className="text-xs text-slate-500">(runs the program again)</span></span>
+              <span>Show functions &amp; modules <span className="text-xs text-slate-600 dark:text-slate-400">(runs the program again)</span></span>
             </label>
             <button type="button" className={`${btn} mt-1 px-2 py-1`} onClick={resetColumns}>
               Reset columns

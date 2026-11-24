@@ -55,7 +55,7 @@ export function WatchPanel() {
                   aria-describedby={error ? errId : undefined}
                   placeholder="e.g. arr[i]   len(items)   i < n"
                   spellCheck={false}
-                  className={`min-w-0 flex-1 rounded border bg-white px-2 py-1 font-mono text-sm text-slate-900 dark:bg-slate-900 dark:text-slate-100 ${
+                  className={`min-w-0 flex-1 rounded border bg-white px-2 py-1 font-mono text-sm text-slate-900 placeholder:text-slate-500 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-400 ${
                     error ? 'border-red-500' : 'border-slate-300 dark:border-slate-700'
                   }`}
                 />

@@ -34,14 +34,8 @@ export const traceLinesField = StateField.define<DecorationSet>({
   provide: (f) => EditorView.decorations.from(f),
 })
 
-/** Line decorations driven by `setTraceLines`: soft for hover, strong with a left bar for the selected row. */
+/** Line decorations driven by `setTraceLines`: soft for hover, strong with a left bar for the selected row.
+ * Their colours are per theme and live in editorTheme.ts (they are part of the contrast check). */
 export const traceHighlight = [
   traceLinesField,
-  EditorView.baseTheme({
-    '.cm-trace-hover': { backgroundColor: 'rgba(250, 204, 21, 0.20)' },
-    '.cm-trace-selected': {
-      backgroundColor: 'rgba(250, 204, 21, 0.42)',
-      boxShadow: 'inset 4px 0 0 #d97706',
-    },
-  }),
 ]

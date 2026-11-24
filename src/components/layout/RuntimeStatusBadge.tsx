@@ -24,10 +24,16 @@ function describe(s: RunnerStatus): { text: string; tone: string } {
 
 export function RuntimeStatusBadge() {
   const status = useStore((s) => s.runnerStatus)
+  const retryRuntime = useStore((s) => s.retryRuntime)
   const { text, tone } = describe(status)
   return (
-    <span role="status" className={`rounded px-2 py-1 text-xs font-medium ${tone}`}>
+    <span role="status" className={`inline-flex items-center gap-2 rounded px-2 py-1 text-xs font-medium ${tone}`}>
       {text}
+      {status.state === 'failed' && (
+        <button type="button" onClick={() => void retryRuntime()} className="rounded border border-current px-1.5 py-0.5">
+          Retry
+        </button>
+      )}
     </span>
   )
 }

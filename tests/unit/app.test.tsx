@@ -313,7 +313,35 @@ describe('queued re-runs', () => {
     queueRerun()
     act(() => useStore.getState().loadPreset('factorial'))
     await act(async () => { await new Promise((r) => setTimeout(r, 700)) })
-    expect(runSpy).toHaveBeenCalledTimes(1) // only the initial run
+    // the initial run + the preset's own run: the stale timer added nothing
+    expect(runSpy).toHaveBeenCalledTimes(2)
+    expect(runSpy.mock.calls[1]![0]).toContain('def fact(n):')
+  })
+
+  it('loading an example runs it straight away, with its prepared input', async () => {
+    const { runSpy } = mount()
+    await screen.findByRole('table')
+    act(() => useStore.getState().loadPreset('vowel-counter'))
+    await waitFor(() => expect(runSpy).toHaveBeenCalledTimes(2))
+    expect(runSpy.mock.calls[1]![0]).toContain('input("Enter a word: ")')
+    expect(runSpy.mock.calls[1]![1].stdin).toEqual(['education'])
+  })
+
+  it('an example with suggested watches runs ONCE (validating them does not trigger a second run)', async () => {
+    const { runSpy } = mount()
+    await screen.findByRole('table')
+    act(() => useStore.getState().loadPreset('bubble-sort'))
+    expect(useStore.getState().watches).toHaveLength(1)
+    await act(async () => { await new Promise((r) => setTimeout(r, 900)) })
+    expect(runSpy).toHaveBeenCalledTimes(2)
+    expect(runSpy.mock.calls[1]![1].watches).toHaveLength(1) // the first run already includes the watch
+  })
+
+  it('a table that really is out of date is still re-run by the delayed re-run', async () => {
+    const { runSpy } = mount()
+    await screen.findByRole('table')
+    act(() => void useStore.getState().addWatch('n')) // changes what is recorded, nothing else re-ran it
+    await waitFor(() => expect(runSpy).toHaveBeenCalledTimes(2), { timeout: 3000 })
   })
 
   it('...nor after a shared link replaces the workspace', async () => {
