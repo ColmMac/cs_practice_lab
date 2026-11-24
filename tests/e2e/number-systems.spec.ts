@@ -181,3 +181,68 @@ test.describe('binary addition visualiser', () => {
     await expect(page.getByTestId('verdict')).toContainText('5 + 1 = 6')
   })
 })
+
+test.describe('practice mode', () => {
+  const open = async (page: import('@playwright/test').Page) => {
+    await page.goto('/number-systems')
+    await page.getByRole('radiogroup', { name: 'Mode' }).getByRole('radio', { name: 'Practice' }).click()
+    await expect(page.getByTestId('question')).toHaveCount(8)
+  }
+  const box = (page: import('@playwright/test').Page, n: number) => page.getByRole('textbox', { name: `Answer to question ${n}` })
+
+  test('a right answer and a wrong one are graded, and the working appears only after checking', async ({ page }) => {
+    await open(page)
+    const first = page.getByTestId('question').first()
+    expect(await first.getAttribute('data-kind')).toBe('dec2bin')
+    const n = Number(/Convert (\d+) to/.exec((await first.getByTestId('prompt').textContent()) ?? '')![1])
+    await expect(page.getByTestId('working')).toHaveCount(0)
+
+    await box(page, 1).fill('0b ' + n.toString(2).padStart(8, '0'))
+    await box(page, 2).fill('not a number')
+    await page.getByRole('button', { name: 'Check answers' }).click()
+
+    await expect(first.locator('[id^="study-msg-"]')).toContainText('Correct')
+    await expect(page.getByTestId('question').nth(1).getByText(/Not correct/)).toBeVisible()
+    await expect(page.getByRole('status').filter({ hasText: 'Score:' })).toContainText('1 / 8')
+    await expect(first.getByTestId('working')).toContainText('weight')
+  })
+
+  test('a missing leading zero is Almost, and feedback does not reveal the answer', async ({ page }) => {
+    await open(page)
+    const first = page.getByTestId('question').first()
+    // Questions are random (the seed URL parameter arrives in N3.5): draw again until the number is below 128,
+    // so that its binary form really has a leading zero to leave out.
+    const read = async () => Number(/Convert (\d+) to/.exec((await first.getByTestId('prompt').textContent()) ?? '')![1])
+    let n = await read()
+    for (let i = 0; i < 40 && n >= 128; i++) {
+      await page.getByRole('button', { name: 'New questions' }).click()
+      n = await read()
+    }
+    expect(n).toBeLessThan(128)
+    await box(page, 1).fill(n.toString(2))
+    await page.getByRole('button', { name: 'Check answers' }).click()
+    const msg = first.locator('[id^="study-msg-"]')
+    await expect(msg).toContainText('Almost')
+    await expect(msg).toContainText('all 8 bits')
+    await expect(msg).not.toContainText(n.toString(2).padStart(8, '0'))
+  })
+
+  test('reveal shows the answer and the working; New questions clears answers; keyboard moves on', async ({ page }) => {
+    await open(page)
+    await box(page, 1).focus()
+    await page.keyboard.press('Alt+r')
+    await expect(page.getByTestId('revealed-cell')).toHaveCount(1)
+    await expect(page.getByTestId('working')).toHaveCount(1)
+    await expect(box(page, 2)).toBeFocused()
+
+    await box(page, 2).fill('1')
+    await page.keyboard.press('Enter')
+    await expect(box(page, 3)).toBeFocused()
+    await page.keyboard.press('Shift+Enter')
+    await expect(box(page, 2)).toBeFocused()
+
+    await page.getByRole('button', { name: 'New questions' }).click()
+    await expect(page.getByTestId('revealed-cell')).toHaveCount(0)
+    await expect(box(page, 2)).toHaveValue('')
+  })
+})

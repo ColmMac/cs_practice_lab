@@ -29,3 +29,15 @@ export {
   type ShiftResult,
 } from './arith'
 export { parseNumberInput, type NumberBase, type ParseResult } from './parse'
+export {
+  KINDS,
+  PRACTICE_WIDTH,
+  QUESTION_COUNT,
+  explain,
+  generateQuestions,
+  gradeAnswer,
+  hintFor,
+  type AnswerType,
+  type Question,
+  type QuestionKind,
+} from './practice'

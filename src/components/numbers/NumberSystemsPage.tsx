@@ -8,6 +8,7 @@ import { SegmentedToggle } from '../ui/SegmentedToggle'
 import { ToolHeader } from '../ui/ToolHeader'
 import { AdditionView } from './AdditionView'
 import { BitRegister } from './BitRegister'
+import { PracticeView } from './PracticeView'
 import { FIELDS, SHIFTS, sumLine, useBitSandbox, type Note, type ShiftKind } from './useBitSandbox'
 
 function Explain({ note }: { note: Note }) {
@@ -39,7 +40,7 @@ function Explain({ note }: { note: Note }) {
 
 export function NumberSystemsPage() {
   const s = useBitSandbox()
-  const [mode, setMode] = useState<'sandbox' | 'add'>('sandbox')
+  const [mode, setMode] = useState<'sandbox' | 'add' | 'practice'>('sandbox')
   return (
     <>
       <title>{`Number systems · ${BRAND}`}</title>
@@ -55,17 +56,20 @@ export function NumberSystemsPage() {
           options={[
             { value: 'sandbox', label: 'Bit sandbox' },
             { value: 'add', label: 'Addition' },
+            { value: 'practice', label: 'Practice' },
           ]}
         />
-        <SegmentedToggle
-          label="Width"
-          value={String(s.width) as '8' | '16'}
-          onChange={(v) => s.setWidth(Number(v) as Width)}
-          options={[
-            { value: '8', label: '8-bit' },
-            { value: '16', label: '16-bit' },
-          ]}
-        />
+        {mode !== 'practice' && (
+          <SegmentedToggle
+            label="Width"
+            value={String(s.width) as '8' | '16'}
+            onChange={(v) => s.setWidth(Number(v) as Width)}
+            options={[
+              { value: '8', label: '8-bit' },
+              { value: '16', label: '16-bit' },
+            ]}
+          />
+        )}
         {mode === 'sandbox' && (
           <SegmentedToggle
             label="Weights"
@@ -78,7 +82,9 @@ export function NumberSystemsPage() {
           />
         )}
       </ToolHeader>
-      {mode === 'add' ? (
+      {mode === 'practice' ? (
+        <PracticeView />
+      ) : mode === 'add' ? (
         <AdditionView width={s.width} />
       ) : (
         <main className="grid min-h-0 flex-1 content-start gap-4 overflow-auto p-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
