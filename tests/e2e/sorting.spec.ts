@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises'
 import { expect, test, type Page } from '@playwright/test'
 
 test.beforeEach(async ({ page }) => {
@@ -133,6 +134,69 @@ test('changing the list goes back to the start', async ({ page }) => {
   await page.getByLabel(/^List/).fill('3, 2, 1')
   await expect(page.getByTestId('caption')).toContainText('Ready')
   expect(await values(page)).toEqual([3, 2, 1])
+})
+
+const historyRows = async (page: Page) => {
+  const rows = page.getByRole('table', { name: /after each pass/ }).locator('tbody tr')
+  await expect(rows.first()).toBeVisible()
+  return rows.evaluateAll((trs) =>
+    trs.map((tr) => Array.from(tr.querySelectorAll('td')).slice(1).map((td) => td.textContent ?? '')),
+  )
+}
+
+test('the pass table lists every pass and follows the visualiser', async ({ page }) => {
+  await page.goto('/sorting-visualizer')
+  expect(await historyRows(page)).toEqual([
+    ['Start', '5', '1', '4', '2', '8', '', ''],
+    ['1', '1', '4', '2', '5', '8', '4', '3'],
+    ['2', '1', '2', '4', '5', '8', '3', '1'],
+    ['3', '1', '2', '4', '5', '8', '2', '0'],
+  ])
+  const current = page.locator('tr[aria-current="step"]')
+  await expect(current).toContainText('Start')
+  await step(page).click()
+  await expect(current).toHaveCount(1)
+  await expect(current.locator('td').nth(1)).toHaveText('1') // pass 1 is under way
+  for (let i = 0; i < 8; i++) await step(page).click() // finish pass 1, start pass 2
+  await expect(current.locator('td').nth(1)).toHaveText('2')
+  await page.getByRole('button', { name: 'Reset' }).click()
+  await expect(current.locator('td').nth(1)).toHaveText('Start')
+})
+
+test('binary search probes show low, mid and high, and the row follows the step', async ({ page }) => {
+  await page.goto('/sorting-visualizer')
+  await algo(page, 'Binary search')
+  await page.getByLabel('Example').selectOption({ label: SEARCH_LIST })
+  await page.getByLabel(/^Target/).fill('82')
+  const table = page.getByRole('table', { name: /Binary search for 82/ })
+  await expect(table.locator('thead th')).toHaveText(['Current', 'Probe', 'Low', 'Mid', 'High', 'Value at mid', 'Result'])
+  const body = table.locator('tbody tr')
+  await expect(body).toHaveCount(4)
+  await expect(body.nth(0)).toContainText('23 < 82: search right')
+  await expect(body.nth(3)).toContainText('Equal: found')
+  await expect(table.locator('tr[aria-current="step"]')).toHaveCount(0)
+  await step(page).click()
+  await expect(table.locator('tr[aria-current="step"]')).toContainText('23')
+  await step(page).click()
+  await expect(table.locator('tr[aria-current="step"]')).toContainText('38')
+})
+
+test('the pass table exports as a CSV matching what is shown', async ({ page }) => {
+  await page.goto('/sorting-visualizer')
+  await page.getByRole('button', { name: /Export/ }).click()
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('button', { name: /Download \.csv/ }).click(),
+  ])
+  expect(download.suggestedFilename()).toBe('bubble-sort-passes.csv')
+  const text = (await readFile((await download.path())!, 'utf8')).replace(/^\uFEFF/, '')
+  expect(text.trim().split(/\r?\n/)).toEqual([
+    'Pass,[0],[1],[2],[3],[4],Compares,Swaps',
+    'Start,5,1,4,2,8,,',
+    '1,1,4,2,5,8,4,3',
+    '2,1,2,4,5,8,3,1',
+    '3,1,2,4,5,8,2,0',
+  ])
 })
 
 test.describe('axe audit on the real page', () => {

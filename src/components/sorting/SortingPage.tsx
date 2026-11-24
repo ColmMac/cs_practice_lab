@@ -9,6 +9,9 @@ import {
   type AlgorithmId,
 } from '../../core/algorithms'
 import { Button } from '../ui/Button'
+import { ExportUnavailable } from '../ui/ExportPanel'
+import { HistoryExport } from './HistoryExport'
+import { HistoryTable } from './HistoryTable'
 import { Panel } from '../ui/Panel'
 import { SegmentedToggle } from '../ui/SegmentedToggle'
 import { ToolHeader } from '../ui/ToolHeader'
@@ -80,6 +83,7 @@ export function SortingPage() {
             { value: 'fast', label: 'Fast' },
           ]}
         />
+        {s.history ? <HistoryExport table={s.history} /> : <ExportUnavailable reason="Enter a valid list first" />}
       </ToolHeader>
       <main className="grid min-h-0 flex-1 content-start gap-4 overflow-auto p-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         <div className="flex min-w-0 flex-col gap-3">
@@ -149,6 +153,13 @@ export function SortingPage() {
               )}
             </div>
           </Panel>
+          {s.history && (
+            <Panel title={s.search ? 'Probe history' : 'Pass history'}>
+              <div className="p-3">
+                <HistoryTable table={s.history} frame={s.index} />
+              </div>
+            </Panel>
+          )}
         </div>
         <Panel title="Input" className="min-w-0 self-start">
           <div className="flex flex-col gap-3 p-3">

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   AlgorithmError,
   buildFrames,
+  buildHistory,
   findListPreset,
   isSearch,
   LIST_PRESETS,
@@ -11,6 +12,7 @@ import {
   sortedProblem,
   type AlgorithmId,
   type Frame,
+  type HistoryTable,
   type Run,
 } from '../../core/algorithms'
 
@@ -33,6 +35,8 @@ export interface Sorting {
   /** The list as numbers, when it parses (used by the "Sort the list" fix). */
   data: number[] | null
   run: Run | null
+  /** The pass-by-pass table for the run; null when the input is invalid. */
+  history: HistoryTable | null
   frames: Frame[]
   index: number
   frame: Frame
@@ -86,6 +90,7 @@ export function useSorting(): Sorting {
   }, [algo, parsedList, parsedTarget, search, earlyExit])
 
   const frames = useMemo(() => (run ? buildFrames(run) : [EMPTY_FRAME]), [run])
+  const history = useMemo(() => (run ? buildHistory(run) : null), [run])
   const last = frames.length - 1
   const at = Math.min(index, last)
   const isPlaying = playing && at < last
@@ -116,6 +121,7 @@ export function useSorting(): Sorting {
     targetError,
     data,
     run,
+    history,
     frames,
     index: at,
     frame: frames[at]!,

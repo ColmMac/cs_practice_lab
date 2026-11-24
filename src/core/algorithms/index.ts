@@ -14,7 +14,14 @@ export {
   type Step,
 } from './types'
 
-export { buildFrames, frameValues, type Card, type Frame, type Mark } from './frames'
+export {
+  buildHistory,
+  currentHistoryRow,
+  type HistoryColumn,
+  type HistoryRow,
+  type HistoryTable,
+} from './history'
+export { buildFrames,frameValues, type Card, type Frame, type Mark } from './frames'
 export {
   ALGORITHM_INFO,
   findListPreset,
