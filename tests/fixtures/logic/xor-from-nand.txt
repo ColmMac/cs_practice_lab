@@ -1,0 +1,5 @@
+A | B || A NAND B | A NAND (A NAND B) | B NAND (A NAND B) || GATES | DIRECT
+0 | 0 || 1        | 1                 | 1                 || 0     | 0
+0 | 1 || 1        | 1                 | 0                 || 1     | 1
+1 | 0 || 1        | 0                 | 1                 || 1     | 1
+1 | 1 || 0        | 1                 | 1                 || 0     | 0

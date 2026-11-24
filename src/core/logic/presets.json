@@ -1,0 +1,44 @@
+[
+  {
+    "id": "half-adder",
+    "title": "Half adder",
+    "description": "Adds two bits: S is the sum bit and C is the carry.",
+    "source": "S = A XOR B\nC = A AND B"
+  },
+  {
+    "id": "de-morgan-and",
+    "title": "De Morgan: NOT (A AND B)",
+    "description": "NOT (A AND B) is the same as (NOT A) OR (NOT B).",
+    "source": "L = NOT (A AND B)\nR = (NOT A) OR (NOT B)"
+  },
+  {
+    "id": "de-morgan-or",
+    "title": "De Morgan: NOT (A OR B)",
+    "description": "NOT (A OR B) is the same as (NOT A) AND (NOT B).",
+    "source": "L = NOT (A OR B)\nR = (NOT A) AND (NOT B)"
+  },
+  {
+    "id": "alarm",
+    "title": "3-input alarm",
+    "description": "The alarm sounds when it is armed (A) and either the door (B) or the window (C) is open.",
+    "source": "ALARM = A AND (B OR C)"
+  },
+  {
+    "id": "majority",
+    "title": "Majority vote",
+    "description": "The output is 1 when at least two of the three inputs are 1.",
+    "source": "M = (A AND B) OR (A AND C) OR (B AND C)"
+  },
+  {
+    "id": "xor-from-nand",
+    "title": "XOR from NAND gates",
+    "description": "Four NAND gates behave exactly like XOR.",
+    "source": "GATES = (A NAND (A NAND B)) NAND (B NAND (A NAND B))\nDIRECT = A XOR B"
+  },
+  {
+    "id": "full-adder",
+    "title": "Full adder",
+    "description": "Adds A, B and a carry-in C: SUM is the sum bit and COUT the carry-out.",
+    "source": "SUM = (A XOR B) XOR C\nCOUT = (A AND B) OR (C AND (A XOR B))"
+  }
+]
