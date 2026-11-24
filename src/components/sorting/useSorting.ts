@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useQuiz, type Quiz } from './useQuiz'
 import {
   AlgorithmError,
   buildFrames,
@@ -41,6 +42,12 @@ export interface Sorting {
   index: number
   frame: Frame
   playing: boolean
+  /** Quiz mode: the player is replaced by questions, and the frame shown is where the current question starts. */
+  quizOn: boolean
+  quiz: Quiz
+  /** True while questions are still being asked, so nothing that would give the answers away is shown. */
+  quizActive: boolean
+  setQuizOn: (b: boolean) => void
   atStart: boolean
   atEnd: boolean
   setAlgo: (a: AlgorithmId) => void
@@ -65,6 +72,7 @@ export function useSorting(): Sorting {
   const [speed, setSpeed] = useState<Speed>('normal')
   const [index, setIndex] = useState(0)
   const [playing, setPlaying] = useState(false)
+  const [quizOn, setQuizOnState] = useState(false)
 
   const search = isSearch(algo)
 
@@ -91,9 +99,12 @@ export function useSorting(): Sorting {
 
   const frames = useMemo(() => (run ? buildFrames(run) : [EMPTY_FRAME]), [run])
   const history = useMemo(() => (run ? buildHistory(run) : null), [run])
+  const quiz = useQuiz(run)
   const last = frames.length - 1
+  const quizActive = quizOn && !quiz.finished && !quiz.unavailable
+  const shown = quizOn ? (quiz.question ? Math.min(quiz.question.before, last) : last) : -1
   const at = Math.min(index, last)
-  const isPlaying = playing && at < last
+  const isPlaying = playing && !quizOn && at < last
 
   useEffect(() => {
     if (!isPlaying) return
@@ -124,7 +135,15 @@ export function useSorting(): Sorting {
     history,
     frames,
     index: at,
-    frame: frames[at]!,
+    frame: frames[shown >= 0 ? shown : at]!,
+    quizOn,
+    quiz,
+    quizActive,
+    setQuizOn: (b) => {
+      setQuizOnState(b)
+      quiz.restart()
+      restart()
+    },
     playing: isPlaying,
     atStart: at === 0,
     atEnd: at >= last,

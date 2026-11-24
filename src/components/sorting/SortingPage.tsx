@@ -16,6 +16,7 @@ import { Panel } from '../ui/Panel'
 import { SegmentedToggle } from '../ui/SegmentedToggle'
 import { ToolHeader } from '../ui/ToolHeader'
 import { ArrayStage } from './ArrayStage'
+import { QuizPanel } from './QuizPanel'
 import { useSorting, type Speed } from './useSorting'
 
 const fieldClass =
@@ -74,6 +75,15 @@ export function SortingPage() {
           </select>
         </label>
         <SegmentedToggle
+          label="Mode"
+          value={s.quizOn ? 'quiz' : 'watch'}
+          onChange={(v) => s.setQuizOn(v === 'quiz')}
+          options={[
+            { value: 'watch', label: 'Watch' },
+            { value: 'quiz', label: 'Quiz', hint: 'Predict each pass or probe before it is shown' },
+          ]}
+        />
+        <SegmentedToggle
           label="Speed"
           value={s.speed}
           onChange={(v: Speed) => s.setSpeed(v)}
@@ -83,32 +93,38 @@ export function SortingPage() {
             { value: 'fast', label: 'Fast' },
           ]}
         />
-        {s.history ? <HistoryExport table={s.history} /> : <ExportUnavailable reason="Enter a valid list first" />}
+        {s.history ? (
+          <HistoryExport table={s.history} />
+        ) : (
+          <ExportUnavailable reason="Enter a valid list first" />
+        )}
       </ToolHeader>
       <main className="grid min-h-0 flex-1 content-start gap-4 overflow-auto p-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         <div className="flex min-w-0 flex-col gap-3">
           <Panel title="Visualiser">
             <div className="flex flex-col gap-3 p-3">
               <ArrayStage frame={s.frame} count={count} />
-              <div role="group" aria-label="Playback" className="flex flex-wrap items-center gap-2">
-                <Button onClick={s.back} disabled={s.atStart || !s.run}>
-                  ◀ Step back
-                </Button>
-                <Button onClick={s.step} disabled={s.atEnd || !s.run}>
-                  Step ▶
-                </Button>
-                <Button variant="primary" onClick={s.togglePlay} disabled={!s.run}>
-                  {s.playing ? 'Pause' : s.atEnd && s.run ? 'Replay' : 'Play'}
-                </Button>
-                <Button onClick={s.reset} disabled={s.atStart}>
-                  Reset
-                </Button>
-                {s.run && (
-                  <span className="text-xs text-slate-600 dark:text-slate-400">
-                    Step {s.index} of {s.frames.length - 1}
-                  </span>
-                )}
-              </div>
+              {!s.quizOn && (
+                <div role="group" aria-label="Playback" className="flex flex-wrap items-center gap-2">
+                  <Button onClick={s.back} disabled={s.atStart || !s.run}>
+                    ◀ Step back
+                  </Button>
+                  <Button onClick={s.step} disabled={s.atEnd || !s.run}>
+                    Step ▶
+                  </Button>
+                  <Button variant="primary" onClick={s.togglePlay} disabled={!s.run}>
+                    {s.playing ? 'Pause' : s.atEnd && s.run ? 'Replay' : 'Play'}
+                  </Button>
+                  <Button onClick={s.reset} disabled={s.atStart}>
+                    Reset
+                  </Button>
+                  {s.run && (
+                    <span className="text-xs text-slate-600 dark:text-slate-400">
+                      Step {s.index} of {s.frames.length - 1}
+                    </span>
+                  )}
+                </div>
+              )}
               <p
                 data-testid="caption"
                 aria-live="polite"
@@ -117,7 +133,7 @@ export function SortingPage() {
               >
                 {s.frame.caption}
               </p>
-              {s.run && (
+              {s.run && !s.quizActive && (
                 <dl className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
                   <div className="flex gap-1">
                     <dt className="text-slate-600 dark:text-slate-400">Comparisons</dt>
@@ -145,7 +161,9 @@ export function SortingPage() {
                   )}
                   {!s.search && (
                     <div className="flex gap-1">
-                      <dt className="text-slate-600 dark:text-slate-400">{s.algo === 'merge' ? 'Levels done' : 'Passes done'}</dt>
+                      <dt className="text-slate-600 dark:text-slate-400">
+                        {s.algo === 'merge' ? 'Levels done' : 'Passes done'}
+                      </dt>
                       <dd className="font-mono font-semibold">{s.frame.pass}</dd>
                     </div>
                   )}
@@ -153,7 +171,14 @@ export function SortingPage() {
               )}
             </div>
           </Panel>
-          {s.history && (
+          {s.quizOn && (
+            <Panel title="Quiz: predict the next step">
+              <div className="p-3">
+                <QuizPanel quiz={s.quiz} />
+              </div>
+            </Panel>
+          )}
+          {s.history && !s.quizActive && (
             <Panel title={s.search ? 'Probe history' : 'Pass history'}>
               <div className="p-3">
                 <HistoryTable table={s.history} frame={s.index} />
@@ -180,7 +205,11 @@ export function SortingPage() {
                 aria-describedby="sort-list-err"
                 className={`${fieldClass} font-mono ${s.listError ? 'border-red-500' : okBorder}`}
               />
-              <p id="sort-list-err" aria-live="polite" className="min-h-4 text-xs text-red-700 dark:text-red-300">
+              <p
+                id="sort-list-err"
+                aria-live="polite"
+                className="min-h-4 text-xs text-red-700 dark:text-red-300"
+              >
                 {s.listError}
               </p>
               {unsorted && (
@@ -193,7 +222,9 @@ export function SortingPage() {
               <div className="flex flex-col gap-1">
                 <label htmlFor="sort-target" className="text-sm font-semibold">
                   Target{' '}
-                  <span className="text-xs font-normal text-slate-600 dark:text-slate-400">the number to find</span>
+                  <span className="text-xs font-normal text-slate-600 dark:text-slate-400">
+                    the number to find
+                  </span>
                 </label>
                 <input
                   id="sort-target"
@@ -206,25 +237,37 @@ export function SortingPage() {
                   aria-describedby="sort-target-err"
                   className={`${fieldClass} w-28 font-mono ${s.targetError ? 'border-red-500' : okBorder}`}
                 />
-                <p id="sort-target-err" aria-live="polite" className="min-h-4 text-xs text-red-700 dark:text-red-300">
+                <p
+                  id="sort-target-err"
+                  aria-live="polite"
+                  className="min-h-4 text-xs text-red-700 dark:text-red-300"
+                >
                   {s.targetError}
                 </p>
               </div>
             )}
             {s.algo === 'bubble' && (
               <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={s.earlyExit} onChange={(e) => s.setEarlyExit(e.target.checked)} />
+                <input
+                  type="checkbox"
+                  checked={s.earlyExit}
+                  onChange={(e) => s.setEarlyExit(e.target.checked)}
+                />
                 Stop early when a pass makes no swaps
               </label>
             )}
-            {s.run && (
+            {s.run && !s.quizActive && (
               <p className="text-sm text-slate-700 dark:text-slate-300">
                 {s.search
                   ? s.run.foundAt === null || s.run.foundAt === undefined
                     ? `Result: ${s.run.target} is not in the list (${s.run.comparisons} comparisons).`
                     : `Result: found ${s.run.target} at index ${s.run.foundAt} (${s.run.comparisons} comparisons).`
                   : `Whole run: ${s.run.comparisons} comparisons, ${
-                      s.algo === 'insertion' ? `${s.run.shifts} shifts` : s.algo === 'merge' ? 'no swaps (merging copies values)' : `${s.run.swaps} swaps`
+                      s.algo === 'insertion'
+                        ? `${s.run.shifts} shifts`
+                        : s.algo === 'merge'
+                          ? 'no swaps (merging copies values)'
+                          : `${s.run.swaps} swaps`
                     }.`}
               </p>
             )}

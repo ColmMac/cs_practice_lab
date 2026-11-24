@@ -37,6 +37,8 @@ export {
   type Parsed,
 } from './input'
 
+export { buildQuiz, gradeQuiz, parseAnswerList, quizUnavailable, type QuizKind, type QuizQuestion } from './quiz'
+
 export const isSearch = (algo: AlgorithmId): boolean => algo === 'linear' || algo === 'binary'
 
 /** Run any algorithm by id. Searches need a `target`. */

@@ -199,6 +199,87 @@ test('the pass table exports as a CSV matching what is shown', async ({ page }) 
   ])
 })
 
+const quizMode = (page: Page) => page.getByRole('radio', { name: 'Quiz' }).click()
+const feedback = (page: Page, id: string) => page.locator(`#study-msg-${id}`)
+
+test('quiz: a right and a wrong answer on the bubble sort passes, and nothing leaks before Reveal', async ({ page }) => {
+  await page.goto('/sorting-visualizer')
+  await quizMode(page)
+  await expect(page.getByTestId('quiz-prompt')).toHaveText('Start from [5, 1, 4, 2, 8]. What is the whole list after pass 1?')
+  // The answers are hidden while questions are open: no pass table, no whole-run summary, no playback.
+  await expect(page.getByRole('heading', { name: 'Pass history' })).toHaveCount(0)
+  await expect(page.getByText(/^Whole run/)).toHaveCount(0)
+  await expect(page.getByRole('button', { name: /^Step ▶/ })).toHaveCount(0)
+  expect(await values(page)).toEqual([5, 1, 4, 2, 8])
+  await expect(page.getByRole('button', { name: 'Continue ▶' })).toBeDisabled()
+
+  // Wrong (unchanged list): graded, and the message does not give the answer away.
+  await page.getByRole('textbox', { name: 'Your list' }).fill('5, 1, 4, 2, 8')
+  await page.getByRole('button', { name: 'Check answer' }).click()
+  await expect(feedback(page, 'q1')).toContainText('Not correct')
+  await expect(feedback(page, 'q1')).not.toContainText('[1, 4, 2, 5, 8]')
+  await expect(feedback(page, 'q1')).not.toContainText('1, 4, 2, 5, 8')
+
+  // Retry and get it right (hand-worked: 5>1 swap, 5>4 swap, 5>2 swap, 5<8).
+  await page.getByRole('textbox', { name: 'Your list' }).fill('1, 4, 2, 5, 8')
+  await page.getByRole('button', { name: 'Check answer' }).click()
+  await expect(feedback(page, 'q1')).toContainText('Correct')
+  await page.getByRole('button', { name: 'Continue ▶' }).click()
+
+  // Question 2 starts from the previous answer; the stage still shows the pre-pass list.
+  await expect(page.getByTestId('quiz-prompt')).toContainText('Start from [1, 4, 2, 5, 8]')
+  expect(await values(page)).toEqual([1, 4, 2, 5, 8])
+  await page.getByRole('textbox', { name: 'Your list' }).fill('1, 2, 4, 5, 8')
+  await page.getByRole('button', { name: 'Check answer' }).click()
+  await expect(feedback(page, 'q2')).toContainText('Correct')
+  await page.getByRole('button', { name: 'Continue ▶' }).click()
+
+  // Question 3: reveal it instead; the answer appears only now, and it is not scored.
+  await expect(page.getByTestId('quiz-prompt')).toContainText('after pass 3')
+  await expect(page.getByTestId('revealed-cell')).toHaveCount(0)
+  await page.getByRole('button', { name: /^Reveal/ }).click()
+  await expect(page.getByTestId('revealed-cell')).toContainText('[1, 2, 4, 5, 8]')
+  await page.getByRole('button', { name: 'Finish' }).click()
+  await expect(page.getByRole('status').filter({ hasText: 'Score:' })).toContainText('2 / 2')
+  await expect(page.getByText('1 revealed (not scored)')).toBeVisible()
+  // The history table is back once the quiz is over.
+  await expect(page.getByRole('heading', { name: 'Pass history' })).toBeVisible()
+  await page.getByRole('button', { name: 'Try again' }).click()
+  await expect(page.getByTestId('quiz-prompt')).toContainText('after pass 1')
+})
+
+test('quiz: binary search asks for mid, with the keyboard contract, and linear search has no quiz', async ({ page }) => {
+  await page.goto('/sorting-visualizer')
+  await algo(page, 'Binary search')
+  await page.getByLabel('Example').selectOption({ label: SEARCH_LIST })
+  await page.getByLabel(/^Target/).fill('43')
+  await quizMode(page)
+  await expect(page.getByTestId('quiz-prompt')).toContainText('indices 0 to 7')
+
+  await page.getByRole('textbox', { name: 'Your index' }).fill('4') // wrong: floor(7 / 2) = 3
+  await page.keyboard.press('Alt+h')
+  await expect(page.getByText(/Hint: mid = /)).toBeVisible()
+  await page.getByRole('button', { name: 'Check answer' }).click()
+  await expect(feedback(page, 'q1')).toContainText('Round the middle down') // ceil(3.5) = 4
+  await page.getByRole('textbox', { name: 'Your index' }).fill('3')
+  await page.keyboard.press('Enter') // Enter moves on from the last box to Check answer
+  await expect(page.getByRole('button', { name: 'Check answer' })).toBeFocused()
+  await page.keyboard.press('Enter')
+  await expect(feedback(page, 'q1')).toContainText('Correct')
+  await page.getByRole('button', { name: 'Continue ▶' }).click()
+
+  // 23 < 43, so low = 4, high = 7, mid = 5.
+  await expect(page.getByTestId('quiz-prompt')).toContainText('The last probe was index 3, which held 23; that is less than 43.')
+  await page.getByRole('textbox', { name: 'Your index' }).fill('5')
+  await page.getByRole('button', { name: 'Check answer' }).click()
+  await expect(feedback(page, 'q2')).toContainText('Correct')
+
+  await algo(page, 'Linear search')
+  await expect(page.getByText(/nothing to predict/)).toBeVisible()
+  await page.getByRole('radio', { name: 'Watch' }).click()
+  await expect(page.getByRole('button', { name: /^Step ▶/ })).toBeVisible()
+})
+
 test.describe('axe audit on the real page', () => {
   test.use({ bypassCSP: true }) // lets the test inject axe-core; the CSP itself is tested elsewhere
 
@@ -237,6 +318,16 @@ test.describe('axe audit on the real page', () => {
       await audit('found')
       await page.getByLabel(/^List/).fill('9, x')
       await audit('error')
+      await page.getByLabel(/^List/).fill('5, 1, 4, 2, 8')
+      await algo(page, 'Bubble sort')
+      await page.getByRole('radio', { name: 'Quiz' }).click()
+      await audit('quiz question')
+      await page.getByRole('textbox', { name: 'Your list' }).fill('5, 1, 4, 2, 8')
+      await page.getByRole('button', { name: 'Check answer' }).click()
+      await audit('quiz graded wrong')
+      await page.getByRole('button', { name: /^Reveal/ }).click()
+      await page.getByRole('button', { name: 'Continue ▶' }).click()
+      await audit('quiz next question')
     })
   }
 })
