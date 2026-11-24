@@ -29,7 +29,7 @@ test('the nav reaches all four tools and the home page', async ({ page }) => {
 })
 
 test('placeholder tools say coming soon and are noindex; unknown paths get a 404 page', async ({ page }) => {
-  await page.goto('/truth-tables')
+  await page.goto('/number-systems')
   await expect(page.getByText('Coming soon.')).toBeVisible()
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex')
 

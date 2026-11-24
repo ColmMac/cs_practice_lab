@@ -7,7 +7,10 @@ import { TOOLS } from './tools'
 // Each tool is its own chunk, so `/` and the light tools never download CodeMirror or start Pyodide.
 const TraceTablePage = lazy(() => import('../App').then((m) => ({ default: m.App })))
 
-const COMING_SOON = TOOLS.filter((t) => t.path !== '/trace-table')
+const TruthTablePage = lazy(() => import('../components/truth/TruthTablePage').then((m) => ({ default: m.TruthTablePage })))
+
+const LIVE = ['/trace-table', '/truth-tables']
+const COMING_SOON = TOOLS.filter((t) => !LIVE.includes(t.path))
 
 export function AppRoutes() {
   return (
@@ -19,6 +22,14 @@ export function AppRoutes() {
           element={
             <Suspense fallback={<p role="status" className="p-4 text-sm">Loading…</p>}>
               <TraceTablePage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="truth-tables"
+          element={
+            <Suspense fallback={<p role="status" className="p-4 text-sm">Loading…</p>}>
+              <TruthTablePage />
             </Suspense>
           }
         />
