@@ -129,7 +129,7 @@ export function StudyToolbar({ result }: { result: TraceResult }) {
         </button>
         <p className="text-[11px] text-slate-600 dark:text-slate-400">
           <kbd>Enter</kbd> / <kbd>↓</kbd> next · <kbd>Shift+Enter</kbd> / <kbd>↑</kbd> previous · <kbd>Tab</kbd> across · <kbd>Alt+H</kbd> hint ·{' '}
-          <kbd>Alt+R</kbd> reveal · output lines: write <code>\n</code> between them
+          <kbd>Alt+R</kbd> reveal · <kbd>Alt+W</kbd> why (wrong answers) · output lines: write <code>\n</code> between them
         </p>
       </div>
 

@@ -21,6 +21,8 @@ export interface StudyState extends StudyView {
   answers: Record<string, string>
   revealed: Record<string, true>
   hints: Record<string, true>
+  /** Cells whose "Why?" explanation is open (not persisted). Cleared when the cell is edited. */
+  why: Record<string, true>
   /** Set by Check answers; an entry disappears when that cell is edited. */
   graded: Record<string, Grade> | null
   /** Answers were restored from a saved session. */
@@ -100,6 +102,8 @@ interface AppState extends PersistedState {
   setAnswer(key: string, text: string): void
   revealCell(key: string): void
   toggleHint(key: string): void
+  /** Open or close the explanation of a cell graded incorrect. */
+  toggleWhy(key: string): void
   resetAnswers(): void
   checkAnswers(): void
   selectStepExclusive(i: number): void
@@ -445,6 +449,7 @@ export const useStore = create<AppState>()(
               answers: saved?.answers ?? {},
               revealed: Object.fromEntries((saved?.revealed ?? []).map((k) => [k, true as const])),
               hints: {},
+              why: {},
               graded: null,
               resumed: !!saved && (Object.keys(saved.answers).length > 0 || saved.revealed.length > 0),
             },
@@ -458,20 +463,25 @@ export const useStore = create<AppState>()(
           const st = get().study
           if (!st) return
           const config = sanitizeStudyConfig({ ...st.config, ...patch }, st.config)
-          commitStudy({ ...st, config, graded: null, hints: {} }, { studyConfig: config })
+          commitStudy({ ...st, config, graded: null, hints: {}, why: {} }, { studyConfig: config })
         },
 
         reshuffleStudy() {
           const st = get().study
           if (!st) return
           const seed = newSeed()
-          commitStudy({ ...st, seed, answers: {}, revealed: {}, hints: {}, graded: null, resumed: false }, { studySeed: seed })
+          commitStudy({ ...st, seed, answers: {}, revealed: {}, hints: {}, why: {}, graded: null, resumed: false }, { studySeed: seed })
         },
 
         setAnswer(key, text) {
           const st = get().study
           if (!st) return
-          commitStudy({ ...st, answers: { ...st.answers, [key]: text.slice(0, MAX_ANSWER_LENGTH) }, graded: withoutKey(st.graded, key) })
+          commitStudy({
+            ...st,
+            answers: { ...st.answers, [key]: text.slice(0, MAX_ANSWER_LENGTH) },
+            graded: withoutKey(st.graded, key),
+            why: without(st.why, key),
+          })
         },
 
         revealCell(key) {
@@ -489,10 +499,16 @@ export const useStore = create<AppState>()(
           set({ study: { ...st, hints } })
         },
 
+        toggleWhy(key) {
+          const st = get().study
+          if (!st || st.graded?.[key]?.state !== 'incorrect') return
+          set({ study: { ...st, why: st.why[key] ? without(st.why, key) : { ...st.why, [key]: true } } })
+        },
+
         resetAnswers() {
           const st = get().study
           if (!st) return
-          commitStudy({ ...st, answers: {}, revealed: {}, hints: {}, graded: null, resumed: false })
+          commitStudy({ ...st, answers: {}, revealed: {}, hints: {}, why: {}, graded: null, resumed: false })
         },
 
         checkAnswers() {

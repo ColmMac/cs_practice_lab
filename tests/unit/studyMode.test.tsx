@@ -752,3 +752,82 @@ describe('Study Mode: store guards', () => {
     expect(graded).not.toHaveProperty('0:<module>:n')
   })
 })
+
+describe('Study Mode: Why was this wrong?', () => {
+  const box = (col: string, nth = 0) => answerBoxes().filter((b) => b.dataset.studyCol === col)[nth]!
+  const callouts = () => screen.queryAllByTestId('why-callout')
+  const whyButtons = () => screen.queryAllByRole('button', { name: /^Why\?/ })
+  const check = () => screen.getByRole('button', { name: /check answers/i })
+
+  /** A session where n is answered correctly and the first digit wrongly, then checked. */
+  async function oneWrongDigit(user: ReturnType<typeof userEvent.setup>) {
+    mount()
+    await startStudy(user)
+    await user.type(box('<module>:n'), '1234')
+    await user.type(box('<module>:digit'), '9')
+    await user.click(check())
+  }
+
+  it('is offered only on cells graded incorrect, and shows the working without the answer', async () => {
+    mount()
+    const user = userEvent.setup()
+    await startStudy(user)
+    expect(whyButtons()).toHaveLength(0)
+    await user.type(box('<module>:n'), '1234')
+    await user.type(box('<module>:n', 1), '123.0') // almost
+    await user.type(box('<module>:digit'), '9')
+    await user.click(check())
+    expect(whyButtons()).toHaveLength(13)
+
+    const button = screen.getAllByRole('button', { name: /^Why\? Explain .*, digit$/ })[0]!
+    expect(button).toHaveAttribute('aria-expanded', 'false')
+    await user.click(button)
+    expect(button).toHaveAttribute('aria-expanded', 'true')
+    expect(callouts()).toHaveLength(1)
+  })
+
+  it('Alt+W opens and closes it from the answer box, and editing the cell removes it', async () => {
+    const user = userEvent.setup()
+    await oneWrongDigit(user)
+    const digit = box('<module>:digit')
+    await user.click(digit)
+    await user.keyboard('{Alt>}w{/Alt}')
+    expect(callouts()).toHaveLength(1)
+    expect(digit).toHaveFocus()
+    expect(digit.getAttribute('aria-describedby')!.split(' ')).toContain(callouts()[0]!.id)
+    await user.keyboard('{Alt>}w{/Alt}')
+    expect(callouts()).toHaveLength(0)
+    await user.keyboard('{Alt>}w{/Alt}')
+    await user.type(digit, '1')
+    expect(callouts()).toHaveLength(0)
+    // checking again does not bring it back by itself
+    await user.click(check())
+    expect(callouts()).toHaveLength(0)
+  })
+
+  it('shows the working without the answer, and stays after Reveal, which adds the result', async () => {
+    const user = userEvent.setup()
+    await oneWrongDigit(user)
+    await user.click(box('<module>:digit'))
+    await user.keyboard('{Alt>}w{/Alt}')
+    expect(callouts()[0]).toHaveTextContent('digit = n % 10')
+    expect(callouts()[0]).toHaveTextContent('1234 % 10')
+    expect(callouts()[0]!.querySelector('[data-part="result"]')).toBeNull()
+    expect(callouts()[0]!.querySelector('button, input, a, [tabindex]')).toBeNull()
+
+    await user.keyboard('{Alt>}r{/Alt}')
+    expect(callouts()[0]!.querySelector('[data-part="result"]')).toHaveTextContent('4')
+    expect(callouts()[0]).toHaveTextContent('So digit becomes 4.')
+  })
+
+  it('a value from an unanswered cell stays as a name', async () => {
+    mount()
+    const user = userEvent.setup()
+    await startStudy(user)
+    await user.click(check())
+    await user.click(box('<module>:digit'))
+    await user.keyboard('{Alt>}w{/Alt}')
+    expect(callouts()[0]).toHaveTextContent('digit = n % 10')
+    expect(callouts()[0]).not.toHaveTextContent('1234')
+  })
+})

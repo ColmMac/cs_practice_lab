@@ -37,6 +37,7 @@ Client-side Python trace-table generator (React + TS + Vite, Pyodide in a Web Wo
 - React Compiler lint: don't return an object that mixes ref callbacks with plain values from a hook (`react-hooks/refs`); return them separately (see `useRowWindow`).
 - Tables above 300 rows are windowed (`useRowWindow`), except in study mode.
 - The Condition column is a projection of `TraceStep.branch` plus the static `TraceResult.lines` (sent in the FIRST wire chunk). `branch` stays undefined when the outcome is unknown (one-line body, raised, aborted): never default it to False. A multi-line header is one step on its first line (`Static.header_span`). While the column is visible the Line cell's T/F chip must stay hidden.
+- "Why was this wrong?" (`src/core/explain`): with `withResult: false` nothing may state the cell's value, directly or by substitution (copy-only expressions and values from unanswered masked cells stay as names). Add result text only when `withResult` is true.
 
 ## Status
-M0-M5, the hub tickets H0-W5.4 (PLAN.md §16) and C1 of §17 are done: 973 unit and 107 E2E tests. Next: C2. M0-M5: the plan in PLAN.md is complete (see §9 and §11-§15). Not done / not verifiable here: LaTeX compilation, Lighthouse, real print pagination, Playwright E2E in CI (see PLAN.md §15). Ideas for later are listed at the end of §15.
+M0-M5, the hub tickets H0-W5.4 (PLAN.md §16) and C1-C2 of §17 are done: 1003 unit and 111 E2E tests. Next: C3. M0-M5: the plan in PLAN.md is complete (see §9 and §11-§15). Not done / not verifiable here: LaTeX compilation, Lighthouse, real print pagination, Playwright E2E in CI (see PLAN.md §15). Ideas for later are listed at the end of §15.

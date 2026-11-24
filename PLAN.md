@@ -1464,7 +1464,7 @@ Every ticket ends with the §16.2 definition of done: typecheck, lint, `npm test
     - E2E `condition.spec.ts`: Linear search → Columns → Condition. The last line-5 row reads `False` and there are 15 rows. No T/F chip in the Line column. In Study mode the Condition cells are answer boxes: `False` is graded Correct, `false` Almost.
     - The Condition column is off after a reload for a workspace saved before this ticket (seed `tts:v1` without the field).
 
-- [ ] **Ticket 2 (C2): Deterministic "Why was this wrong?"**
+- [x] **Ticket 2 (C2): Deterministic "Why was this wrong?"**
   - Files: `core/explain/stepExplainer.ts`, `components/study/WhyCallout.tsx`, `AnswerCell.tsx`, `TraceTable.tsx`, `StudyToolbar.tsx` (legend: `Alt+W` why), `useAnswerGrid.ts` (Alt+W), `store/index.ts` (`why: Record<string, true>` in `StudyState`, cleared on edit like grades), `explain.test.ts`.
   - Edge cases:
     - The first step of a function (pre-state comes from the call step).
@@ -1605,6 +1605,13 @@ Every ticket ends with the §16.2 definition of done: typecheck, lint, `npm test
 - **Deviation:** `LineInfo.oneLine` (wire `ol`) was added to the contract. `branch === undefined` alone cannot tell a one-line body (shows `?`) from a header that raised or was cut off (blank).
 - **Deviation:** the Column Manager does not also list Condition among the per-column checkboxes. Its one control is "Condition (True/False)", and ticking it also removes `cond` from `hiddenColumns`. **Reset columns** turns it off.
 - The golden-table helper (`tests/unit/tableText.ts`) drops its `T`/`F` line suffix when a Condition column is present, matching the UI. Both `*.condition.txt` files were written by hand first and matched on the first comparison. The older preset goldens are unchanged, and the wire fixture diff only adds `lines`.
+
+#### Implementation notes: C2
+
+- `core/explain/stepExplainer.ts` (`explainCell`, `explanationText`, `maskedValueGuard`) and `components/study/WhyCallout.tsx`. `StudyState.why` (not persisted) is cleared on edit, reset, reshuffle and mask changes. `AnswerCell` takes optional `onWhy`/`why`, so the truth-table, number and sorting grids are unchanged. The Why? button is `tabIndex={-1}` like Hint and Reveal; Alt+W is the keyboard route.
+- **Deviations:** `isHidden` takes a third argument, the frame id the value is read from. A copy-only expression (`y = x`, `a, b = b, a`) is never substituted, because the substituted values would be the answer. A note says when a value was withheld. Negative values are bracketed. A variable the line does not name (a method call, a callee's change) and a watch column quote the line only. The existing line templates print `not found` as `(not found)` inside a longer test (`ast.unparse`); the tracer is unchanged.
+- **Bug found by a test before commit:** the first `maskedValueGuard` matched any live frame of the function, so under recursion a callee's closing step could hide, or leak, another level's value.
+- Tests: `tests/unit/explain.test.ts` (26, including the no-result structural check over every maskable cell of every preset), 4 in `studyMode.test.tsx`, `tests/e2e/explain.spec.ts` (4, with axe light + dark before and after Reveal). New wire fixture `explain.json`; the existing fixtures and goldens are unchanged. Full suite 1003 unit, 111 E2E.
 
 ### 17.7 Ticket order
 

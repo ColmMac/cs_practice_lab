@@ -8,15 +8,17 @@ export const CHECK_ID = 'study-check'
 export interface AnswerKeyActions {
   onHint: (key: string) => void
   onReveal: (key: string) => void
+  /** "Why was this wrong?"; grids without explanations leave it out. */
+  onWhy?: (key: string) => void
 }
 
 /**
  * The keyboard contract for a grid of answer boxes, as a `keydown` handler for the `<table>`:
- * Enter/↓ next, Shift+Enter/↑ previous, Alt+H hint, Alt+R reveal (Ctrl/⌘ combinations are left alone, so
+ * Enter/↓ next, Shift+Enter/↑ previous, Alt+H hint, Alt+R reveal, Alt+W why (Ctrl/⌘ combinations are left alone, so
  * Ctrl+Enter still runs). Only keys that come from an answer box are handled: a row's own handlers must
  * ignore keys that bubble up from an input.
  */
-export function answerGridKeyDown({ onHint, onReveal }: AnswerKeyActions) {
+export function answerGridKeyDown({ onHint, onReveal, onWhy }: AnswerKeyActions) {
   return (e: KeyboardEvent<HTMLElement>) => {
     const input = e.target
     if (!(input instanceof HTMLInputElement) || !input.dataset.studyKey || e.ctrlKey || e.metaKey) return
@@ -26,6 +28,9 @@ export function answerGridKeyDown({ onHint, onReveal }: AnswerKeyActions) {
     if (e.altKey && e.key.toLowerCase() === 'h') {
       e.preventDefault()
       onHint(key)
+    } else if (onWhy && e.altKey && e.key.toLowerCase() === 'w') {
+      e.preventDefault()
+      onWhy(key)
     } else if (e.altKey && e.key.toLowerCase() === 'r') {
       e.preventDefault()
       const next = nextStudyInput(grid, input, 1)

@@ -1,8 +1,10 @@
 import { useMemo } from 'react'
 import { columnLabel, CONDITION_COL, LINE_COL, OUTPUT_COL } from '../../core/derive/columns'
+import { explainCell, maskedValueGuard, type ExplainContext } from '../../core/explain/stepExplainer'
 import { hintFor } from '../../core/study/hint'
 import { cellKey } from '../../core/study/types'
 import type { TraceResult } from '../../core/types'
+import { getLanguage } from '../../languages/registry'
 import { useStore } from '../../store'
 import { TABLE, TD as td, TH as th, THEAD } from '../ui/tableStyles'
 import { AnswerCell } from '../study/AnswerCell'
@@ -13,7 +15,7 @@ import { useTableData } from './useTableData'
 
 export function TraceTable({ result, stale }: { result: TraceResult; stale: boolean }) {
   const { selectedStep, hoverStep, setHoverStep, selectStep } = useStore()
-  const { setAnswer, revealCell, toggleHint, selectStepExclusive } = useStore()
+  const { setAnswer, revealCell, toggleHint, toggleWhy, selectStepExclusive } = useStore()
   const study = useStore((s) => s.study)
   // In a study session the table is FROZEN: useTableData returns the columns/modes captured when it began.
   const { columns, rows, model } = useTableData(result)
@@ -41,8 +43,23 @@ export function TraceTable({ result, stale }: { result: TraceResult; stale: bool
       </tr>
     ) : null
 
-  /** Enter / ↓ next, Shift+Enter / ↑ previous, Alt+H hint, Alt+R reveal: shared with every answer grid. */
-  const onStudyKey = answerGridKeyDown({ onHint: toggleHint, onReveal: revealCell })
+  /** Enter / ↓ next, Shift+Enter / ↑ previous, Alt+H hint, Alt+R reveal, Alt+W why. */
+  const onStudyKey = answerGridKeyDown({ onHint: toggleHint, onReveal: revealCell, onWhy: toggleWhy })
+
+  // built only while an explanation is open
+  const explain: ExplainContext | null =
+    study && model && Object.keys(study.why).length > 0
+      ? {
+          result,
+          format: getLanguage(result.language).formatValue,
+          isHidden: maskedValueGuard(
+            result,
+            model.maskedKeys,
+            (k) => !!study.revealed[k] || study.graded?.[k]?.state === 'correct',
+          ),
+          watchText: (id) => columns.find((c) => c.id === id)?.header ?? id,
+        }
+      : null
 
   return (
     <div className={`overflow-auto ${stale ? 'opacity-60' : ''}`} aria-busy={stale}>
@@ -152,6 +169,8 @@ export function TraceTable({ result, stale }: { result: TraceResult; stale: bool
                           onReveal={() => revealCell(key)}
                           onHint={() => toggleHint(key)}
                           onFocusCell={() => selectStepExclusive(step)}
+                          onWhy={() => toggleWhy(key)}
+                          why={explain && study.why[key] ? explainCell(explain, step, c.id, { withResult: !!study.revealed[key] }) : null}
                         />
                       ) : (
                         cell?.display

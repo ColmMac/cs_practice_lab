@@ -23,6 +23,14 @@ CASES = {
     "factorial": ("def fact(n):\n    if n <= 1:\n        return 1\n    return n * fact(n - 1)\n\nresult = fact(3)\nprint(result)\n", {}),
     "zero-division": ("a = 1\nb = a / 0\n", {}),
     "infinite-loop": ("i = 0\nwhile True:\n    i += 1\n", {"maxSteps": 12}),
+    # step explanations: `+=`, a swap, globals read in a function, a negative number, a long string,
+    # a list changed by a method call, and a `for` loop
+    "explain": (
+        "count = 2\nstep = -3\ntitle = 'a title that is far too long'\n\ndef bump(extra):\n    total = count + extra\n    return total ** 2\n\n"
+        "count += 1\na = 1\nb = 2\na, b = b, a\ntag = title + '!'\nsq = step ** 2\nnums = [a]\nnums.append(b)\ny = bump(a)\n"
+        "for k in range(1):\n    pass\n",
+        {},
+    ),
     "syntax-error": ("if x\n    pass\n", {}),
     "needs-input": ("name = input('Name? ')\nprint(name)\n", {}),
     # watch results: `cond` flips when the loop ends; `fn` is the innermost live fact() call; `bad` is rejected
