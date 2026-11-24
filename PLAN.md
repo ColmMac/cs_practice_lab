@@ -972,10 +972,11 @@ Hub-wide rules (these join CLAUDE.md as they land):
 - Goldens `tests/fixtures/export/truth-*.{md,csv,tex}`, **reviewed by hand**. The CSV formula guard matters here too (`=` cannot reach a cell, but the test stays).
 - Implementation notes: `components/ui/ExportPanel.tsx` (Markdown, CSV, LaTeX, PNG; slots `controls`, `extras` before Image and `trailing` after it; also `ExportUnavailable`). The trace `ExportMenu` is now a thin wrapper passing its variant/program controls, JSON and Print through those slots (same markup and order; its tests and goldens are unchanged). `core/export/truthModel.ts` (`buildTruthTableModel`, `truthBaseName`) and `components/truth/TruthExport.tsx`: the worksheet blanks the running study mask, else what the study settings would hide (outputs only by default). **Deviations:** JSON skipped (optional); Print is not offered on the truth page (the print region is trace-only; PNG covers paper use). Goldens: half adder (md/csv/tex) and a full-adder worksheet with intermediates (md), checked against hand working. Tests: `tests/unit/truthExport.test.ts` (7), plus one E2E in `truth-tables.spec.ts` (key and worksheet downloads; disabled when invalid).
 
-**T2.6: E2E for truth tables**
+**T2.6: E2E for truth tables** ✅ DONE
 - The half-adder preset shows 4 rows with the correct Sum/Carry. An invalid expression shows the error and no table.
 - Study mode: one correct and one wrong answer graded. Markdown export downloads `truth-table*.md`. The `?expr=` deep link renders.
 - Axe audit on the real page, light + dark.
+- Implementation notes: the first four bullets were already covered by the T2.3-T2.5 specs (preset rows, invalid expression, study right+wrong, `truth-table.md` download, `?expr=` deep link). T2.6 adds the axe audit to `tests/e2e/truth-tables.spec.ts`: axe-core is injected into the real built page (`bypassCSP` for that describe only) and run in light and dark over the table, intermediates on, the error state and study mode; all clean, so no component fixes were needed. Full E2E: 20 pass.
 
 ### Phase 3: Number systems (`/number-systems`)
 

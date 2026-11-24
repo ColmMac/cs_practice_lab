@@ -106,3 +106,37 @@ test('export: downloads the key and the worksheet as Markdown, and is disabled f
   await page.locator('#truth-expr').fill('A AND')
   await expect(page.getByRole('button', { name: /export/i })).toBeDisabled()
 })
+
+test.describe('axe audit on the real page', () => {
+  test.use({ bypassCSP: true }) // lets the test inject axe-core; the CSP itself is tested elsewhere
+
+  for (const theme of ['light', 'dark'] as const) {
+    test(`no axe violations in ${theme} mode (table, error and study states)`, async ({ page }) => {
+      await page.addInitScript((t) => localStorage.setItem('tts:theme', t), theme)
+      await page.goto('/truth-tables?preset=full-adder')
+      await expect(page.locator('html')).toHaveClass(theme === 'dark' ? /\bdark\b/ : /^(?!.*\bdark\b)/)
+      await expect(page.getByRole('table', { name: 'Truth table' }).locator('tbody tr')).toHaveCount(8)
+      await page.addScriptTag({ path: 'node_modules/axe-core/axe.min.js' })
+
+      const audit = async (label: string) => {
+        const results = await page.evaluate(async () => {
+          const axe = (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: { target: unknown }[] }[] }> } }).axe
+          const r = await axe.run()
+          return r.violations.map((v) => ({ id: v.id, targets: v.nodes.map((n) => n.target) }))
+        })
+        expect(results, `${label} (${theme})`).toEqual([])
+      }
+
+      await audit('table')
+      await page.getByRole('radiogroup', { name: 'Intermediate columns' }).getByRole('radio', { name: 'On' }).click()
+      await audit('intermediates on')
+      await page.locator('#truth-expr').fill('A AND')
+      await expect(page.getByTestId('error-underline')).toBeVisible()
+      await audit('error')
+      await page.locator('#truth-expr').fill('A XOR B')
+      await page.getByRole('button', { name: /study mode/i }).click()
+      await expect(page.getByRole('textbox', { name: /^Row \d+, / }).first()).toBeVisible()
+      await audit('study mode')
+    })
+  }
+})
