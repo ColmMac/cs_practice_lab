@@ -1,20 +1,19 @@
 import { lazy, Suspense } from 'react'
 import { Route, Routes } from 'react-router'
 import { AppShell } from './AppShell'
-import { ComingSoonPage, HomePage, NotFoundPage } from './pages'
-import { TOOLS } from './tools'
+import { HomePage, NotFoundPage } from './pages'
 
 // Each tool is its own chunk, so `/` and the light tools never download CodeMirror or start Pyodide.
 const TraceTablePage = lazy(() => import('../App').then((m) => ({ default: m.App })))
 
 const TruthTablePage = lazy(() => import('../components/truth/TruthTablePage').then((m) => ({ default: m.TruthTablePage })))
 
+const SortingPage = lazy(() => import('../components/sorting/SortingPage').then((m) => ({ default: m.SortingPage })))
+
 const NumberSystemsPage = lazy(() =>
   import('../components/numbers/NumberSystemsPage').then((m) => ({ default: m.NumberSystemsPage })),
 )
 
-const LIVE = ['/trace-table', '/truth-tables', '/number-systems']
-const COMING_SOON = TOOLS.filter((t) => !LIVE.includes(t.path))
 
 export function AppRoutes() {
   return (
@@ -45,9 +44,14 @@ export function AppRoutes() {
             </Suspense>
           }
         />
-        {COMING_SOON.map((t) => (
-          <Route key={t.path} path={t.path.slice(1)} element={<ComingSoonPage name={t.name} />} />
-        ))}
+        <Route
+          path="sorting-visualizer"
+          element={
+            <Suspense fallback={<p role="status" className="p-4 text-sm">Loading…</p>}>
+              <SortingPage />
+            </Suspense>
+          }
+        />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>

@@ -28,12 +28,9 @@ test('the nav reaches all four tools and the home page', async ({ page }) => {
   await expect(page).toHaveURL(/\/$/)
 })
 
-test('placeholder tools say coming soon and are noindex; unknown paths get a 404 page', async ({ page }) => {
-  await page.goto('/sorting-visualizer')
-  await expect(page.getByText('Coming soon.')).toBeVisible()
-  await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex')
-
+test('unknown paths get a noindex 404 page', async ({ page }) => {
   await page.goto('/no-such-page')
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex')
   await expect(page.getByRole('heading', { name: 'Page not found' })).toBeVisible()
   await page.getByRole('main').getByRole('link', { name: 'Go to the home page' }).click()
   await expect(page).toHaveURL(/\/$/)

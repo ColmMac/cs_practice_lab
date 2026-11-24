@@ -36,22 +36,6 @@ export function HomePage() {
   )
 }
 
-export function ComingSoonPage({ name }: { name: string }) {
-  return (
-    <>
-      <title>{`${name} · ${BRAND}`}</title>
-      <meta name="robots" content="noindex" />
-      <ToolHeader title={name} />
-      <main className="p-4">
-        <p className="text-sm text-slate-700 dark:text-slate-300">Coming soon.</p>
-        <p className="mt-2 text-sm">
-          <Link to="/" className={linkClass}>Back to all tools</Link>
-        </p>
-      </main>
-    </>
-  )
-}
-
 export function NotFoundPage() {
   return (
     <>

@@ -14,6 +14,22 @@ export {
   type Step,
 } from './types'
 
+export { buildFrames, frameValues, type Card, type Frame, type Mark } from './frames'
+export {
+  ALGORITHM_INFO,
+  findListPreset,
+  LIST_PRESETS,
+  MAX_CARDS,
+  MAX_VALUE,
+  MIN_ITEMS,
+  MIN_VALUE,
+  parseList,
+  parseTarget,
+  type AlgorithmInfo,
+  type ListPreset,
+  type Parsed,
+} from './input'
+
 export const isSearch = (algo: AlgorithmId): boolean => algo === 'linear' || algo === 'binary'
 
 /** Run any algorithm by id. Searches need a `target`. */
