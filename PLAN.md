@@ -980,12 +980,13 @@ Hub-wide rules (these join CLAUDE.md as they land):
 
 ### Phase 3: Number systems (`/number-systems`)
 
-**N3.1: Number core (`src/core/numbers/`)**
+**N3.1: Number core (`src/core/numbers/`)** ✅ DONE
 - Bit-array model for widths 8 and 16: `toUnsigned`, `toSigned` (two's complement), `fromUnsigned` and `fromSigned` (range-checked), `toHex` and `fromHex`.
 - Tolerant input parsing (`0b`, `0x`, `&`, `h`, spaces, underscores) that reports width overflow.
 - `shiftLeftLogical`, `shiftRightLogical`, `shiftRightArithmetic` (and `shiftLeftArithmetic` with a sign-change overflow flag). Each returns the new bits, the bit shifted out and the flags.
 - `add(a, b)` returns the result bits, a per-column carry array, the unsigned carry-out and the signed overflow flag (with the reason, such as "two positives gave a negative").
 - Tests: **exhaustive over all 256×256 8-bit additions** against integer arithmetic, all 8-bit conversion round trips, and sampled 16-bit values.
+- Implementation notes: `bits.ts` (MSB-first `Bits`, conversions, `invert`, `negate`, `NumberError` thrown on range errors), `arith.ts` (shifts return `{bits, out, lost, overflow?}`; `add` returns `carries` = carry INTO each column, aligned with the bits, plus `carryOut`, `overflow`, `overflowReason`), `parse.ts` (`parseNumberInput` never throws; binary reports `padded` when fewer digits than the width were typed, for N3.4's "Almost"). Pure core with no route, so no E2E (N3.5 owns it); `tests/unit/numbers.test.ts` (18 tests). Full suite 857 unit, 20 E2E.
 
 **N3.2: Bit sandbox UI**
 - A register of 8 or 16 toggle buttons (`aria-pressed`, labels such as "bit 7, weight 128", with the weight shown as −128 in signed view), a live weights row and a sum-of-set-weights line ("64 + 8 + 1 = 73").
