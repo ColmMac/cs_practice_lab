@@ -1,0 +1,9 @@
+SEND "Enter a word: " TO DISPLAY
+RECEIVE word FROM KEYBOARD
+SET vowels TO 0
+FOR EACH ch FROM word DO
+    if ch in "aeiou":  [!]
+        SET vowels TO vowels + 1
+    END IF
+END FOR EACH
+SEND "Vowels:" & vowels TO DISPLAY

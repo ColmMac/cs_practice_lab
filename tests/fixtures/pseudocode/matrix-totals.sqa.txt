@@ -1,0 +1,10 @@
+SET grid TO [[1, 2, 3], [4, 5, 6]]
+SET totals TO []
+FOR r FROM 0 TO LENGTH(grid) - 1 DO
+    SET row_total TO 0
+    FOR c FROM 0 TO LENGTH(grid[r]) - 1 DO
+        SET row_total TO row_total + grid[r][c]
+    END FOR
+    totals.append(row_total)  [!]
+END FOR
+SEND totals TO DISPLAY

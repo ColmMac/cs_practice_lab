@@ -1,0 +1,18 @@
+SET nums TO [5, 2, 4, 1]
+SET n TO LENGTH(nums)
+FOR i FROM 0 TO n - 2 DO
+    SET swapped TO False
+    FOR j FROM 0 TO n - 1 - i - 1 DO
+        IF nums[j] > nums[j + 1] THEN
+            # swap the two values using temp
+            SET temp TO nums[j]
+            SET nums[j] TO nums[j + 1]
+            SET nums[j + 1] TO temp
+            SET swapped TO True
+        END IF
+    END FOR
+    IF NOT swapped THEN
+        break  [!]
+    END IF
+END FOR
+SEND nums TO DISPLAY

@@ -1,4 +1,5 @@
 import { executionKey } from '../../core/executionKey'
+import type { ExamDialect, PseudoResult } from '../../core/pseudocode/types'
 import type { RunnerCapabilities, RunnerStatus, TraceRunner } from '../../core/runner'
 import type { TraceOptions, TraceResult, TraceStatus } from '../../core/types'
 import { materialise } from './materialise'
@@ -52,6 +53,8 @@ export class PythonTraceRunner implements TraceRunner {
   private current: ActiveRun | null = null
   private validations = new Map<string, (r: { ok: true } | { ok: false; message: string }) => void>()
   private validationCounter = 0
+  private conversions = new Map<string, { resolve: (r: PseudoResult) => void; reject: (e: Error) => void }>()
+  private conversionCounter = 0
 
   constructor(
     private readonly indexURL: string = PYODIDE_INDEX_URL,
@@ -126,6 +129,19 @@ export class PythonTraceRunner implements TraceRunner {
     })
   }
 
+  /** Parses (never runs) the program. Rejects if the worker is replaced or fails before it can answer. */
+  async toPseudocode(code: string, dialect: ExamDialect): Promise<PseudoResult> {
+    await this.init()
+    const worker = this.worker
+    if (!worker) throw new Error('Python runtime is not available')
+    const requestId = `p-${++this.conversionCounter}`
+    return new Promise((resolve, reject) => {
+      this.conversions.set(requestId, { resolve, reject })
+      const msg: ToWorker = { type: 'pseudocode', requestId, code, dialect }
+      worker.postMessage(msg)
+    })
+  }
+
   cancel(): void {
     if (this.current) this.stop('cancelled', 'Run cancelled.')
   }
@@ -137,6 +153,7 @@ export class PythonTraceRunner implements TraceRunner {
     this.ready = null
     for (const resolve of this.validations.values()) resolve({ ok: true })
     this.validations.clear()
+    this.dropConversions('Runner disposed.')
     this.listeners.clear()
     this.status = { state: 'uninitialised' }
   }
@@ -149,6 +166,7 @@ export class PythonTraceRunner implements TraceRunner {
     // a bad watch is still reported, per step, by the next run.
     for (const resolve of this.validations.values()) resolve({ ok: true })
     this.validations.clear()
+    this.dropConversions('Python was restarted.')
     const worker = this.createWorker()
     this.worker = worker
     this.setStatus({ state: 'loading', message: 'Starting Python runtime…' })
@@ -210,6 +228,12 @@ export class PythonTraceRunner implements TraceRunner {
         resolve?.(msg.ok ? { ok: true } : { ok: false, message: msg.message ?? 'Not allowed in a watch expression.' })
         break
       }
+      case 'pseudocode-done': {
+        const waiting = this.conversions.get(msg.requestId)
+        this.conversions.delete(msg.requestId)
+        waiting?.resolve(msg.result)
+        break
+      }
       case 'done':
         this.finish(msg.runId, (run) => this.toResult(msg.result, run))
         break
@@ -219,6 +243,12 @@ export class PythonTraceRunner implements TraceRunner {
         )
         break
     }
+  }
+
+  private dropConversions(message: string) {
+    const waiting = [...this.conversions.values()]
+    this.conversions.clear()
+    for (const w of waiting) w.reject(new Error(message))
   }
 
   private finish(runId: string, build: (run: ActiveRun) => TraceResult) {
@@ -266,6 +296,7 @@ export class PythonTraceRunner implements TraceRunner {
   private fail(message: string) {
     this.setStatus({ state: 'failed', message })
     this.ready = null // next init() retries with a fresh worker
+    this.dropConversions(message)
     const run = this.current
     if (run) {
       this.clear(run)

@@ -1,0 +1,8 @@
+SUBROUTINE fact(n)
+    IF n ≤ 1 THEN
+        RETURN 1
+    ENDIF
+    RETURN n * fact(n - 1)
+ENDSUBROUTINE
+result ← fact(4)
+OUTPUT result

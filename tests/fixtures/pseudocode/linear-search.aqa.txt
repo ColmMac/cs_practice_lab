@@ -1,0 +1,12 @@
+items ← [4, 8, 15, 16, 23, 42]
+target ← 15
+found ← False
+i ← 0
+WHILE i < LEN(items) AND NOT found
+    IF items[i] = target THEN
+        found ← True
+    ELSE
+        i ← i + 1
+    ENDIF
+ENDWHILE
+OUTPUT found, i

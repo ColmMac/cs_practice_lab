@@ -1,0 +1,8 @@
+n ← 1234
+total ← 0
+WHILE n > 0
+    digit ← n MOD 10
+    total ← total + digit
+    n ← n DIV 10
+ENDWHILE
+OUTPUT total

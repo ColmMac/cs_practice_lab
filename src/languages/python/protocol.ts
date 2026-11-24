@@ -1,4 +1,5 @@
 // Private wire format between python.worker.ts, tracer.py and PythonTraceRunner. See PLAN.md §3.
+import type { ExamDialect, PseudoResult } from '../../core/pseudocode/types'
 import type { StatementKind, TraceError, TraceStatus, Value, VariableMeta, WatchExpression, WatchResult } from '../../core/types'
 
 /** Pyodide version served from the CDN. Must equal the `pyodide` npm package version (unit-tested). */
@@ -83,6 +84,7 @@ export type ToWorker =
   | { type: 'init'; indexURL: string }
   | { type: 'run'; runId: string; code: string; options: WireOptions }
   | { type: 'validate-watch'; requestId: string; expr: string }
+  | { type: 'pseudocode'; requestId: string; code: string; dialect: ExamDialect }
 
 // Worker → Main
 export type FromWorker =
@@ -90,5 +92,6 @@ export type FromWorker =
   | { type: 'chunk'; runId: string; chunk: WireChunk }
   | { type: 'done'; runId: string; result: WireResult }
   | { type: 'watch-validated'; requestId: string; ok: boolean; message?: string }
+  | { type: 'pseudocode-done'; requestId: string; result: PseudoResult }
   | { type: 'run-failed'; runId: string; message: string } // harness bug, not user-code failure
   | { type: 'fatal'; message: string } // Pyodide failed to load

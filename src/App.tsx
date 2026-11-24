@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { CodeEditor } from './components/editor/CodeEditor'
 import { InputsPanel } from './components/editor/InputsPanel'
+import { PseudocodePanel } from './components/editor/PseudocodePanel'
 import { PrintRegion } from './components/export/PrintRegion'
 import { Welcome } from './components/layout/Welcome'
 import { EmptyState } from './components/table/EmptyState'
@@ -45,11 +46,13 @@ export function App() {
     <div className="flex min-h-0 flex-1 flex-col print:hidden">
       <Toolbar />
       <SharedBanner />
-      <main className="grid min-h-0 flex-1 grid-cols-1 gap-4 p-4 lg:grid-cols-[minmax(320px,2fr)_3fr]">
-        <section className="flex min-h-0 flex-col gap-3" aria-label="Code">
+      {/* Phones: the page scrolls and the code column keeps its full height. Wide screens: each column scrolls itself. */}
+      <main className="grid min-h-0 flex-1 grid-cols-1 grid-rows-[max-content_minmax(60dvh,1fr)] gap-4 overflow-auto p-4 lg:grid-cols-[minmax(320px,2fr)_3fr] lg:grid-rows-[minmax(0,1fr)] lg:overflow-hidden">
+        <section className="flex min-h-0 flex-col gap-3 lg:overflow-y-auto" aria-label="Code">
           <div className="min-h-[240px] flex-1 overflow-auto rounded border border-slate-300 dark:border-slate-700">
             <CodeEditor />
           </div>
+          <PseudocodePanel />
           <InputsPanel />
           <WatchPanel />
         </section>

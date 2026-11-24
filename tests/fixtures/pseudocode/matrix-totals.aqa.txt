@@ -1,0 +1,10 @@
+grid ← [[1, 2, 3], [4, 5, 6]]
+totals ← []
+FOR r ← 0 TO LEN(grid) - 1
+    row_total ← 0
+    FOR c ← 0 TO LEN(grid[r]) - 1
+        row_total ← row_total + grid[r][c]
+    ENDFOR
+    totals.append(row_total)  [!]
+ENDFOR
+OUTPUT totals

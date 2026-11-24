@@ -1,0 +1,8 @@
+FUNCTION fact(n) RETURNS <type>
+    IF n ≤ 1 THEN
+        RETURN 1
+    END IF
+    RETURN n * fact(n - 1)
+END FUNCTION
+SET result TO fact(4)
+SEND result TO DISPLAY

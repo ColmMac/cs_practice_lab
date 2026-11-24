@@ -1,0 +1,12 @@
+SET items TO [4, 8, 15, 16, 23, 42]
+SET target TO 15
+SET found TO False
+SET i TO 0
+WHILE i < LENGTH(items) AND NOT found DO
+    IF items[i] = target THEN
+        SET found TO True
+    ELSE
+        SET i TO i + 1
+    END IF
+END WHILE
+SEND found & i TO DISPLAY

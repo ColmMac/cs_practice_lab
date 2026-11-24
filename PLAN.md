@@ -1484,7 +1484,7 @@ Every ticket ends with the §16.2 definition of done: typecheck, lint, `npm test
     - E2E `explain.spec.ts`: Linear search, Study mode, a wrong `i` on the first line-9 row → Check → Why? shows "`i = i + 1`" and "`0 + 1`" with no `[data-part=result]`; Reveal then shows "becomes `1`".
     - Axe light + dark with a callout open.
 
-- [ ] **Ticket 3 (C3): Exam pseudocode reference**
+- [x] **Ticket 3 (C3): Exam pseudocode reference**
   - Files: `pseudocode.py`, `test_pseudocode.py`, `protocol.ts`, `python.worker.ts`, `PythonTraceRunner.ts`, `core/runner.ts`, `core/pseudocode/types.ts`, `PseudocodePanel.tsx`, `App.tsx`.
   - Edge cases:
     - A syntax error shows the message, with no partial pseudocode.
@@ -1612,6 +1612,22 @@ Every ticket ends with the §16.2 definition of done: typecheck, lint, `npm test
 - **Deviations:** `isHidden` takes a third argument, the frame id the value is read from. A copy-only expression (`y = x`, `a, b = b, a`) is never substituted, because the substituted values would be the answer. A note says when a value was withheld. Negative values are bracketed. A variable the line does not name (a method call, a callee's change) and a watch column quote the line only. The existing line templates print `not found` as `(not found)` inside a longer test (`ast.unparse`); the tracer is unchanged.
 - **Bug found by a test before commit:** the first `maskedValueGuard` matched any live frame of the function, so under recursion a callee's closing step could hide, or leak, another level's value.
 - Tests: `tests/unit/explain.test.ts` (26, including the no-result structural check over every maskable cell of every preset), 4 in `studyMode.test.tsx`, `tests/e2e/explain.spec.ts` (4, with axe light + dark before and after Reveal). New wire fixture `explain.json`; the existing fixtures and goldens are unchanged. Full suite 1003 unit, 111 E2E.
+
+#### Implementation notes: C3
+
+- `languages/python/pseudocode.py` (imports only `ast` and `json`; the worker runs it in its own namespace), `core/pseudocode/types.ts`, an optional `TraceRunner.toPseudocode`, and `components/editor/PseudocodePanel.tsx` (closed by default; a closed panel asks Python for nothing). A waiting request is rejected when the worker is replaced, fails or is disposed.
+- **Keywords were checked** against the text of the AQA 8525 pseudo-code guide (2024), the OCR J277 specification v3.1 §3c, and the SQA reference language summary (Sept 2016, v1.0, Higher). The 18 goldens were then written by hand, before the converter, and all matched on the first run.
+- **Where the documents overrule the §17.3 table:**
+  - SQA closes `FOR EACH` with `END FOR EACH`.
+  - The SQA summary has no `ELSE IF`, so each `elif` is an `IF` nested inside `ELSE`.
+  - A constant negative step is supported (AQA and OCR both show one), so `range(5, 0, -1)` ends at `1`. A zero or non-constant step is still unsupported.
+  - OCR writes `for i=0 to 9`, 2D elements as `grid[r,c]`, comments with `//`, and list literals assigned to a name as `array x = [...]`.
+  - AQA defines no exponent operator, so `**` is unsupported there.
+- **Not defined by the source used** (kept from this plan, so treat as unverified): SQA `LENGTH()`, `INT(a / b)` for `//` (it differs from `//` for negative numbers), `True`/`False`, and the word order of `FOR ... STEP ... DO` (the summary's one-line form is ambiguous). The full SQA reference document was not read. The OCR table does not show `print` with commas.
+- **Choices that avoid a wrong translation:** AQA `STRING_TO_INT` / `STRING_TO_REAL` only when the argument is visibly text (otherwise `int(a / 2)` would read as a string conversion); SQA number input is unsupported; a tuple assignment is split only when the order cannot change the result.
+- **Contract addition:** `PseudoLine.note`, for the OCR for-each marker. Comments and blank lines are dropped (`ast` does not keep them); the panel says so.
+- **Existing layout bug, found by the phone-width E2E:** below `lg`, the code column overflowed its grid row, so the table covered the Inputs and Watches controls even without this panel. `main` now scrolls on narrow screens, and the code column scrolls itself on wide ones.
+- Tests: `test_pseudocode.py` (146, passing with the rest on 3.12, 3.13 and 3.14), `tests/unit/pseudocode.test.tsx` (13), `tests/e2e/pseudocode.spec.ts` (6, with axe light + dark and 375 px). The existing home-page E2E still shows no Pyodide on `/`. Full suite 1016 unit, 117 E2E.
 
 ### 17.7 Ticket order
 

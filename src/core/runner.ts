@@ -1,3 +1,4 @@
+import type { ExamDialect, PseudoResult } from './pseudocode/types'
 import type { LanguageId, TraceOptions, TraceResult } from './types'
 
 export type RunnerStatus =
@@ -30,6 +31,8 @@ export interface TraceRunner {
   /** Resolves with a TraceResult for ALL user-code outcomes; rejects only if the runtime itself is broken. */
   runTrace(code: string, options: TraceOptions): Promise<TraceResult>
   validateWatch?(expr: string): Promise<{ ok: true } | { ok: false; message: string }>
+  /** Rewrite a program as exam pseudocode. Parses only, never runs it. Rejects if the runtime cannot answer. */
+  toPseudocode?(code: string, dialect: ExamDialect): Promise<PseudoResult>
   cancel(): void
   dispose(): void
 }

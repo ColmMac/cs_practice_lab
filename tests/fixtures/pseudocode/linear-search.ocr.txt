@@ -1,0 +1,12 @@
+array items = [4, 8, 15, 16, 23, 42]
+target = 15
+found = False
+i = 0
+while i < items.length AND NOT found
+    if items[i] == target then
+        found = True
+    else
+        i = i + 1
+    endif
+endwhile
+print(found, i)

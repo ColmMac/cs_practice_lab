@@ -1,0 +1,8 @@
+function fact(n)
+    if n <= 1 then
+        return 1
+    endif
+    return n * fact(n - 1)
+endfunction
+result = fact(4)
+print(result)

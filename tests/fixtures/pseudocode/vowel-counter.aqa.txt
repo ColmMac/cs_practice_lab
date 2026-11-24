@@ -1,0 +1,9 @@
+OUTPUT 'Enter a word: '
+word ← USERINPUT
+vowels ← 0
+FOR ch IN word
+    if ch in "aeiou":  [!]
+        vowels ← vowels + 1
+    ENDIF
+ENDFOR
+OUTPUT 'Vowels:', vowels

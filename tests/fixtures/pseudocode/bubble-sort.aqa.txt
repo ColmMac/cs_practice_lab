@@ -1,0 +1,18 @@
+nums ← [5, 2, 4, 1]
+n ← LEN(nums)
+FOR i ← 0 TO n - 2
+    swapped ← False
+    FOR j ← 0 TO n - 1 - i - 1
+        IF nums[j] > nums[j + 1] THEN
+            # swap the two values using temp
+            temp ← nums[j]
+            nums[j] ← nums[j + 1]
+            nums[j + 1] ← temp
+            swapped ← True
+        ENDIF
+    ENDFOR
+    IF NOT swapped THEN
+        break  [!]
+    ENDIF
+ENDFOR
+OUTPUT nums
