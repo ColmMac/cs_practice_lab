@@ -1,7 +1,8 @@
 import { lazy, Suspense } from 'react'
 import { Route, Routes } from 'react-router'
 import { AppShell } from './AppShell'
-import { HomePage, NotFoundPage } from './pages'
+import { HomePage } from './HomePage'
+import { NotFoundPage } from './pages'
 
 // Each tool is its own chunk, so `/` and the light tools never download CodeMirror or start Pyodide.
 const TraceTablePage = lazy(() => import('../App').then((m) => ({ default: m.App })))
