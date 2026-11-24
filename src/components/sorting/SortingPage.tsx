@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router'
-import { BRAND } from '../../app/tools'
+import { PageMeta } from '../../app/PageMeta'
+import { toolDescription } from '../../app/tools'
 import {
   ALGORITHM_INFO,
   LIST_PRESETS,
@@ -44,11 +45,7 @@ export function SortingPage() {
 
   return (
     <>
-      <title>{`Sorting & searching · ${BRAND}`}</title>
-      <meta
-        name="description"
-        content="Step through bubble, insertion and merge sort and linear and binary search, one comparison at a time."
-      />
+      <PageMeta title="Sorting & searching" description={toolDescription('/sorting-visualizer')} />
       <ToolHeader title="Sorting & searching">
         <label className="flex items-center gap-2 text-xs">
           <span className="text-slate-600 dark:text-slate-400">Algorithm</span>

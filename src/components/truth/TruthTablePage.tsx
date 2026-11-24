@@ -1,4 +1,5 @@
-import { BRAND } from '../../app/tools'
+import { PageMeta } from '../../app/PageMeta'
+import { toolDescription } from '../../app/tools'
 import { findLogicPreset, logicPresets } from '../../core/logic'
 import { Badge } from '../ui/Badge'
 import { Panel } from '../ui/Panel'
@@ -20,8 +21,7 @@ export function TruthTablePage() {
 
   return (
     <>
-      <title>{`Truth tables · ${BRAND}`}</title>
-      <meta name="description" content="Build truth tables for Boolean expressions and logic gates, with exam-style columns." />
+      <PageMeta title="Truth tables" description={toolDescription('/truth-tables')} />
       <ToolHeader title="Truth tables">
         <label className="flex items-center gap-2 text-xs">
           <span className="text-slate-600 dark:text-slate-400">Example</span>

@@ -5,7 +5,8 @@ import { Badge } from '../components/ui/Badge'
 import { BUTTON_CLASSES } from '../components/ui/Button'
 import { Panel } from '../components/ui/Panel'
 import { ToolHeader } from '../components/ui/ToolHeader'
-import { BRAND, TOOLS } from './tools'
+import { PageMeta } from './PageMeta'
+import { BRAND, HOME_DESCRIPTION, TOOLS } from './tools'
 
 const linkClass = 'text-emerald-800 underline focus-visible:outline-2 focus-visible:outline-emerald-700 dark:text-emerald-300'
 
@@ -85,7 +86,7 @@ export function HomePage() {
   if (payload) return <Navigate to={`/trace-table#${SHARE_KEY}${payload}`} replace />
   return (
     <>
-      <title>{BRAND}</title>
+      <PageMeta description={HOME_DESCRIPTION} />
       <ToolHeader title={BRAND} />
       <main className="min-h-0 flex-1 overflow-auto p-4">
         <section aria-labelledby="hero-heading" className="mb-6 max-w-3xl">

@@ -1057,10 +1057,11 @@ Hub-wide rules (these join CLAUDE.md as they land):
   - "Bubble Sort: predict each pass" → `/sorting-visualizer?algo=bubble&quiz=1`
 - Implementation notes: `QUICK_STARTS` in `app/HomePage.tsx` (a "Quick starts" list of toolbar-style links above the tool cards). The trace route is now `app/TraceTableRoute.tsx` (lazy, so the home page still never loads the store), which calls `usePresetParam`: a known built-in id goes through `loadPreset` (so it runs) and the parameter is removed with `replace`; an unknown id is only removed; a share-link fragment or a shared workspace under review is left untouched. Number systems gained `?a=` / `?b=` (binary, up to 16 digits; more than 8 digits means 16-bit; invalid values ignored), read once into the addition view and not written back. The sorting and truth-table links needed no change. Tests: 8 new E2E in `home.spec.ts` and `tests/unit/numbersUrlOperands.test.ts` (3). Full suite 958 unit, 76 E2E.
 
-**W5.3: SEO and discoverability**
+**W5.3: SEO and discoverability** ✅ DONE
 - A per-route `<title>` and `<meta name="description">` through React 19's native metadata hoisting (a small `PageMeta` component in each page), plus `<link rel="canonical">` when `VITE_SITE_URL` is set. `index.html` keeps sensible defaults for crawlers that do not run JS.
 - `public/robots.txt`, and `sitemap.xml` generated at build time from the route table (D3) covering `/` and the four tools.
 - Prerendering for non-JS crawlers is a later idea, not in scope.
+- Implementation notes: `app/PageMeta.tsx` (`<title>`, description, optional `noindex`, and a canonical link from `VITE_SITE_URL` + the pathname, query dropped) is used by every page; the descriptions live in `TOOLS` in `app/tools.ts`, which also gives `SITE_PATHS`. A `seo-files` plugin in `vite.config.ts` emits `robots.txt` (with a Sitemap line when the origin is set) and `sitemap.xml` (skipped with a warning when it is not). `index.html` has a default title and a `data-default` description for crawlers without JS; `main.tsx` removes that tag at startup because React does not de-duplicate hoisted metas against static ones. `tsconfig` gained `allowImportingTsExtensions` so the config can import `tools.ts`. Tests: `tests/unit/seo.test.tsx` (3), `tests/e2e/seo.spec.ts` (8). Full suite 961 unit, 84 E2E.
 
 **W5.4: Final E2E, accessibility and documentation pass**
 - `home.spec.ts`: every card navigates to its tool and every quick-start link opens the right preset; the document title changes per route; 404 page.

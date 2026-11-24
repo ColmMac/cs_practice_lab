@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router'
-import { BRAND } from '../../app/tools'
+import { PageMeta } from '../../app/PageMeta'
+import { toolDescription } from '../../app/tools'
 import { numberUrlParams, parseNumberUrl, toBinary, type Mode, type Topic, type Width } from '../../core/numbers'
 import { newSeed } from '../../core/study/rng'
 import { Badge } from '../ui/Badge'
@@ -54,11 +55,7 @@ export function NumberSystemsPage() {
   }, [mode, s.width, s.bits, topic, seed, setParams])
   return (
     <>
-      <title>{`Number systems · ${BRAND}`}</title>
-      <meta
-        name="description"
-        content="Toggle bits and see denary, signed, binary and hex update together, with shifts and two’s complement."
-      />
+      <PageMeta title="Number systems" description={toolDescription('/number-systems')} />
       <ToolHeader title="Number systems">
         <SegmentedToggle
           label="Mode"
