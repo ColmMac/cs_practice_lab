@@ -15,6 +15,7 @@ import {
   type Frame,
   type HistoryTable,
   type Run,
+  type SortingUrlState,
 } from '../../core/algorithms'
 
 export const SPEEDS = { slow: 1400, normal: 800, fast: 300 } as const
@@ -35,6 +36,8 @@ export interface Sorting {
   targetError: string | null
   /** The list as numbers, when it parses (used by the "Sort the list" fix). */
   data: number[] | null
+  /** The target as a number, when it parses. */
+  target: number | null
   run: Run | null
   /** The pass-by-pass table for the run; null when the input is invalid. */
   history: HistoryTable | null
@@ -64,15 +67,15 @@ export interface Sorting {
 }
 
 /** Inputs, the run they produce, and a player over its frames. Any input change goes back to the start. */
-export function useSorting(): Sorting {
-  const [algo, setAlgoState] = useState<AlgorithmId>('bubble')
-  const [text, setTextState] = useState(START.data.join(', '))
-  const [targetText, setTargetTextState] = useState(String(START.target))
+export function useSorting(initial?: Partial<SortingUrlState>): Sorting {
+  const [algo, setAlgoState] = useState<AlgorithmId>(initial?.algo ?? 'bubble')
+  const [text, setTextState] = useState((initial?.data ?? START.data).join(', '))
+  const [targetText, setTargetTextState] = useState(String(initial?.target ?? START.target))
   const [earlyExit, setEarlyExitState] = useState(true)
   const [speed, setSpeed] = useState<Speed>('normal')
   const [index, setIndex] = useState(0)
   const [playing, setPlaying] = useState(false)
-  const [quizOn, setQuizOnState] = useState(false)
+  const [quizOn, setQuizOnState] = useState(initial?.quiz ?? false)
 
   const search = isSearch(algo)
 
@@ -131,6 +134,7 @@ export function useSorting(): Sorting {
     listError,
     targetError,
     data,
+    target: parsedTarget.ok ? parsedTarget.value : null,
     run,
     history,
     frames,

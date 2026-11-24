@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router'
 import { BRAND } from '../../app/tools'
 import {
   ALGORITHM_INFO,
@@ -6,6 +8,8 @@ import {
   MAX_VALUE,
   MIN_ITEMS,
   MIN_VALUE,
+  parseSortingUrl,
+  sortingUrlParams,
   type AlgorithmId,
 } from '../../core/algorithms'
 import { Button } from '../ui/Button'
@@ -24,7 +28,17 @@ const fieldClass =
 const okBorder = 'border-slate-300 dark:border-slate-700'
 
 export function SortingPage() {
-  const s = useSorting()
+  const [params, setParams] = useSearchParams()
+  // Read the link once; after that the page owns the state and writes it back to the URL.
+  const [start] = useState(() => parseSortingUrl(params))
+  const s = useSorting(start)
+  useEffect(() => {
+    setParams(
+      sortingUrlParams({ algo: s.algo, data: s.data, target: s.target, search: s.search, quiz: s.quizOn }),
+      { replace: true },
+    )
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- s.data/s.target are fresh arrays/values per parse; key on their text
+  }, [s.algo, s.data?.join(','), s.target, s.search, s.quizOn, setParams])
   const count = s.frame.cards.length
   const unsorted = s.algo === 'binary' && s.listError?.startsWith('Binary search needs')
 

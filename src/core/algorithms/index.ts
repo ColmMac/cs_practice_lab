@@ -65,3 +65,4 @@ export const runAlgorithm = (
 /** The array after each pass, in order (sorting runs). */
 export const passSnapshots = (run: Run): number[][] =>
   run.steps.flatMap((s) => (s.kind === 'pass-end' ? [s.array] : []))
+export { parseSortingUrl, sortingUrlParams, type SortingUrlState } from './urlState'

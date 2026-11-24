@@ -280,6 +280,64 @@ test('quiz: binary search asks for mid, with the keyboard contract, and linear s
   await expect(page.getByRole('button', { name: /^Step ▶/ })).toBeVisible()
 })
 
+test('a bubble sort deep link and the preset give the hand-checked pass table, and the URL follows the page', async ({ page }) => {
+  await page.goto('/sorting-visualizer')
+  expect(page.url()).not.toContain('?') // a plain page keeps a plain URL
+  await algo(page, 'Insertion sort')
+  await expect(page).toHaveURL(/\?algo=insertion$/)
+  await page.getByLabel(/^List/).fill('9, 7, 5')
+  await expect(page).toHaveURL(/algo=insertion&data=9%2C7%2C5/)
+  await algo(page, 'Bubble sort')
+  await page.getByLabel('Example').selectOption({ label: 'Textbook: 5, 1, 4, 2, 8' })
+  await expect(page).not.toHaveURL(/\?/)
+
+  await page.goto('/sorting-visualizer?algo=bubble&data=5,1,4,2,8')
+  expect(await historyRows(page)).toEqual([
+    ['Start', '5', '1', '4', '2', '8', '', ''],
+    ['1', '1', '4', '2', '5', '8', '4', '3'],
+    ['2', '1', '2', '4', '5', '8', '3', '1'],
+    ['3', '1', '2', '4', '5', '8', '2', '0'],
+  ])
+})
+
+test('the binary search deep link shows the mid sequence 3, 5, 6, 7', async ({ page }) => {
+  await page.goto('/sorting-visualizer?algo=binary&data=3,9,10,23,27,38,43,82&target=82')
+  await expect(page.getByLabel('Algorithm')).toHaveValue('binary')
+  await expect(page.getByLabel(/^Target/)).toHaveValue('82')
+  const table = page.getByRole('table', { name: /Binary search for 82/ })
+  const mids = await table.locator('tbody tr').evaluateAll((rows) =>
+    rows.map((r) => r.querySelectorAll('td')[3]?.textContent?.trim()),
+  )
+  expect(mids).toEqual(['3', '5', '6', '7'])
+})
+
+test('bad link parameters fall back to the defaults', async ({ page }) => {
+  await page.goto('/sorting-visualizer?algo=nope&data=1,x&target=zz&quiz=maybe')
+  await expect(page.getByLabel('Algorithm')).toHaveValue('bubble')
+  expect(await values(page)).toEqual([5, 1, 4, 2, 8])
+  await expect(page.getByRole('radio', { name: 'Watch' })).toBeChecked()
+})
+
+test('the quiz deep link opens in quiz mode: one right answer, one wrong', async ({ page }) => {
+  await page.goto('/sorting-visualizer?quiz=1')
+  await expect(page.getByRole('radio', { name: 'Quiz' })).toBeChecked()
+  await expect(page.getByTestId('quiz-prompt')).toContainText('after pass 1')
+
+  await page.getByRole('textbox', { name: 'Your list' }).fill('1, 4, 2, 5, 8')
+  await page.getByRole('button', { name: 'Check answer' }).click()
+  await expect(feedback(page, 'q1')).toContainText('Correct')
+  await page.getByRole('button', { name: 'Continue ▶' }).click()
+
+  await page.getByRole('textbox', { name: 'Your list' }).fill('1, 4, 2, 5, 8')
+  await page.getByRole('button', { name: 'Check answer' }).click()
+  await expect(feedback(page, 'q2')).toContainText('Not correct')
+
+  // Turning the quiz off and on again is reflected in the link.
+  await expect(page).toHaveURL(/quiz=1/)
+  await page.getByRole('radio', { name: 'Watch' }).click()
+  await expect(page).not.toHaveURL(/quiz/)
+})
+
 test.describe('axe audit on the real page', () => {
   test.use({ bypassCSP: true }) // lets the test inject axe-core; the CSP itself is tested elsewhere
 
@@ -328,6 +386,10 @@ test.describe('axe audit on the real page', () => {
       await page.getByRole('button', { name: /^Reveal/ }).click()
       await page.getByRole('button', { name: 'Continue ▶' }).click()
       await audit('quiz next question')
+      await page.goto('/sorting-visualizer?algo=binary&data=3,9,10,23,27,38,43,82&target=82&quiz=1')
+      await expect(page.getByRole('radio', { name: 'Quiz' })).toBeChecked()
+      await page.addScriptTag({ path: 'node_modules/axe-core/axe.min.js' }) // a new page load drops axe
+      await audit('deep link quiz')
     })
   }
 })
