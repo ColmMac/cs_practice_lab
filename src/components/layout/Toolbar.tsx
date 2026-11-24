@@ -5,7 +5,6 @@ import { ExportMenu } from '../export/ExportMenu'
 import { StudyToggle } from '../study/StudyToggle'
 import { ShareButton } from './ShareButton'
 import { Button } from '../ui/Button'
-import { ThemeToggle } from '../ui/ThemeToggle'
 import { ToolHeader } from '../ui/ToolHeader'
 
 export function Toolbar() {
@@ -47,7 +46,6 @@ Cancel
         <RuntimeStatusBadge />
         <ExportMenu />
         <ShareButton />
-        <ThemeToggle />
       </div>
     </ToolHeader>
   )

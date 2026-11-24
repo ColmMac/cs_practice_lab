@@ -15,7 +15,7 @@ test('loads Python, runs a preset and shows the right table', async ({ page }) =
   page.on('pageerror', (e) => errors.push(e.message))
   page.on('console', (m) => m.type() === 'error' && errors.push(m.text()))
 
-  await page.goto('/')
+  await page.goto('/trace-table')
   await expect(page.getByRole('status').filter({ hasText: 'Python ready' })).toBeVisible({ timeout: 80_000 })
 
   await loadPreset(page, 'Digit sum (while, %, //)')
@@ -29,7 +29,7 @@ test('loads Python, runs a preset and shows the right table', async ({ page }) =
 })
 
 test('recursion preset shows return values', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/trace-table')
   await loadPreset(page, 'Recursive factorial')
   const table = page.getByRole('table', { name: 'Trace table' })
   await expect(table.getByRole('cell', { name: '24' }).first()).toBeVisible({ timeout: 80_000 })
@@ -37,7 +37,7 @@ test('recursion preset shows return values', async ({ page }) => {
 })
 
 test('Study mode hides answers and grades a typed answer', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/trace-table')
   await loadPreset(page, 'Digit sum (while, %, //)')
   const table = page.getByRole('table', { name: 'Trace table' })
   await expect(table.getByRole('cell', { name: '1234' }).first()).toBeVisible({ timeout: 80_000 })
@@ -49,7 +49,7 @@ test('Study mode hides answers and grades a typed answer', async ({ page }) => {
 })
 
 test('Markdown export downloads a file', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/trace-table')
   await loadPreset(page, 'Digit sum (while, %, //)')
   await expect(page.getByRole('table', { name: 'Trace table' }).getByRole('cell', { name: '1234' }).first()).toBeVisible({
     timeout: 80_000,
@@ -67,7 +67,7 @@ test('Markdown export downloads a file', async ({ page }) => {
 
 test('theme toggle applies the dark class and persists across a reload (tts:theme)', async ({ page }) => {
   await page.emulateMedia({ colorScheme: 'light' })
-  await page.goto('/')
+  await page.goto('/trace-table')
   const html = page.locator('html')
   await expect(html).not.toHaveClass(/dark/)
 

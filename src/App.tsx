@@ -42,7 +42,7 @@ export function App() {
 
   return (
     <>
-    <div className="flex h-screen flex-col bg-white text-slate-900 print:hidden dark:bg-slate-950 dark:text-slate-100">
+    <div className="flex min-h-0 flex-1 flex-col print:hidden">
       <Toolbar />
       <SharedBanner />
       <main className="grid min-h-0 flex-1 grid-cols-1 gap-4 p-4 lg:grid-cols-[minmax(320px,2fr)_3fr]">
