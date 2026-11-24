@@ -1,6 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router'
 import { BRAND } from '../../app/tools'
-import { toBinary, type Width } from '../../core/numbers'
+import { numberUrlParams, parseNumberUrl, toBinary, type Mode, type Topic, type Width } from '../../core/numbers'
+import { newSeed } from '../../core/study/rng'
 import { Badge } from '../ui/Badge'
 import { Button } from '../ui/Button'
 import { Panel } from '../ui/Panel'
@@ -39,8 +41,17 @@ function Explain({ note }: { note: Note }) {
 }
 
 export function NumberSystemsPage() {
-  const s = useBitSandbox()
-  const [mode, setMode] = useState<'sandbox' | 'add' | 'practice'>('sandbox')
+  const [params, setParams] = useSearchParams()
+  // Read the link once; after that the page owns the state and writes it back to the URL.
+  const [start] = useState(() => parseNumberUrl(params))
+  const s = useBitSandbox({ width: start.width, bits: start.bits })
+  const [mode, setMode] = useState<Mode>(start.mode)
+  const [seed, setSeed] = useState(() => start.seed ?? newSeed())
+  const [topic, setTopic] = useState<Topic | null>(start.topic)
+
+  useEffect(() => {
+    setParams(numberUrlParams({ mode, width: s.width, bits: s.bits, topic, seed }), { replace: true })
+  }, [mode, s.width, s.bits, topic, seed, setParams])
   return (
     <>
       <title>{`Number systems · ${BRAND}`}</title>
@@ -83,7 +94,7 @@ export function NumberSystemsPage() {
         )}
       </ToolHeader>
       {mode === 'practice' ? (
-        <PracticeView />
+        <PracticeView seed={seed} topic={topic} onTopic={setTopic} onSeed={setSeed} />
       ) : mode === 'add' ? (
         <AdditionView width={s.width} />
       ) : (

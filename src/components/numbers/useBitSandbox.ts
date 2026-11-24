@@ -54,9 +54,9 @@ const show = (bits: Bits, base: NumberBase): string =>
 
 const zeros = (width: Width): Bits => fromUnsigned(0, width)
 
-export function useBitSandbox() {
-  const [width, setWidthState] = useState<Width>(8)
-  const [bits, setBits] = useState<Bits>(() => zeros(8))
+export function useBitSandbox(initial?: { width: Width; bits: Bits | null }) {
+  const [width, setWidthState] = useState<Width>(initial?.width ?? 8)
+  const [bits, setBits] = useState<Bits>(() => initial?.bits ?? zeros(initial?.width ?? 8))
   const [view, setView] = useState<View>('unsigned')
   const [note, setNote] = useState<Note>(null)
   // The text a student is typing in a field, kept apart from the bits so a half-typed value never clobbers them.

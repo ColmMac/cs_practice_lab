@@ -1,4 +1,4 @@
-import { explain } from '../../core/numbers'
+import { explain, TOPICS, type Topic } from '../../core/numbers'
 import { Button } from '../ui/Button'
 import { Panel } from '../ui/Panel'
 import { AnswerCell } from '../study/AnswerCell'
@@ -7,8 +7,18 @@ import { CHECK_ID } from '../study/useAnswerGrid'
 import { usePractice } from './usePractice'
 
 /** Practice mode: eight seeded questions, graded with the shared answer grid; the working appears after checking. */
-export function PracticeView() {
-  const p = usePractice()
+export function PracticeView({
+  seed,
+  topic,
+  onTopic,
+  onSeed,
+}: {
+  seed: number
+  topic: Topic | null
+  onTopic: (topic: Topic | null) => void
+  onSeed: (seed: number) => void
+}) {
+  const p = usePractice(seed, topic, onSeed)
   const { grid } = p
   return (
     <main className="flex min-h-0 flex-1 flex-col gap-3 overflow-auto p-4">
@@ -20,6 +30,24 @@ export function PracticeView() {
             </Button>
             <Button onClick={grid.reset}>Reset answers</Button>
             <Button onClick={p.next}>New questions</Button>
+            <label className="flex items-center gap-1 text-xs text-slate-700 dark:text-slate-300">
+              Topic
+              <select
+                value={topic ?? ''}
+                onChange={(e) => {
+                  onTopic((e.target.value || null) as Topic | null)
+                  grid.reset()
+                }}
+                className="rounded border border-slate-300 bg-white px-1 py-1 text-xs text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+              >
+                <option value="">All topics</option>
+                {(Object.keys(TOPICS) as Topic[]).map((t) => (
+                  <option key={t} value={t}>
+                    {TOPICS[t].label}
+                  </option>
+                ))}
+              </select>
+            </label>
             <p className="text-[11px] text-slate-600 dark:text-slate-400">
               <kbd>Enter</kbd> / <kbd>↓</kbd> next · <kbd>Shift+Enter</kbd> / <kbd>↑</kbd> previous · <kbd>Alt+H</kbd> hint · <kbd>Alt+R</kbd> reveal ·
               formatting such as 0b, 0x and spaces is fine.

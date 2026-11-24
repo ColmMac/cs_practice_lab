@@ -1,5 +1,5 @@
-import { useCallback, useMemo, useState } from 'react'
-import { generateQuestions, gradeAnswer, hintFor, type Question } from '../../core/numbers'
+import { useCallback, useMemo } from 'react'
+import { generateQuestions, gradeAnswer, hintFor, TOPICS, type Question, type Topic } from '../../core/numbers'
 import { newSeed } from '../../core/study/rng'
 import { summarise } from '../../core/study/score'
 import { useAnswerGrid } from '../study/useAnswerGrid'
@@ -17,9 +17,11 @@ const KIND_LABEL: Record<Question['kind'], string> = {
 }
 
 /** Practice mode: seeded questions, the generic answer grid for typing/hints/reveals/grading, and a score. */
-export function usePractice(initialSeed?: number) {
-  const [seed, setSeed] = useState(() => initialSeed ?? newSeed())
-  const questions = useMemo(() => generateQuestions(seed), [seed])
+export function usePractice(seed: number, topic: Topic | null, onSeed: (seed: number) => void) {
+  const questions = useMemo(
+    () => generateQuestions(seed, undefined, topic ? TOPICS[topic].kinds : undefined),
+    [seed, topic],
+  )
   const byId = useMemo(() => new Map(questions.map((q) => [q.id, q])), [questions])
   const keys = useMemo(() => questions.map((q) => q.id), [questions])
 
@@ -42,7 +44,7 @@ export function usePractice(initialSeed?: number) {
   )
 
   const next = () => {
-    setSeed(newSeed())
+    onSeed(newSeed())
     reset()
   }
   const hint = (q: Question) => (grid.hints[q.id] ? hintFor(q) : null)

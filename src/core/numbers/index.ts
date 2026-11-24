@@ -28,6 +28,7 @@ export {
   type AddResult,
   type ShiftResult,
 } from './arith'
+export { MODES, TOPICS, numberUrlParams, parseNumberUrl, type Mode, type NumberUrlState, type Topic } from './urlState'
 export { parseNumberInput, type NumberBase, type ParseResult } from './parse'
 export {
   KINDS,

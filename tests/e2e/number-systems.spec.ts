@@ -208,14 +208,13 @@ test.describe('practice mode', () => {
   })
 
   test('a missing leading zero is Almost, and feedback does not reveal the answer', async ({ page }) => {
-    await open(page)
     const first = page.getByTestId('question').first()
-    // Questions are random (the seed URL parameter arrives in N3.5): draw again until the number is below 128,
-    // so that its binary form really has a leading zero to leave out.
+    // Questions are seeded: step through seeds until the number is below 128, so its binary form has a leading zero.
     const read = async () => Number(/Convert (\d+) to/.exec((await first.getByTestId('prompt').textContent()) ?? '')![1])
-    let n = await read()
-    for (let i = 0; i < 40 && n >= 128; i++) {
-      await page.getByRole('button', { name: 'New questions' }).click()
+    let n = 999
+    for (let seed = 1; seed < 60 && n >= 128; seed++) {
+      await page.goto(`/number-systems?mode=practice&seed=${seed}`)
+      await expect(page.getByTestId('question')).toHaveCount(8)
       n = await read()
     }
     expect(n).toBeLessThan(128)
@@ -245,4 +244,112 @@ test.describe('practice mode', () => {
     await expect(page.getByTestId('revealed-cell')).toHaveCount(0)
     await expect(box(page, 2)).toHaveValue('')
   })
+})
+
+test.describe('URL state', () => {
+  test('?bits= deep link opens the register, and toggling writes the URL back', async ({ page }) => {
+    await page.goto('/number-systems?bits=01001001')
+    await expect(page.getByLabel(/^Denary \(unsigned\)/)).toHaveValue('73')
+    await expect(page.getByLabel(/^Hex/)).toHaveValue('49')
+    await expect(bit(page, 6)).toHaveAttribute('aria-pressed', 'true')
+    await bit(page, 0).click()
+    await expect(page).toHaveURL(/bits=01001000/)
+    await page.getByRole('button', { name: 'Clear' }).click()
+    await expect(page).not.toHaveURL(/bits=/)
+  })
+
+  test('?width=16 and ?mode=add deep links', async ({ page }) => {
+    await page.goto('/number-systems?bits=0000000011111111')
+    await expect(page.getByRole('radio', { name: '16-bit' })).toBeChecked()
+    await expect(page.getByLabel(/^Hex/)).toHaveValue('00FF')
+    await page.goto('/number-systems?mode=add&width=16')
+    await expect(page.getByTestId('addition-table')).toBeVisible()
+    await expect(page.getByTestId('result-bit')).toHaveCount(16)
+    await expect(page).toHaveURL(/mode=add/)
+  })
+
+  test('bad parameters fall back to the plain sandbox', async ({ page }) => {
+    await page.goto('/number-systems?mode=nope&bits=zzz&width=99&topic=__proto__')
+    await expect(page.getByLabel(/^Binary/)).toHaveValue('00000000')
+    await expect(page.getByRole('radio', { name: '8-bit' })).toBeChecked()
+  })
+
+  test('a fixed seed gives the same questions, and one is answered right', async ({ page }) => {
+    await page.goto('/number-systems?mode=practice&seed=5')
+    await expect(page.getByTestId('question')).toHaveCount(8)
+    const prompts = await page.getByTestId('prompt').allTextContents()
+    expect(prompts).toHaveLength(8)
+    await page.reload()
+    await expect(page.getByTestId('question')).toHaveCount(8)
+    expect(await page.getByTestId('prompt').allTextContents()).toEqual(prompts)
+
+    const n = Number(/Convert (\d+) to/.exec(prompts[0]!)![1])
+    await page.getByRole('textbox', { name: 'Answer to question 1' }).fill(n.toString(2).padStart(8, '0'))
+    await page.getByRole('button', { name: 'Check answers' }).click()
+    await expect(page.getByTestId('question').first().locator('[id^="study-msg-"]')).toContainText('Correct')
+
+    await page.getByRole('button', { name: 'New questions' }).click()
+    await expect(page).not.toHaveURL(/seed=5(&|$)/)
+    await expect(page).toHaveURL(/seed=\d+/)
+  })
+
+  test('?topic= limits the questions, and the topic select changes it', async ({ page }) => {
+    await page.goto('/number-systems?mode=practice&topic=twos&seed=3')
+    await expect(page.getByTestId('question')).toHaveCount(8)
+    const kinds = () => page.getByTestId('question').evaluateAll((els) => els.map((e) => e.getAttribute('data-kind')))
+    expect(new Set(await kinds())).toEqual(new Set(['neg2twos', 'twos2dec']))
+    await page.getByLabel('Topic').selectOption('hex')
+    await expect(page).toHaveURL(/topic=hex/)
+    await expect(page.getByTestId('question').first()).toHaveAttribute('data-kind', 'bin2hex')
+    expect(new Set(await kinds())).toEqual(new Set(['bin2hex', 'hex2bin']))
+    await page.getByLabel('Topic').selectOption('')
+    await expect(page).not.toHaveURL(/topic=/)
+  })
+
+  test('the overflow example (01111111 + 00000001) flags signed overflow', async ({ page }) => {
+    await page.goto('/number-systems?mode=add')
+    await page.getByRole('textbox', { name: /^Operand A/ }).fill('01111111')
+    await page.getByRole('textbox', { name: /^Operand B/ }).fill('00000001')
+    await expect(page.getByText('Overflow: two positives gave a negative.')).toBeVisible()
+  })
+})
+
+test.describe('axe audit on the real page', () => {
+  test.use({ bypassCSP: true })
+
+  for (const theme of ['light', 'dark'] as const) {
+    test(`no axe violations in ${theme} mode (sandbox, addition and practice)`, async ({ page }) => {
+      await page.addInitScript((t) => localStorage.setItem('tts:theme', t), theme)
+      await page.goto('/number-systems?bits=01001001')
+      await expect(page.locator('html')).toHaveClass(theme === 'dark' ? /\bdark\b/ : /^(?!.*\bdark\b)/)
+      await expect(page.getByLabel(/^Hex/)).toHaveValue('49')
+      await page.addScriptTag({ path: 'node_modules/axe-core/axe.min.js' })
+
+      const audit = async (label: string) => {
+        const results = await page.evaluate(async () => {
+          const axe = (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: { target: unknown }[] }[] }> } }).axe
+          const r = await axe.run()
+          return r.violations.map((v) => ({ id: v.id, targets: v.nodes.map((n) => n.target) }))
+        })
+        expect(results, `${label} (${theme})`).toEqual([])
+      }
+
+      await audit('sandbox')
+      await page.getByRole('button', { name: 'Arithmetic left' }).click()
+      await page.getByLabel(/^Denary \(unsigned\)/).fill('300')
+      await audit('sandbox error')
+      await page.getByRole('radiogroup', { name: 'Mode' }).getByRole('radio', { name: 'Addition' }).click()
+      await page.getByRole('button', { name: 'Signed overflow' }).click()
+      await audit('addition')
+      await page.getByRole('button', { name: 'Step through' }).click()
+      await page.getByRole('button', { name: 'Next column' }).click()
+      await audit('addition step')
+      await page.getByRole('radiogroup', { name: 'Mode' }).getByRole('radio', { name: 'Practice' }).click()
+      await expect(page.getByTestId('question')).toHaveCount(8)
+      await audit('practice')
+      await page.getByRole('textbox', { name: 'Answer to question 1' }).fill('1')
+      await page.getByRole('button', { name: 'Check answers' }).click()
+      await audit('practice checked')
+    })
+  }
 })

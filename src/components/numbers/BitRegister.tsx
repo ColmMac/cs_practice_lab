@@ -30,7 +30,7 @@ export function BitRegister({
               <button
                 type="button"
                 aria-pressed={b === 1}
-                aria-label={`${name ? `${name} ` : ''}bit ${n - 1 - i}, weight ${weight}`}
+                aria-label={`${name ? `${name} ` : ''}bit ${n - 1 - i}, weight ${weight}, value ${b}`}
                 onClick={() => onToggle(i)}
                 className={`rounded border px-2 py-2 font-mono text-base font-semibold focus-visible:outline-2 focus-visible:outline-emerald-700 ${
                   b === 1
