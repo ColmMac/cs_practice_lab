@@ -9,7 +9,11 @@ const TraceTablePage = lazy(() => import('../App').then((m) => ({ default: m.App
 
 const TruthTablePage = lazy(() => import('../components/truth/TruthTablePage').then((m) => ({ default: m.TruthTablePage })))
 
-const LIVE = ['/trace-table', '/truth-tables']
+const NumberSystemsPage = lazy(() =>
+  import('../components/numbers/NumberSystemsPage').then((m) => ({ default: m.NumberSystemsPage })),
+)
+
+const LIVE = ['/trace-table', '/truth-tables', '/number-systems']
 const COMING_SOON = TOOLS.filter((t) => !LIVE.includes(t.path))
 
 export function AppRoutes() {
@@ -30,6 +34,14 @@ export function AppRoutes() {
           element={
             <Suspense fallback={<p role="status" className="p-4 text-sm">Loading…</p>}>
               <TruthTablePage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="number-systems"
+          element={
+            <Suspense fallback={<p role="status" className="p-4 text-sm">Loading…</p>}>
+              <NumberSystemsPage />
             </Suspense>
           }
         />

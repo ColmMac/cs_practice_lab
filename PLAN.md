@@ -988,10 +988,11 @@ Hub-wide rules (these join CLAUDE.md as they land):
 - Tests: **exhaustive over all 256×256 8-bit additions** against integer arithmetic, all 8-bit conversion round trips, and sampled 16-bit values.
 - Implementation notes: `bits.ts` (MSB-first `Bits`, conversions, `invert`, `negate`, `NumberError` thrown on range errors), `arith.ts` (shifts return `{bits, out, lost, overflow?}`; `add` returns `carries` = carry INTO each column, aligned with the bits, plus `carryOut`, `overflow`, `overflowReason`), `parse.ts` (`parseNumberInput` never throws; binary reports `padded` when fewer digits than the width were typed, for N3.4's "Almost"). Pure core with no route, so no E2E (N3.5 owns it); `tests/unit/numbers.test.ts` (18 tests). Full suite 857 unit, 20 E2E.
 
-**N3.2: Bit sandbox UI**
+**N3.2: Bit sandbox UI** ✅ DONE
 - A register of 8 or 16 toggle buttons (`aria-pressed`, labels such as "bit 7, weight 128", with the weight shown as −128 in signed view), a live weights row and a sum-of-set-weights line ("64 + 8 + 1 = 73").
 - Four linked fields (denary unsigned, denary signed, binary, hex). Editing any of them updates the rest, and invalid or out-of-range input shows an inline error without clobbering the bits.
 - Width toggle, shift buttons (with the bit that fell out and any overflow flag), Clear, Invert and Negate (two's complement shown as "invert + 1").
+- Implementation notes: `src/components/numbers/` (`NumberSystemsPage`, `useBitSandbox`, `BitRegister`); `/number-systems` is now a lazy live route (`shell.spec.ts` uses `/sorting-visualizer` for the coming-soon case). A field keeps a draft while it is being typed, so a half-typed or out-of-range value shows an inline error and leaves the bits alone; blur restores the derived text. Width change zero-extends or keeps the low bits. Shifts (logical/arithmetic, left/right by 1) report the bit shifted out and, for arithmetic left, the overflow flag; Negate shows "invert X -> Y, then add 1". A Weights toggle (unsigned/signed) shows the top weight as negative. **Deferred:** URL state and axe (N3.5). E2E: `tests/e2e/number-systems.spec.ts` (6); full suite passes.
 
 **N3.3: Binary addition visualiser**
 - Two operand registers, then the column layout an exam uses: a carry row, operand rows and a result row. Carries are highlighted, and a step-through goes column by column (right to left).

@@ -1,0 +1,99 @@
+import { expect, test } from '@playwright/test'
+
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('tts:welcomed', '1'))
+})
+
+const bit = (page: import('@playwright/test').Page, index: number) =>
+  page.getByRole('button', { name: new RegExp(`^bit ${index}, weight`) })
+
+test('toggling bits updates the sum line and all four fields', async ({ page }) => {
+  await page.goto('/number-systems')
+  await expect(page.getByRole('heading', { level: 1, name: 'Number systems' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'bit 7, weight 128' })).toHaveAttribute('aria-pressed', 'false')
+
+  for (const i of [6, 3, 0]) await bit(page, i).click()
+  await expect(page.getByTestId('sum-line')).toHaveText('64 + 8 + 1 = 73')
+  await expect(page.getByLabel(/^Denary \(unsigned\)/)).toHaveValue('73')
+  await expect(page.getByLabel(/^Denary \(signed\)/)).toHaveValue('73')
+  await expect(page.getByLabel(/^Binary/)).toHaveValue('01001001')
+  await expect(page.getByLabel(/^Hex/)).toHaveValue('49')
+})
+
+test('editing any field updates the bits; bad input shows an error without clobbering them', async ({ page }) => {
+  await page.goto('/number-systems')
+  await page.getByLabel(/^Hex/).fill('0xFF')
+  await expect(page.getByLabel(/^Binary/)).toHaveValue('11111111')
+  await expect(page.getByLabel(/^Denary \(signed\)/)).toHaveValue('-1')
+  await expect(page.getByLabel(/^Denary \(unsigned\)/)).toHaveValue('255')
+  await expect(bit(page, 7)).toHaveAttribute('aria-pressed', 'true')
+
+  await page.getByLabel(/^Denary \(unsigned\)/).fill('300')
+  await expect(page.getByLabel(/^Denary \(unsigned\)/)).toHaveAttribute('aria-invalid', 'true')
+  await expect(page.locator('#num-unsigned-err')).toContainText('does not fit')
+  await expect(bit(page, 7)).toHaveAttribute('aria-pressed', 'true') // bits untouched
+  await expect(page.getByLabel(/^Binary/)).toHaveValue('11111111')
+
+  await page.getByLabel(/^Binary/).fill('0b1000 0000')
+  await expect(page.getByLabel(/^Denary \(signed\)/)).toHaveValue('-128')
+  await expect(page.locator('#num-unsigned-err')).toHaveText('')
+})
+
+test('the signed view shows the top weight as negative', async ({ page }) => {
+  await page.goto('/number-systems')
+  await page.getByLabel(/^Binary/).fill('10000001')
+  await page.getByRole('radiogroup', { name: 'Weights' }).getByRole('radio', { name: 'Signed', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'bit 7, weight -128' })).toBeVisible()
+  await expect(page.getByTestId('sum-line')).toHaveText('-128 + 1 = -127')
+})
+
+test('shifts report the bit that fell out and the overflow flag', async ({ page }) => {
+  await page.goto('/number-systems')
+  await page.getByLabel(/^Binary/).fill('01000001')
+  await page.getByRole('button', { name: 'Arithmetic left' }).click()
+  await expect(page.getByLabel(/^Binary/)).toHaveValue('10000010')
+  await expect(page.getByTestId('bit-out')).toHaveText('0')
+  await expect(page.getByText(/^Overflow:/)).toBeVisible()
+
+  await page.getByRole('button', { name: 'Arithmetic right' }).click()
+  await expect(page.getByLabel(/^Binary/)).toHaveValue('11000001')
+  await expect(page.getByTestId('bit-out')).toHaveText('0')
+
+  await page.getByRole('button', { name: 'Logical right' }).click()
+  await expect(page.getByLabel(/^Binary/)).toHaveValue('01100000')
+  await expect(page.getByTestId('bit-out')).toHaveText('1')
+
+  await page.getByRole('button', { name: 'Logical left' }).click()
+  await expect(page.getByLabel(/^Binary/)).toHaveValue('11000000')
+})
+
+test('invert, negate (shows invert + 1) and clear', async ({ page }) => {
+  await page.goto('/number-systems')
+  await page.getByLabel(/^Denary \(unsigned\)/).fill('5')
+  await page.getByRole('button', { name: 'Negate' }).click()
+  await expect(page.getByLabel(/^Denary \(signed\)/)).toHaveValue('-5')
+  await expect(page.getByLabel(/^Binary/)).toHaveValue('11111011')
+  await expect(page.getByText('invert 00000101 → 11111010, then add 1')).toBeVisible()
+
+  await page.getByRole('button', { name: 'Invert' }).click()
+  await expect(page.getByLabel(/^Binary/)).toHaveValue('00000100')
+
+  await page.getByRole('button', { name: 'Clear' }).click()
+  await expect(page.getByLabel(/^Binary/)).toHaveValue('00000000')
+  await expect(page.getByTestId('sum-line')).toHaveText('No bits set = 0')
+})
+
+test('the width toggle switches to 16 bits and back', async ({ page }) => {
+  await page.goto('/number-systems')
+  await page.getByLabel(/^Binary/).fill('11111111')
+  await page.getByRole('radio', { name: '16-bit' }).click()
+  await expect(page.getByRole('group', { name: '16-bit register' }).getByRole('button')).toHaveCount(16)
+  await expect(page.getByLabel(/^Binary/)).toHaveValue('0000000011111111')
+  await expect(page.getByLabel(/^Hex/)).toHaveValue('00FF')
+  await page.getByLabel(/^Denary \(unsigned\)/).fill('65535')
+  await expect(page.getByLabel(/^Hex/)).toHaveValue('FFFF')
+
+  await page.getByRole('radio', { name: '8-bit' }).click()
+  await expect(page.getByRole('group', { name: '8-bit register' }).getByRole('button')).toHaveCount(8)
+  await expect(page.getByLabel(/^Hex/)).toHaveValue('FF')
+})
