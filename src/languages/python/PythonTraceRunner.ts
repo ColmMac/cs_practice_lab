@@ -27,7 +27,7 @@ interface ActiveRun {
   timer: ReturnType<typeof setTimeout>
   detachAbort?: () => void
   /** Everything streamed so far; what survives if the worker has to be killed. */
-  acc: Required<Pick<WireChunk, 'steps' | 'frames' | 'variables' | 'rawSteps' | 'line'>>
+  acc: Required<Pick<WireChunk, 'steps' | 'frames' | 'variables' | 'rawSteps' | 'line'>> & Pick<WireChunk, 'lines'>
   lastProgressAt: number
 }
 
@@ -194,6 +194,7 @@ export class PythonTraceRunner implements TraceRunner {
         run.acc.variables.push(...msg.chunk.variables)
         run.acc.rawSteps = msg.chunk.rawSteps
         run.acc.line = msg.chunk.line
+        run.acc.lines = msg.chunk.lines ?? run.acc.lines
         // Rows arrive one by one; tell the UI about progress at most every PROGRESS_INTERVAL_MS.
         const now = Date.now()
         if (now - run.lastProgressAt >= PROGRESS_INTERVAL_MS) {
@@ -279,6 +280,7 @@ export class PythonTraceRunner implements TraceRunner {
       steps: [...run.acc.steps, ...wire.steps],
       frames: [...run.acc.frames, ...wire.frames],
       variables: [...run.acc.variables, ...wire.variables],
+      lines: run.acc.lines ?? wire.lines,
     }
     return materialise(merged, { runId: run.runId, code: run.code, options: run.options })
   }

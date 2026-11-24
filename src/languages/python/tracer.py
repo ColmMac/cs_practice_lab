@@ -16,8 +16,10 @@ from __future__ import annotations
 
 import ast
 import builtins
+import copy
 import json
 import random
+import re
 import sys
 import time
 import traceback
@@ -29,6 +31,9 @@ TRANSPARENT = frozenset({"<genexpr>", "<lambda>", "<listcomp>", "<dictcomp>", "<
 BLOCKED_IMPORTS = frozenset({"js", "pyodide", "pyodide_js", "micropip", "_pyodide"})
 MAX_STDOUT = 100_000
 CO_NEWLOCALS = 0x2  # function code objects have it; module and class bodies don't
+MAX_LINE_INFO = 2000  # described source lines
+MAX_EXPR_TEXT = 200
+MAX_EXPR_NAMES = 40
 
 _MISSING = object()
 
@@ -238,6 +243,149 @@ def _target_names(t, out: set) -> None:
         _target_names(t.value, out)
 
 
+# ── line descriptions (what each line is, for the Condition column and explanations) ──
+
+_COMPREHENSION_NODES = (ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)
+_IMPURE_NODES = (ast.NamedExpr, ast.Await, ast.Yield, ast.YieldFrom, ast.Lambda, *_COMPREHENSION_NODES)
+_PLACEHOLDER = re.compile(r"__tt_(\d+)__")
+
+
+def _is_pure(node) -> bool:
+    """Safe to restate with values substituted: no calls except safe built-ins, nothing that binds or defers."""
+    for n in ast.walk(node):
+        if isinstance(n, _IMPURE_NODES):
+            return False
+        if isinstance(n, ast.Call) and not (isinstance(n.func, ast.Name) and n.func.id in SAFE_CALLS):
+            return False
+    return True
+
+
+class _Placeholders(ast.NodeTransformer):
+    """Swaps every variable read (not a called function's name) for a numbered placeholder."""
+
+    def __init__(self):
+        self.names: list[str] = []
+
+    def visit_Call(self, node):
+        if not isinstance(node.func, ast.Name):
+            node.func = self.visit(node.func)
+        node.args = [self.visit(a) for a in node.args]
+        node.keywords = [self.visit(k) for k in node.keywords]
+        return node
+
+    def visit_Name(self, node):
+        if not isinstance(node.ctx, ast.Load):
+            return node
+        self.names.append(node.id)
+        return ast.Name(f"__tt_{len(self.names) - 1}__", ast.Load())
+
+
+def _template(exprs: list, text: str) -> dict | None:
+    """``{"t": source text, "p": [literal, {"n": name}, literal, ...], "u": pure}``, or None if too big.
+
+    ``exprs`` are joined with ", " (print arguments). Works on copies: the tree is compiled afterwards.
+    Nothing is evaluated.
+    """
+    if len(text) > MAX_EXPR_TEXT or "__tt_" in text:
+        return None
+    try:
+        swap = _Placeholders()
+        source = ", ".join(ast.unparse(swap.visit(copy.deepcopy(e))) for e in exprs)
+        if len(swap.names) > MAX_EXPR_NAMES:
+            return None
+        pure = all(_is_pure(e) for e in exprs)
+    except (ValueError, RecursionError):  # huge int literal, absurd nesting
+        return None
+    parts = [{"n": swap.names[int(x)]} if i % 2 else x for i, x in enumerate(_PLACEHOLDER.split(source))]
+    return {"t": text, "p": parts, "u": pure}
+
+
+class _Source:
+    """Source text of AST nodes. (``ast.get_source_segment`` re-splits the whole file on every call.)"""
+
+    def __init__(self, code: str):
+        self.lines = re.split(r"\r\n|\r|\n", code)
+
+    def line(self, lineno: int) -> str:
+        return self.lines[lineno - 1] if 0 < lineno <= len(self.lines) else ""
+
+    def segment(self, node) -> str:
+        """As written, with a multi-line expression joined onto one line."""
+        first, last = node.lineno, node.end_lineno
+        rows = [self.line(n).encode("utf-8") for n in range(first, last + 1)]
+        rows[-1] = rows[-1][: node.end_col_offset]
+        rows[0] = rows[0][node.col_offset :]
+        return " ".join(r.decode("utf-8", "replace").strip() for r in rows)
+
+    def text(self, nodes: list) -> str:
+        total = sum(n.end_lineno - n.lineno for n in nodes)
+        if total > 20:  # cannot fit in MAX_EXPR_TEXT in any useful way
+            return " " * (MAX_EXPR_TEXT + 1)
+        return ", ".join(self.segment(n) for n in nodes)
+
+
+def _target_texts(targets: list, src: _Source) -> list[str]:
+    out: list[str] = []
+    todo = list(targets)
+    while todo and len(out) < MAX_EXPR_NAMES:
+        t = todo.pop(0)
+        if isinstance(t, (ast.Tuple, ast.List)):
+            todo[:0] = t.elts
+        elif isinstance(t, ast.Starred):
+            todo.insert(0, t.value)
+        else:
+            text = t.id if isinstance(t, ast.Name) else src.text([t])[:MAX_EXPR_TEXT]
+            if text not in out:
+                out.append(text)
+    return out
+
+
+def _reads_input(node) -> bool:
+    return any(isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id == "input" for n in ast.walk(node))
+
+
+def _describe(n: ast.stmt, src: _Source, is_elif: bool) -> dict:
+    kind, exprs, targets, text, value = "other", [], [], None, None
+    if isinstance(n, ast.If):
+        kind, exprs = ("elif" if is_elif else "if"), [n.test]
+    elif isinstance(n, ast.While):
+        kind, exprs = "while", [n.test]
+    elif isinstance(n, (ast.For, ast.AsyncFor)):
+        kind, exprs, targets = "for", [n.iter], [n.target]
+    elif isinstance(n, ast.Assign):
+        kind, exprs, targets, value = "assign", [n.value], n.targets, n.value
+    elif isinstance(n, ast.AnnAssign) and n.value is not None:
+        kind, exprs, targets, value = "assign", [n.value], [n.target], n.value
+    elif isinstance(n, ast.AugAssign):
+        kind, targets, value = "augassign", [n.target], n.value
+        left = copy.copy(n.target)  # shallow: only the context changes, from "store" to "read"
+        left.ctx = ast.Load()
+        whole = ast.BinOp(left, n.op, n.value)
+        if len(src.text([n])) <= MAX_EXPR_TEXT:
+            try:
+                text = ast.unparse(whole)
+            except (ValueError, RecursionError):
+                text = None
+        exprs = [whole] if text is not None else []
+    elif isinstance(n, ast.Return):
+        kind, exprs = "return", [n.value] if n.value is not None else []
+    elif isinstance(n, ast.Expr) and isinstance(n.value, ast.Call):
+        f = n.value.func
+        if isinstance(f, ast.Name) and f.id == "print":
+            kind, exprs = "output", n.value.args
+
+    out: dict = {"k": kind}
+    if exprs:
+        expr = _template(exprs, text if text is not None else src.text(exprs))
+        if expr is not None:
+            out["e"] = expr
+    if targets:
+        out["tg"] = _target_texts(targets, src)
+    if value is not None and _reads_input(value):
+        out["in"] = True
+    return out
+
+
 class Static:
     """One AST pass collecting per-line facts the runtime tracer can't know.
 
@@ -247,17 +395,30 @@ class Static:
     body_range   header line -> (first, last) line of its body, so the line that runs next tells us
                  whether an if/elif/while/for condition sent control into the body.
     ephemeral    names bound only as comprehension targets (hidden by default).
+    header_span  every line of a MULTI-LINE if/elif/while test or for iterable -> the header's first line,
+                 so line events inside it are one evaluation of one row.
+    line_info    line -> description of the first statement on it (sent to the host as ``lines``).
     """
 
-    def __init__(self, tree: ast.AST):
+    def __init__(self, tree: ast.AST, code: str):
         self.assigns: dict[int, set[str]] = defaultdict(set)
         # A for-loop target is only (re)assigned when the body is entered, not when the loop is exhausted.
         self.for_targets: dict[int, set[str]] = defaultdict(set)
         self.return_lines: set[int] = set()
         self.body_range: dict[int, tuple[int, int]] = {}
+        self.header_span: dict[int, int] = {}
+        self.line_info: dict[int, dict] = {}
+        src = _Source(code)
+        elifs: set[int] = set()  # id() of If nodes written as `elif` (not `else:` followed by `if`)
         comp: set[str] = set()
         params: set[str] = set()
-        for n in ast.walk(tree):
+        for n in ast.walk(tree):  # breadth-first: the first statement on a line is visited first
+            if isinstance(n, ast.If) and len(n.orelse) == 1 and isinstance(n.orelse[0], ast.If):
+                if src.line(n.orelse[0].lineno).lstrip().startswith("elif"):
+                    elifs.add(id(n.orelse[0]))
+            if isinstance(n, ast.stmt) and n.lineno not in self.line_info and len(self.line_info) < MAX_LINE_INFO:
+                self.line_info[n.lineno] = _describe(n, src, id(n) in elifs)
+
             if isinstance(n, ast.Assign):
                 for t in n.targets:
                     _target_names(t, self.assigns[n.lineno])
@@ -268,9 +429,9 @@ class Static:
                     _target_names(n.target, self.assigns[n.lineno])
             elif isinstance(n, (ast.For, ast.AsyncFor)):
                 _target_names(n.target, self.for_targets[n.lineno])
-                self._range(n)
+                self._range(n, n.iter)
             elif isinstance(n, (ast.If, ast.While)):
-                self._range(n)
+                self._range(n, n.test)
             elif isinstance(n, (ast.With, ast.AsyncWith)):
                 for item in n.items:
                     if item.optional_vars is not None:
@@ -293,13 +454,24 @@ class Static:
                 _target_names(n.target, comp)
             elif isinstance(n, ast.arg):
                 params.add(n.arg)
+        for line, header in self.header_span.items():  # e.g. a `:=` on a continuation line of a condition
+            if line != header and line in self.assigns:
+                self.assigns[header] |= self.assigns[line]
         bound = params.union(*self.assigns.values(), *self.for_targets.values())
         self.ephemeral = comp - bound
 
-    def _range(self, n) -> None:
+    def _range(self, n, head) -> None:
+        """``head`` is the test (or iterable) expression of the header ``n``."""
         first = n.body[0].lineno
-        if first == n.lineno:
-            return  # inline body (`if x: y`): the next line event can't tell us the outcome
+        if first <= head.end_lineno:
+            # inline body (`if x: y`): the next line event can't tell us the outcome
+            info = self.line_info.get(n.lineno)
+            if info is not None and info["k"] in ("if", "elif", "while", "for"):
+                info["ol"] = True
+            return
+        if head.end_lineno > n.lineno:
+            for line in range(n.lineno, head.end_lineno + 1):
+                self.header_span[line] = n.lineno
         self.body_range[n.lineno] = (first, max(getattr(s, "end_lineno", s.lineno) or s.lineno for s in n.body))
 
 
@@ -448,6 +620,7 @@ class Tracer:
         self.return_lines = static.return_lines
         self.emit_cb = emit_cb
         self.sent_steps = self.sent_frames = self.sent_vars = 0
+        self.sent_lines = False
         self.frame_objs: dict[int, object] = {}  # fid -> live frame object
         self.watches = [Watch(s) for s in opts.watches]
         self.last_watch: dict[str, str] = {}  # watch id -> canonical JSON of the last emitted result
@@ -493,11 +666,18 @@ class Tracer:
 
     def local_trace(self, frame, event, arg):
         if event == "line":
-            self.running_line = frame.f_lineno  # set first: the flush inside finalise() reports it
-            self.finalise(frame, next_line=frame.f_lineno)
+            line = frame.f_lineno
+            header = self.static.header_span.get(line)
+            if header is not None:
+                p = self.pending.get(self.fids[id(frame)])
+                if p is not None and p[1] == header:
+                    self.tick(frame)  # still evaluating that header: no new row (but it counts towards limits)
+                    return self.local_trace
+            self.running_line = line  # set first: the flush inside finalise() reports it
+            self.finalise(frame, next_line=line)
             self.tick(frame)
             fid = self.fids[id(frame)]
-            self.pending[fid] = (frame, frame.f_lineno)
+            self.pending[fid] = (frame, line if header is None else header)
         elif event == "exception":
             if not issubclass(arg[0], StopIteration):
                 self.exc[self.fids[id(frame)]] = (arg[0].__name__, str(arg[1]))
@@ -630,7 +810,7 @@ class Tracer:
                     writes.append((fid, n, s))
         return writes
 
-    def finalise(self, frame, closing: bool = False, ret=None, next_line=None) -> None:
+    def finalise(self, frame, closing: bool = False, ret=None, next_line=None, aborted: bool = False) -> None:
         fid = self.fids.get(id(frame))
         p = self.pending.pop(fid, None) if fid is not None else None
         if p is None:
@@ -642,12 +822,12 @@ class Tracer:
         exc = self.exc.pop(fid, None)
         branch = None
         rng = self.static.body_range.get(line)
-        if rng is not None and exc is None:
+        if rng is not None and exc is None and not aborted:
             branch = next_line is not None and rng[0] <= next_line <= rng[1]
 
         # Assignments are writes even when the value didn't change (`found = False` twice).
         names = set(self.static.assigns.get(line, ()))
-        if branch is not False:  # a for header that is exhausting does not rebind its target
+        if branch is not False and not (aborted and rng is not None):  # a for header that is exhausting does not rebind its target
             names |= self.static.for_targets.get(line, set())
         if names:
             have = {n for _f, n, _v in writes}
@@ -723,6 +903,9 @@ class Tracer:
             "rawSteps": self.raw,
             "line": self.running_line,
         }
+        if not self.sent_lines:  # static, so once is enough; first, so a killed run still has it
+            chunk["lines"] = self.static.line_info
+            self.sent_lines = True
         self.sent_steps, self.sent_frames, self.sent_vars = len(self.steps), len(frames), len(variables)
         return chunk
 
@@ -730,7 +913,7 @@ class Tracer:
         """After an abort the tracer is switched off, so finalise whatever lines were mid-flight."""
         for fid in reversed(list(self.pending)):
             frame, _ = self.pending[fid]
-            self.finalise(frame)
+            self.finalise(frame, aborted=True)  # no next line: a header's outcome is unknown, not False
 
 
 # ───────────────────────────── sandbox pieces ─────────────────────────────
@@ -835,7 +1018,7 @@ def run_trace(code: str, opts_json: str, emit=None) -> str:
 
     try:
         tree = ast.parse(code, filename=USER_FILE)
-        static = Static(tree)
+        static = Static(tree, code)
         tree = ast.fix_missing_locations(_AbortGuard().visit(tree))
         code_obj = compile(tree, USER_FILE, "exec")
     except SyntaxError as e:

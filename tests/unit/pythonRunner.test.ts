@@ -140,6 +140,19 @@ describe('PythonTraceRunner', () => {
     expect(result.stats.stepsExecuted).toBe(8)
   })
 
+  it('keeps the static line info from the first chunk, even when the run is killed', async () => {
+    const { runner, workers } = setup()
+    const p = runner.runTrace(digitSum.code, opts({ timeoutMs: 1000 }))
+    await vi.advanceTimersByTimeAsync(0)
+    const w = workers[0]!
+    const runId = w.lastRun().runId
+    w.say({ type: 'chunk', runId, chunk: { ...firstChunk(4), lines: wire.lines } })
+    w.say({ type: 'chunk', runId, chunk: { ...firstChunk(8), steps: wire.steps.slice(4, 8) } }) // later chunks have none
+    await vi.advanceTimersByTimeAsync(1000 + HARD_KILL_GRACE_MS)
+
+    expect((await p).lines?.[3]?.kind).toBe('while')
+  })
+
   it('ignores chunks that arrive for a run that was already stopped', async () => {
     const { runner, workers } = setup()
     const p = runner.runTrace('x = 1', opts())

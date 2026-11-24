@@ -6,8 +6,11 @@ export function tableText(columns: ColumnDef[], rows: TraceRow[]): string {
   const body = rows.map((r) =>
     columns.map((c) => {
       let d = r.cells[c.id]?.display ?? ''
-      if (c.id === 'line') {
+      // with a Condition column the outcome has its own cell, so the Line suffix is dropped (as the UI drops its chip)
+      if (c.id === 'line' && !columns.some((x) => x.id === 'cond')) {
         d = '  '.repeat(r.depth) + d + (r.branch === undefined ? '' : r.branch ? ' T' : ' F')
+      } else if (c.id === 'line') {
+        d = '  '.repeat(r.depth) + d
       }
       return d.replace(/\n/g, '\\n')
     }),

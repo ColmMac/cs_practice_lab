@@ -467,6 +467,97 @@
   ],
   "rawSteps": 27,
   "line": 6,
+  "lines": {
+   "1": {
+    "k": "assign",
+    "e": {
+     "t": "input(\"Enter a word: \")",
+     "p": [
+      "input('Enter a word: ')"
+     ],
+     "u": false
+    },
+    "tg": [
+     "word"
+    ],
+    "in": true
+   },
+   "2": {
+    "k": "assign",
+    "e": {
+     "t": "0",
+     "p": [
+      "0"
+     ],
+     "u": true
+    },
+    "tg": [
+     "vowels"
+    ]
+   },
+   "3": {
+    "k": "for",
+    "e": {
+     "t": "word",
+     "p": [
+      "",
+      {
+       "n": "word"
+      },
+      ""
+     ],
+     "u": true
+    },
+    "tg": [
+     "ch"
+    ]
+   },
+   "6": {
+    "k": "output",
+    "e": {
+     "t": "\"Vowels:\", vowels",
+     "p": [
+      "'Vowels:', ",
+      {
+       "n": "vowels"
+      },
+      ""
+     ],
+     "u": true
+    }
+   },
+   "4": {
+    "k": "if",
+    "e": {
+     "t": "ch in \"aeiou\"",
+     "p": [
+      "",
+      {
+       "n": "ch"
+      },
+      " in 'aeiou'"
+     ],
+     "u": true
+    }
+   },
+   "5": {
+    "k": "assign",
+    "e": {
+     "t": "vowels + 1",
+     "p": [
+      "",
+      {
+       "n": "vowels"
+      },
+      " + 1"
+     ],
+     "u": true
+    },
+    "tg": [
+     "vowels"
+    ]
+   }
+  },
   "functions": [],
   "stdout": "Enter a word: education\nVowels: 5\n",
   "stats": {

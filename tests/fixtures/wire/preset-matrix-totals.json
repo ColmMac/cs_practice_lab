@@ -538,6 +538,131 @@
   ],
   "rawSteps": 24,
   "line": 8,
+  "lines": {
+   "1": {
+    "k": "assign",
+    "e": {
+     "t": "[[1, 2, 3], [4, 5, 6]]",
+     "p": [
+      "[[1, 2, 3], [4, 5, 6]]"
+     ],
+     "u": true
+    },
+    "tg": [
+     "grid"
+    ]
+   },
+   "2": {
+    "k": "assign",
+    "e": {
+     "t": "[]",
+     "p": [
+      "[]"
+     ],
+     "u": true
+    },
+    "tg": [
+     "totals"
+    ]
+   },
+   "3": {
+    "k": "for",
+    "e": {
+     "t": "range(len(grid))",
+     "p": [
+      "range(len(",
+      {
+       "n": "grid"
+      },
+      "))"
+     ],
+     "u": false
+    },
+    "tg": [
+     "r"
+    ]
+   },
+   "8": {
+    "k": "output",
+    "e": {
+     "t": "totals",
+     "p": [
+      "",
+      {
+       "n": "totals"
+      },
+      ""
+     ],
+     "u": true
+    }
+   },
+   "4": {
+    "k": "assign",
+    "e": {
+     "t": "0",
+     "p": [
+      "0"
+     ],
+     "u": true
+    },
+    "tg": [
+     "row_total"
+    ]
+   },
+   "5": {
+    "k": "for",
+    "e": {
+     "t": "range(len(grid[r]))",
+     "p": [
+      "range(len(",
+      {
+       "n": "grid"
+      },
+      "[",
+      {
+       "n": "r"
+      },
+      "]))"
+     ],
+     "u": false
+    },
+    "tg": [
+     "c"
+    ]
+   },
+   "7": {
+    "k": "other"
+   },
+   "6": {
+    "k": "assign",
+    "e": {
+     "t": "row_total + grid[r][c]",
+     "p": [
+      "",
+      {
+       "n": "row_total"
+      },
+      " + ",
+      {
+       "n": "grid"
+      },
+      "[",
+      {
+       "n": "r"
+      },
+      "][",
+      {
+       "n": "c"
+      },
+      "]"
+     ],
+     "u": true
+    },
+    "tg": [
+     "row_total"
+    ]
+   }
+  },
   "functions": [],
   "stdout": "[6, 15]\n",
   "stats": {

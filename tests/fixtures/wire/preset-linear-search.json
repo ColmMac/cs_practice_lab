@@ -287,6 +287,152 @@
   ],
   "rawSteps": 15,
   "line": 10,
+  "lines": {
+   "1": {
+    "k": "assign",
+    "e": {
+     "t": "[4, 8, 15, 16, 23, 42]",
+     "p": [
+      "[4, 8, 15, 16, 23, 42]"
+     ],
+     "u": true
+    },
+    "tg": [
+     "items"
+    ]
+   },
+   "2": {
+    "k": "assign",
+    "e": {
+     "t": "15",
+     "p": [
+      "15"
+     ],
+     "u": true
+    },
+    "tg": [
+     "target"
+    ]
+   },
+   "3": {
+    "k": "assign",
+    "e": {
+     "t": "False",
+     "p": [
+      "False"
+     ],
+     "u": true
+    },
+    "tg": [
+     "found"
+    ]
+   },
+   "4": {
+    "k": "assign",
+    "e": {
+     "t": "0",
+     "p": [
+      "0"
+     ],
+     "u": true
+    },
+    "tg": [
+     "i"
+    ]
+   },
+   "5": {
+    "k": "while",
+    "e": {
+     "t": "i < len(items) and not found",
+     "p": [
+      "",
+      {
+       "n": "i"
+      },
+      " < len(",
+      {
+       "n": "items"
+      },
+      ") and (not ",
+      {
+       "n": "found"
+      },
+      ")"
+     ],
+     "u": true
+    }
+   },
+   "10": {
+    "k": "output",
+    "e": {
+     "t": "found, i",
+     "p": [
+      "",
+      {
+       "n": "found"
+      },
+      ", ",
+      {
+       "n": "i"
+      },
+      ""
+     ],
+     "u": true
+    }
+   },
+   "6": {
+    "k": "if",
+    "e": {
+     "t": "items[i] == target",
+     "p": [
+      "",
+      {
+       "n": "items"
+      },
+      "[",
+      {
+       "n": "i"
+      },
+      "] == ",
+      {
+       "n": "target"
+      },
+      ""
+     ],
+     "u": true
+    }
+   },
+   "7": {
+    "k": "assign",
+    "e": {
+     "t": "True",
+     "p": [
+      "True"
+     ],
+     "u": true
+    },
+    "tg": [
+     "found"
+    ]
+   },
+   "9": {
+    "k": "assign",
+    "e": {
+     "t": "i + 1",
+     "p": [
+      "",
+      {
+       "n": "i"
+      },
+      " + 1"
+     ],
+     "u": true
+    },
+    "tg": [
+     "i"
+    ]
+   }
+  },
   "functions": [],
   "stdout": "True 2\n",
   "stats": {

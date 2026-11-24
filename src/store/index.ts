@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
-import { resolveColumns, watchColumnId } from '../core/derive/columns'
+import { CONDITION_COL, resolveColumns, watchColumnId } from '../core/derive/columns'
 import type { RunnerStatus, TraceRunner } from '../core/runner'
 import { buildShareUrl, decodeShare, parseShareHash } from '../core/share/urlState'
 import { gradeAnswer, type GradingLanguage } from '../core/study/grade'
@@ -79,6 +79,8 @@ interface AppState extends PersistedState {
   resetColumns(): void
   setShowEphemeral(on: boolean): void
   setShowCallables(on: boolean): void
+  /** The Condition column is a view of the recorded trace: nothing is re-run. */
+  setShowCondition(on: boolean): void
 
   /** Drop a queued "re-run soon" (it belonged to a workspace that has just been replaced). */
   cancelScheduledRerun(): void
@@ -128,6 +130,7 @@ export function workspaceOf(s: Workspace): Workspace {
     columnOrder: s.columnOrder,
     showEphemeral: s.showEphemeral,
     showCallables: s.showCallables,
+    showCondition: s.showCondition,
     watches: s.watches,
     studyConfig: s.studyConfig,
     studySeed: s.studySeed,
@@ -358,7 +361,14 @@ export const useStore = create<AppState>()(
             hiddenColumns: s.hiddenColumns.includes(id) ? s.hiddenColumns.filter((x) => x !== id) : [...s.hiddenColumns, id],
           })),
         setColumnOrder: (columnOrder) => set({ columnOrder }),
-        resetColumns: () => set({ hiddenColumns: defaultWorkspace().hiddenColumns, columnOrder: [], showEphemeral: false }),
+        resetColumns: () =>
+          set({ hiddenColumns: defaultWorkspace().hiddenColumns, columnOrder: [], showEphemeral: false, showCondition: false }),
+        setShowCondition: (showCondition) =>
+          // ticking the box must show the column, even if a stored or shared workspace had also hidden it
+          set((s) => ({
+            showCondition,
+            hiddenColumns: showCondition ? s.hiddenColumns.filter((c) => c !== CONDITION_COL) : s.hiddenColumns,
+          })),
         setShowEphemeral: (showEphemeral) => set({ showEphemeral }),
         setShowCallables(showCallables) {
           set({ showCallables })
@@ -416,6 +426,7 @@ export const useStore = create<AppState>()(
           if (!getLanguage(r.language).parseAnswer) return
           const { visible } = resolveColumns(r, {
             showEphemeral: s.showEphemeral,
+            showCondition: s.showCondition,
             watches: s.watches,
             hidden: s.hiddenColumns,
             order: s.columnOrder,

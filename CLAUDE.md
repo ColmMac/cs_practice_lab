@@ -36,6 +36,7 @@ Client-side Python trace-table generator (React + TS + Vite, Pyodide in a Web Wo
 - Editor colours are `PALETTES` in `editorTheme.ts` and are contrast-tested (including the row-highlight overlays). Change a colour, run `tests/unit/editorTheme.test.ts`. **Audit accessibility on the REAL page** (axe in the browser pane, light + dark), not just jsdom: the unit tests replace CodeMirror, and two real problems were only visible there.
 - React Compiler lint: don't return an object that mixes ref callbacks with plain values from a hook (`react-hooks/refs`); return them separately (see `useRowWindow`).
 - Tables above 300 rows are windowed (`useRowWindow`), except in study mode.
+- The Condition column is a projection of `TraceStep.branch` plus the static `TraceResult.lines` (sent in the FIRST wire chunk). `branch` stays undefined when the outcome is unknown (one-line body, raised, aborted): never default it to False. A multi-line header is one step on its first line (`Static.header_span`). While the column is visible the Line cell's T/F chip must stay hidden.
 
 ## Status
-M0-M5 and the hub tickets H0-W5.4 (PLAN.md §16) are done: 961 unit and 102 E2E tests. M0-M5: the plan in PLAN.md is complete (see §9 and §11-§15). Not done / not verifiable here: LaTeX compilation, Lighthouse, real print pagination, Playwright E2E in CI (see PLAN.md §15). Ideas for later are listed at the end of §15.
+M0-M5, the hub tickets H0-W5.4 (PLAN.md §16) and C1 of §17 are done: 973 unit and 107 E2E tests. Next: C2. M0-M5: the plan in PLAN.md is complete (see §9 and §11-§15). Not done / not verifiable here: LaTeX compilation, Lighthouse, real print pagination, Playwright E2E in CI (see PLAN.md §15). Ideas for later are listed at the end of §15.

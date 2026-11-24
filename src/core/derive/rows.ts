@@ -1,5 +1,5 @@
 import type { Cell, ColumnDef, TraceResult, TraceRow, TraceStep, Value, WatchResult } from '../types'
-import { LINE_COL, OUTPUT_COL, RETURN_COL, STACK_COL, WATCH_PREFIX } from './columns'
+import { CONDITION_COL, LINE_COL, OUTPUT_COL, RETURN_COL, STACK_COL, WATCH_PREFIX } from './columns'
 
 /**
  * compact     — a row only when something a visible column shows has changed (exam style).
@@ -25,6 +25,30 @@ export const DEFAULT_ROW_OPTIONS: RowOptions = { granularity: 'compact', display
 export function formatOutput(delta: string): string {
   if (delta === '\n') return '⏎'
   return delta.endsWith('\n') ? delta.slice(0, -1) : delta
+}
+
+export const ONE_LINE_NOTE = 'Condition and body on one line: put the body on its own line to see the outcome'
+
+const HEADER_KINDS: ReadonlySet<string> = new Set(['if', 'elif', 'while', 'for'])
+
+/** A header that ran, but whose outcome can't be observed because its body shares its line. */
+function hiddenOutcome(result: TraceResult, step: TraceStep): boolean {
+  const info = result.lines?.[step.lineNumber]
+  if (!info?.oneLine || !HEADER_KINDS.has(info.kind)) return false
+  return step.branch === undefined && !step.exception && step.kind !== 'call'
+}
+
+/**
+ * A boolean written by the line, so Study Mode masks and grades it like any other value. One-line headers
+ * show `?`, which is never a question.
+ */
+function conditionCell(result: TraceResult, step: TraceStep, format: (v: Value) => string): Cell {
+  if (step.branch !== undefined) {
+    const value: Value = { k: 'bool', v: step.branch }
+    return { value, display: format(value), written: true }
+  }
+  if (hiddenOutcome(result, step)) return { display: '?', written: false, note: ONE_LINE_NOTE }
+  return { display: '', written: false }
 }
 
 /** Identity of a watch result, for "did it change?". Leaving scope is not a change (it would add noise rows). */
@@ -71,6 +95,8 @@ export function deriveRows(
       if (step.stdoutDelta !== '' && visible.has(OUTPUT_COL)) keep = true
       if (step.returnValue && visible.has(RETURN_COL)) keep = true
       if (step.exception !== undefined) keep = true
+      // a condition test writes nothing, but with the column on it IS the row (including the final False)
+      if (visible.has(CONDITION_COL) && (step.branch !== undefined || hiddenOutcome(result, step))) keep = true
       for (const w of watchNow.values()) if (w.changed) keep = true
     }
     if (!keep) continue
@@ -80,6 +106,8 @@ export function deriveRows(
     for (const col of columns) {
       if (col.id === LINE_COL) {
         cells[col.id] = { display: String(step.lineNumber), written: false }
+      } else if (col.id === CONDITION_COL) {
+        cells[col.id] = conditionCell(result, step, format)
       } else if (col.id === RETURN_COL) {
         cells[col.id] = {
           value: step.returnValue,

@@ -10,11 +10,12 @@ import { useStore } from '../../store'
 export function useColumns(result: TraceResult): { all: ColumnDef[]; visible: ColumnDef[] } {
   const watches = useStore((s) => s.watches)
   const showEphemeral = useStore((s) => s.showEphemeral)
+  const showCondition = useStore((s) => s.showCondition)
   const hidden = useStore((s) => s.hiddenColumns)
   const order = useStore((s) => s.columnOrder)
 
   return useMemo(
-    () => resolveColumns(result, { showEphemeral, watches, hidden, order }),
-    [result, watches, showEphemeral, hidden, order],
+    () => resolveColumns(result, { showEphemeral, showCondition, watches, hidden, order }),
+    [result, watches, showEphemeral, showCondition, hidden, order],
   )
 }

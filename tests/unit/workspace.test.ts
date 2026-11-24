@@ -22,6 +22,7 @@ const full: Workspace = {
   columnOrder: ['f:n', '<module>:x'],
   showEphemeral: true,
   showCallables: true,
+  showCondition: true,
   watches: [
     { id: 'w1', expr: 'n * 2', scope: { kind: 'function', name: 'f' }, enabled: true },
     { id: 'w2', expr: 'x', label: 'the x', scope: { kind: 'module' }, enabled: false },

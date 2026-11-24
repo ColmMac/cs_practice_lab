@@ -40,6 +40,37 @@ export type WatchResult =
   | { ok: true; value: Value }
   | { ok: false; reason: 'not-in-scope' | 'error' | 'rejected'; message: string }
 
+// ───────────── Static line info ─────────────
+/** Control-flow headers whose outcome is `TraceStep.branch`. */
+export type HeaderKind = 'if' | 'elif' | 'while' | 'for'
+export type StatementKind = HeaderKind | 'assign' | 'augassign' | 'return' | 'output' | 'other'
+
+/** An expression as a template: literal text and variable references, e.g. ['', {name:'count'}, ' + 1']. */
+export type ExprPart = string | { name: string }
+
+export interface LineExpr {
+  /** Source text as written (`i < len(items) and not found`), at most 200 characters. */
+  text: string
+  /** Normalised template for substitution. */
+  parts: ExprPart[]
+  /** No calls except safe built-ins and nothing that binds or defers: safe to restate with values
+   *  substituted. Impure expressions are quoted but never substituted. */
+  pure: boolean
+}
+
+export interface LineInfo {
+  kind: StatementKind
+  /** if/elif/while: the test · for: the iterable · assign: the value · augassign: `target op value`
+   *  · return: the value · output: the printed arguments */
+  expr?: LineExpr
+  /** assign / augassign / for: names (or target source text, e.g. `nums[j]`) bound by the line */
+  targets?: string[]
+  /** the right-hand side reads program input */
+  readsInput?: boolean
+  /** a header with its body on the same line: its outcome can't be observed */
+  oneLine?: boolean
+}
+
 export interface TraceStep {
   stepIndex: number
   kind: StepKind
@@ -53,12 +84,15 @@ export interface TraceStep {
   stdoutDelta: string
   returnValue?: Value
   exception?: { type: string; message: string; caught: boolean }
+  /** Header lines only (see LineInfo.kind). if/elif/while: the condition's value (True = body entered).
+   *  for: another item was taken (False = the loop is exhausted). Undefined for one-line bodies
+   *  (`if x: y`), where the next line event cannot tell, and when the header raised or was cut off. */
   branch?: boolean
   watches: Record<string, WatchResult>
 }
 
 // ───────────── Result ─────────────
-export type ColumnId = string // 'line' | 'output' | 'return' | 'stack' | `${scope}:${name}` | `watch:${id}`
+export type ColumnId = string // 'line' | 'cond' | 'output' | 'return' | 'stack' | `${scope}:${name}` | `watch:${id}`
 
 export type TraceStatus =
   | 'ok'
@@ -101,6 +135,9 @@ export interface TraceResult {
   inputRequest?: { prompt: string; consumedCount: number }
   stats: { stepsExecuted: number; durationMs: number; truncated: boolean }
   executionKey: string
+  /** Per source line (1-based): what the first statement on that line is. Static, so one entry per line,
+   *  not per step. Optional: old fixtures and the fake runner have none. */
+  lines?: Record<number, LineInfo>
 }
 
 // ───────────── Options & watches ─────────────

@@ -17,6 +17,8 @@ def trace(code: str, **opts) -> dict:
     parts = [json.loads(c) for c in chunks]
     for key in ("steps", "frames", "variables"):
         res[key] = [x for p in parts for x in p[key]] + res[key]
+    if parts and "lines" in parts[0]:  # static line info travels in the first chunk only
+        res["lines"] = parts[0]["lines"]
     res["chunks"] = len(parts)
     return res
 

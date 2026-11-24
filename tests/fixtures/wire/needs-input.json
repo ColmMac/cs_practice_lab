@@ -39,6 +39,36 @@
   "variables": [],
   "rawSteps": 1,
   "line": 1,
+  "lines": {
+   "1": {
+    "k": "assign",
+    "e": {
+     "t": "input('Name? ')",
+     "p": [
+      "input('Name? ')"
+     ],
+     "u": false
+    },
+    "tg": [
+     "name"
+    ],
+    "in": true
+   },
+   "2": {
+    "k": "output",
+    "e": {
+     "t": "name",
+     "p": [
+      "",
+      {
+       "n": "name"
+      },
+      ""
+     ],
+     "u": true
+    }
+   }
+  },
   "functions": [],
   "stdout": "Name? ",
   "stats": {

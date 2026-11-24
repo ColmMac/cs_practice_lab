@@ -1443,7 +1443,7 @@ Tests:
 
 Every ticket ends with the §16.2 definition of done: typecheck, lint, `npm test`, `npm run build`, `npx playwright test` (stop any `vite preview` on :4173 first), hand-reviewed goldens, an implementation-notes entry here and one commit. Tracer tickets also run `npm run test:py` on **3.12, 3.13 and 3.14**.
 
-- [ ] **Ticket 1 (C1): Condition contract and column**
+- [x] **Ticket 1 (C1): Condition contract and column**
   - Files: `tracer.py` (A.1–A.6), `protocol.ts`, `materialise.ts`, `PythonTraceRunner.ts`, `core/types.ts`, `derive/columns.ts`, `derive/rows.ts`, `workspace.ts`, `store/index.ts` (`setShowCondition`), `ColumnManager.tsx`, `TraceTable.tsx`, `make_wire_fixtures.py`, `test_line_info.py`.
   - Edge cases:
     - `elif` vs `else:` + nested `if`.
@@ -1597,6 +1597,14 @@ Every ticket ends with the §16.2 definition of done: typecheck, lint, `npm test
       - Typing the hand-worked answers and Check gives 100 %; back on home it shows "1/6" and the next CTA is Bubble sort.
       - A seeded corrupt `hub:mastery:v1` is ignored.
     - Axe light + dark on home with progress.
+
+#### Implementation notes: C1
+
+- **A.5 was a real bug.** The test written first failed on 3.14: a two-line `while` condition produced an extra row for its second line, and the header was finalised early. `Static.header_span` maps every line of a multi-line test or iterable to the header line, only when the body starts below it. Skipped events still count towards the step limit, so `while (a and\n b): pass` still stops. A `:=` on a continuation line is moved to the header line so it stays a write.
+- **Second bug found while reading `flush_pending`.** After an abort (step limit, timeout) a header suspended inside a call was finalised with no next line and recorded `branch = False`. It now records no outcome.
+- **Deviation:** `LineInfo.oneLine` (wire `ol`) was added to the contract. `branch === undefined` alone cannot tell a one-line body (shows `?`) from a header that raised or was cut off (blank).
+- **Deviation:** the Column Manager does not also list Condition among the per-column checkboxes. Its one control is "Condition (True/False)", and ticking it also removes `cond` from `hiddenColumns`. **Reset columns** turns it off.
+- The golden-table helper (`tests/unit/tableText.ts`) drops its `T`/`F` line suffix when a Condition column is present, matching the UI. Both `*.condition.txt` files were written by hand first and matched on the first comparison. The older preset goldens are unchanged, and the wire fixture diff only adds `lines`.
 
 ### 17.7 Ticket order
 

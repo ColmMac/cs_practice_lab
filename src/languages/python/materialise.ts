@@ -1,6 +1,7 @@
 import { executionKey } from '../../core/executionKey'
 import type {
   FrameInfo,
+  LineInfo,
   ScopeSnapshot,
   StepKind,
   TraceOptions,
@@ -9,9 +10,20 @@ import type {
   Value,
   WatchResult,
 } from '../../core/types'
-import type { WireResult } from './protocol'
+import type { WireLineInfo, WireResult } from './protocol'
 
 const KINDS: Record<string, StepKind> = { c: 'call', l: 'line', r: 'return', x: 'exception' }
+
+function lineInfo(w: WireLineInfo): LineInfo {
+  const info: LineInfo = { kind: w.k }
+  if (w.e) {
+    info.expr = { text: w.e.t, parts: w.e.p.map((p) => (typeof p === 'string' ? p : { name: p.n })), pure: w.e.u }
+  }
+  if (w.tg) info.targets = w.tg
+  if (w.in) info.readsInput = true
+  if (w.ol) info.oneLine = true
+  return info
+}
 
 /**
  * Turns the tracer's compact delta-encoded wire result into the language-neutral TraceResult.
@@ -76,5 +88,8 @@ export function materialise(
       truncated: wire.stats.truncated,
     },
     executionKey: executionKey('python', ctx.code, ctx.options),
+    ...(wire.lines
+      ? { lines: Object.fromEntries(Object.entries(wire.lines).map(([n, info]) => [n, lineInfo(info)])) }
+      : {}),
   }
 }

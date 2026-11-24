@@ -19,6 +19,8 @@ export interface Workspace {
   columnOrder: string[]
   showEphemeral: boolean
   showCallables: boolean
+  /** Show the Condition (True/False) column. Opt-in, so older workspaces and links look as before. */
+  showCondition: boolean
   watches: WatchExpression[]
   /** Study Mode settings for NEW sessions (and what a teacher's share link carries). */
   studyConfig: StudyConfig
@@ -52,6 +54,7 @@ export function defaultWorkspace(code = '', stdinText = ''): Workspace {
     columnOrder: [],
     showEphemeral: false,
     showCallables: false,
+    showCondition: false,
     watches: [],
     studyConfig: { ...DEFAULT_STUDY_CONFIG },
     studySeed: 0,
@@ -115,6 +118,7 @@ export function sanitizeWorkspace(input: unknown, fallback: Workspace): Workspac
     columnOrder: strings(o.columnOrder) ?? fallback.columnOrder,
     showEphemeral: typeof o.showEphemeral === 'boolean' ? o.showEphemeral : fallback.showEphemeral,
     showCallables: typeof o.showCallables === 'boolean' ? o.showCallables : fallback.showCallables,
+    showCondition: typeof o.showCondition === 'boolean' ? o.showCondition : fallback.showCondition,
     watches: sanitizeWatches(o.watches) ?? fallback.watches,
     studyConfig: sanitizeStudyConfig(o.studyConfig, fallback.studyConfig),
     studySeed: sanitizeSeed(o.studySeed, fallback.studySeed),

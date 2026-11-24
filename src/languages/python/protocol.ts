@@ -1,5 +1,5 @@
 // Private wire format between python.worker.ts, tracer.py and PythonTraceRunner. See PLAN.md §3.
-import type { TraceError, TraceStatus, Value, VariableMeta, WatchExpression, WatchResult } from '../../core/types'
+import type { StatementKind, TraceError, TraceStatus, Value, VariableMeta, WatchExpression, WatchResult } from '../../core/types'
 
 /** Pyodide version served from the CDN. Must equal the `pyodide` npm package version (unit-tested). */
 export const PYODIDE_VERSION = '314.0.8'
@@ -40,6 +40,15 @@ export interface WireStep {
   wt?: Record<string, WatchResult>
 }
 
+/** What one source line is (tracer.py `_describe`). */
+export interface WireLineInfo {
+  k: StatementKind
+  e?: { t: string; p: (string | { n: string })[]; u: boolean }
+  tg?: string[]
+  in?: true
+  ol?: true // header with its body on the same line
+}
+
 /** Incremental batch streamed while the program runs (only items not sent before). */
 export interface WireChunk {
   steps: WireStep[]
@@ -47,6 +56,8 @@ export interface WireChunk {
   variables: VariableMeta[]
   rawSteps: number // line events executed so far (progress)
   line: number // line executing right now: where a blocked / killed run is stuck
+  /** Static line info, keyed by line number. Sent once, in the first chunk, so a killed run keeps it. */
+  lines?: Record<string, WireLineInfo>
 }
 
 /**
@@ -63,6 +74,8 @@ export interface WireResult {
   functions: string[]
   stdout: string
   stats: { rawSteps: number; truncated: boolean; durationMs: number }
+  /** Set only when nothing was streamed (otherwise it came with the first chunk). */
+  lines?: Record<string, WireLineInfo>
 }
 
 // Main → Worker

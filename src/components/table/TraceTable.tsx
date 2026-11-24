@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { columnLabel, LINE_COL, OUTPUT_COL } from '../../core/derive/columns'
+import { columnLabel, CONDITION_COL, LINE_COL, OUTPUT_COL } from '../../core/derive/columns'
 import { hintFor } from '../../core/study/hint'
 import { cellKey } from '../../core/study/types'
 import type { TraceResult } from '../../core/types'
@@ -32,6 +32,8 @@ export function TraceTable({ result, stale }: { result: TraceResult; stale: bool
   }
   const showGroups = new Set(columns.filter((c) => c.kind === 'var').map((c) => c.group)).size > 1
   const headerRows = showGroups ? 2 : 1
+  // With the Condition column on, the Line cell's T/F chip would repeat it (and, in Study mode, answer it).
+  const showChip = !columns.some((c) => c.id === CONDITION_COL)
   const spacer = (height: number) =>
     height > 0 ? (
       <tr aria-hidden="true" style={{ height }}>
@@ -73,7 +75,12 @@ export function TraceTable({ result, stale }: { result: TraceResult; stale: bool
           )}
           <tr>
             {columns.map((c) => (
-              <th key={c.id} scope="col" className={th}>
+              <th
+                key={c.id}
+                scope="col"
+                title={c.id === CONDITION_COL ? 'if / while: was the condition true? for: was another item taken?' : undefined}
+                className={th}
+              >
                 {c.header}
               </th>
             ))}
@@ -149,7 +156,7 @@ export function TraceTable({ result, stale }: { result: TraceResult; stale: bool
                       ) : (
                         cell?.display
                       )}
-                      {c.id === LINE_COL && row.branch !== undefined && (
+                      {c.id === LINE_COL && showChip && row.branch !== undefined && (
                         <span
                           title={row.branch ? 'Condition was true: entered the body' : 'Condition was false'}
                           aria-label={row.branch ? 'condition true' : 'condition false'}

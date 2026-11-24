@@ -5,6 +5,8 @@ export const RETURN_COL = 'return'
 export const OUTPUT_COL = 'output'
 export const STACK_COL = 'stack'
 export const WATCH_PREFIX = 'watch:'
+/** The True/False outcome of if / elif / while / for lines (`TraceStep.branch`). Opt-in. */
+export const CONDITION_COL = 'cond'
 
 export const watchColumnId = (watchId: string): ColumnId => `${WATCH_PREFIX}${watchId}`
 
@@ -12,12 +14,14 @@ export interface ColumnOptions {
   showEphemeral?: boolean
   /** Enabled watches get a column each (after the variables). */
   watches?: WatchExpression[]
+  /** Add the Condition column (only if some step has an outcome to show). */
+  showCondition?: boolean
 }
 
 /**
  * Every column that COULD be shown for this trace, in default order:
  * Line · variables (grouped by scope, module first, each group in order of first appearance) ·
- * watches · Return (if any function returned explicitly) · Output (if anything printed) ·
+ * watches · Condition (if asked for) · Return (if any function returned explicitly) · Output (if anything printed) ·
  * Call stack (if any function was called).
  * Which of them are visible, and in what order, is a separate user preference: `applyColumnPrefs`.
  */
@@ -39,6 +43,10 @@ export function deriveColumns(result: TraceResult, opts: ColumnOptions = {}): Co
     if (w.enabled) cols.push({ id: watchColumnId(w.id), header: w.label?.trim() || w.expr.trim() || '(empty)', kind: 'watch' })
   }
 
+  if (opts.showCondition && result.steps.some((s) => s.branch !== undefined)) {
+    cols.push({ id: CONDITION_COL, header: 'Condition', kind: 'meta' })
+  }
+
   if (result.steps.some((s) => s.returnValue)) cols.push({ id: RETURN_COL, header: 'Return', kind: 'meta' })
   if (result.steps.some((s) => s.stdoutDelta)) cols.push({ id: OUTPUT_COL, header: 'Output', kind: 'meta' })
   if (result.steps.some((s) => s.callStack.length > 1)) cols.push({ id: STACK_COL, header: 'Call stack', kind: 'meta' })
@@ -54,7 +62,7 @@ const orderable = (c: ColumnDef) => c.kind === 'var' || c.kind === 'watch'
 
 /**
  * Hides the columns the user turned off and applies their ordering to the variable/watch columns.
- * Line / Return / Output / Call stack keep their slots; ids the order list doesn't know keep their
+ * Line / Condition / Return / Output / Call stack keep their slots; ids the order list doesn't know keep their
  * default relative position after the ones it does.
  */
 export function applyColumnPrefs(cols: ColumnDef[], prefs: ColumnPrefs): ColumnDef[] {
@@ -86,7 +94,11 @@ export interface ColumnView extends ColumnPrefs, ColumnOptions {}
  * `visible`: the ones the table shows. Shared by the table, the Column Manager and Study Mode.
  */
 export function resolveColumns(result: TraceResult, view: ColumnView): { all: ColumnDef[]; visible: ColumnDef[] } {
-  const derived = deriveColumns(result, { showEphemeral: view.showEphemeral, watches: view.watches })
+  const derived = deriveColumns(result, {
+    showEphemeral: view.showEphemeral,
+    watches: view.watches,
+    showCondition: view.showCondition,
+  })
   return {
     all: applyColumnPrefs(derived, { hidden: [], order: view.order }),
     visible: applyColumnPrefs(derived, { hidden: view.hidden, order: view.order }),

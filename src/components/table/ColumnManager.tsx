@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react'
-import { columnLabel, moveColumn } from '../../core/derive/columns'
+import { columnLabel, CONDITION_COL, moveColumn } from '../../core/derive/columns'
 import type { TraceResult } from '../../core/types'
 import { useStore } from '../../store'
 import { useColumns } from './useColumns'
@@ -16,6 +16,7 @@ export function ColumnManager({ result }: { result: TraceResult }) {
   const { all, visible } = useColumns(result)
   const { hiddenColumns, toggleColumn, setColumnOrder, resetColumns, showEphemeral, setShowEphemeral, showCallables, setShowCallables } =
     useStore()
+  const { showCondition, setShowCondition } = useStore()
 
   useEffect(() => {
     if (!open) return
@@ -55,7 +56,8 @@ export function ColumnManager({ result }: { result: TraceResult }) {
           className="absolute left-0 z-30 mt-1 w-72 rounded border border-slate-300 bg-white p-3 text-sm shadow-lg dark:border-slate-700 dark:bg-slate-900"
         >
           <ul className="max-h-64 space-y-1 overflow-auto">
-            {all.map((c) => {
+            {/* the Condition column has its own checkbox below: two controls for one column would disagree */}
+            {all.filter((c) => c.id !== CONDITION_COL).map((c) => {
               const canMove = c.kind === 'var' || c.kind === 'watch'
               const at = movable.indexOf(c.id)
               return (
@@ -88,6 +90,10 @@ export function ColumnManager({ result }: { result: TraceResult }) {
           </ul>
 
           <div className="mt-3 space-y-1.5 border-t border-slate-200 pt-3 dark:border-slate-700">
+            <label className="flex items-start gap-2">
+              <input type="checkbox" checked={showCondition} onChange={(e) => setShowCondition(e.target.checked)} className="mt-0.5" />
+              <span>Condition (True/False) <span className="text-xs text-slate-600 dark:text-slate-400">(if, while and for lines)</span></span>
+            </label>
             <label className="flex items-start gap-2">
               <input type="checkbox" checked={showEphemeral} onChange={(e) => setShowEphemeral(e.target.checked)} className="mt-0.5" />
               <span>Show temporary variables <span className="text-xs text-slate-600 dark:text-slate-400">(loop variables inside comprehensions)</span></span>
