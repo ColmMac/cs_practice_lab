@@ -840,3 +840,213 @@ Test counts at the end of M5: 128 tracer tests (each on Python 3.12, 3.13, 3.14)
 ### Remaining ideas (not started)
 
 JavaScript / Java / C++ runners (see the adapter notes above), study mode for languages beyond Python, a worksheet "answer sheet" layout with the program beside the table, drag-and-drop column reordering, Playwright E2E in CI, and a Lighthouse run once it is installed.
+
+---
+
+## 16. CS Study Hub expansion — ticket plan (H, T, N, S, W tickets)
+
+Goal: grow Trace Table Studio into a multi-page **CS exam study hub**: four zero-login tools sharing one visual language, plus a home page at `/` built last.
+
+| Route | Tool |
+|-------|------|
+| `/trace-table` | Python trace tables (the existing app, moved here) |
+| `/truth-tables` | Boolean logic and truth table generator |
+| `/number-systems` | Binary, hex and two's complement trainer |
+| `/sorting-visualizer` | Sorting and searching step visualiser |
+| `/` | Home page: hero, tool directory, quick-start presets |
+
+### 16.1 Codebase audit: what exists and what the brief got wrong
+
+| Brief says | Reality (2026-11-24) | Consequence for the plan |
+|------------|----------------------|---------------------------|
+| Tailwind CSS | Tailwind **v4** through `@tailwindcss/vite`. There is no `tailwind.config`. Dark mode is the custom variant `@custom-variant dark (&:where(.dark, .dark *))` in `src/styles/index.css`, toggled by a `.dark` class on `<html>`. | The design tokens are the class strings themselves (slate surfaces, `border-slate-300/700`, `emerald-700` accent, `rounded`, `text-sm`/`text-xs`, `px-4 py-2`). Primitives must reproduce them **verbatim**, so moving the trace table onto them changes nothing visually. |
+| Exporters in `src/utils/exporters.ts` | They live in `src/core/export/` (`csv`, `markdown`, `latex`, `json`, `download`), all built from one `TableModel` (plain string cells). PNG is `components/export/png.tsx`. | The exporters are already tool-agnostic. Only `ExportMenu.tsx` is coupled to the trace store, so it gets split into a generic `ExportPanel(table: TableModel, baseName)` plus a thin trace wrapper. |
+| "Reuse Study / Mask Mode" | `src/core/study` is trace-specific: `Truth` = Python `Value` or output text, masks are keyed on `TraceRow.stepIndices`, and grading needs a `GradingLanguage`. The parts that carry over are `rng.ts` (seeded `mulberry32`/`shuffled`), `score.ts` (`summarise`, `formatPoints`), the answer-box keyboard contract (`components/study/navigation.ts`, `StudyCell`) and the "messages never contain the ground truth" rule. | Extract a **generic answer grid** (cell keys, seeded mask selection, keyboard contract, score bar). Each tool supplies its own grader. Trace Study Mode keeps its own grading. |
+| Theme toggle | Lives in the trace store (`theme`, `toggleTheme`, key `tts:theme`, `applyTheme` on `<html>`). | Move it into a shared theme module **keeping the `tts:theme` key**, so existing users keep their choice. |
+| Playwright suite | `playwright.config.ts` (production build + `vite preview` on :4173, real CSP) and `tests/e2e/app.spec.ts` (4 tests) are **uncommitted**. Chromium 1255 is now installed. Baseline run: **4/4 pass** (31 s, including the build). | Ticket H0 commits this as the baseline. CLAUDE.md still says the Playwright browsers are missing, so update it then. |
+| `react-router-dom` | Current is `react-router` 8.x. `react-router-dom` is only a legacy re-export (7.x). | Use `react-router` (declarative `BrowserRouter`/`Routes`, no framework mode). Pin an exact version. |
+| SPA fallback | Only `public/_headers` exists (Netlify / Cloudflare Pages). `vite preview` already falls back to `index.html`. | Add `public/_redirects`. Vercel is a decision (see 16.3). The E2E deep-link test runs on `vite preview`, so it does **not** prove the host config. A unit test checks the file instead. |
+| Share links | `/#s=<lz>` on the root; `buildShareUrl(location.href)` uses the current path. | Old links at `/#s=…` must keep working: `/` forwards any `#s=` hash to `/trace-table#s=…` **before** the home page renders. Shared code still never auto-runs. |
+| Bundle | One 500 kB+ chunk (CodeMirror + app); Pyodide loads from the CDN in the worker. | Lazy-load each tool route (`React.lazy`), so `/` and the light tools never download CodeMirror or start Pyodide. Pyodide starts only when `/trace-table` mounts, and survives navigating away and back (the store and runner are module-level, and `init()` is already idempotent). |
+
+Hub-wide rules (these join CLAUDE.md as they land):
+- **No `eval`, no `new Function`**: the CSP forbids them anyway (`script-src 'self' 'wasm-unsafe-eval'`). The boolean parser is hand-written recursive descent.
+- **No inline `<script>`** (blocked by the CSP). The theme is applied in `main.tsx` before `createRoot`. If a flash of the wrong theme is visible, use a tiny `public/theme-init.js` loaded from `index.html`.
+- Each tool has `src/core/<tool>/` (pure, framework-free, unit-tested) and `src/tools/<tool>/` (React page and components).
+- URL query parameters are **untrusted**. Each tool has a `sanitize…Params` with an allowlist and length caps, and bad values fall back to defaults, never into state. A `?preset=` id must be in the built-in list. Built-in presets may auto-run (as today); user code from a link never does.
+- Per-tool localStorage keys use the prefixes `hub:truth:`, `hub:numbers:` and `hub:sorting:`. Every read is wrapped in try/catch and sanitised. The existing `tts:*` keys stay unchanged.
+- Every new colour pairing must pass WCAG AA in both themes. The real-page axe audit (browser pane, light + dark) runs per tool, not just jsdom.
+- Animations respect `prefers-reduced-motion` (they jump to the end state).
+
+### 16.2 Definition of done for every ticket
+
+1. `npm run typecheck` · `npm run lint` · `npm test` all green, plus new unit tests for any new core logic.
+2. `npm run build` green.
+3. `npx playwright test` green, with at least 1–2 new E2E tests for each new tool and for home navigation.
+   **Stop any running `vite preview` on :4173 first**: `reuseExistingServer: true` would otherwise test a stale build.
+4. Golden or snapshot files (exports, algorithm step tables) are **reviewed by hand** against your own working, the same rule as the presets.
+5. A short "implementation notes" entry here (deviations and bugs found), then one commit per ticket.
+
+### 16.3 Decisions needed before or while building
+
+| # | Question | Default if unanswered |
+|---|----------|-----------------------|
+| D1 | Hub name for the nav brand and `<title>` suffix | "CS Study Hub" (the trace tool keeps the name "Trace Table Studio") |
+| D2 | Hosting target | Netlify / Cloudflare Pages (`_headers` + `_redirects`). Vercel would need `vercel.json`, which duplicates the headers, so it would be **generated** from `_headers` with a test that keeps them in sync. |
+| D3 | Production origin, for `sitemap.xml`, canonical URLs and `robots.txt` | `VITE_SITE_URL`. `sitemap.xml` is generated at build time and skipped (with a warning) when the variable is unset. |
+| D4 | Truth-table row order | Exam convention: A is the most significant bit, rows count 0000 → 1111. |
+| D5 | Binary search midpoint | `mid = (low + high) DIV 2` (floor), with 0-based indices and a 1-based display toggle. |
+
+---
+
+### Phase 0: Baseline
+
+**H0: Commit the Playwright baseline** ✅ DONE
+- Commit `playwright.config.ts` and `tests/e2e/app.spec.ts` as they are (4 passing tests).
+- Update CLAUDE.md (browsers installed; `npx playwright test` builds first; stop :4173 first; `PW_CHANNEL=msedge` fallback). Add `test-results/` to `.gitignore`.
+- Done when: `npm run build` and `npx playwright test` pass, and the commit is made.
+
+### Phase 1: Design system, routing, shared shell
+
+**H1.1: Shared theme module**
+- `src/components/ui/theme.ts`: a tiny Zustand store `useTheme` with `theme` and `toggle`. Same `tts:theme` key and same `prefers-color-scheme` fallback. Applied to `<html>` in `main.tsx` before the first render.
+- `ThemeToggle` component (same markup and classes as today's button).
+- Remove `theme`/`toggleTheme` from the trace store. Fix the tests that use them.
+- Tests: initial theme from storage, then from the media query, then light; storage throwing; toggle persists.
+
+**H1.2: UI primitives in `src/components/ui/`**
+- `Button` (variants `primary` emerald, `danger` red, `toolbar` outline, `small`), `SegmentedToggle` (today's `Segmented` moved here, with the old path re-exporting it), `Badge` (tones: neutral, warn, ok, info, error, taken from `RuntimeStatusBadge`), `Panel` (bordered rounded section with an optional title), `ToolHeader` (title + toolbar slot, the strip that is `Toolbar`'s `<header>` today), `Popover` (wraps `usePopover`) and `DataTable` styles (the table classes from `TraceTable`, as shared class constants).
+- Refactor the trace components to use them with **identical class strings**.
+- Proof of no visual change: before/after Playwright screenshots of the trace page (light + dark, with a preset loaded) compared pixel by pixel in a throwaway script, plus a unit test asserting the primitives' class strings.
+- `src/components/ui/README.md`: the token cheat-sheet (surfaces, borders, accent, focus ring, spacing, type scale) that every new tool must use.
+
+**H1.3: Router and AppShell**
+- Add `react-router` (exact version). `src/app/AppShell.tsx`: a sticky top nav (`print:hidden`) with the brand (→ `/`), four tool links (`NavLink`, `aria-current="page"`, wrapping or collapsing at phone width) and `ThemeToggle`, then `<Outlet>`, plus a skip-to-content link.
+- `src/app/routes.tsx`: `/trace-table` loads a lazy `TraceTablePage` (today's `App` body). The three new tools get lazy placeholder pages ("Coming soon", `noindex`) so the nav is complete from day one. `/` gets a placeholder directory. `*` gets a 404 page with links home.
+- Legacy share links: the `/` route forwards `#s=…` to `/trace-table#s=…` with `replace`, before anything renders. The trace store's hash handling is unchanged. `buildShareUrl` now produces `/trace-table#s=…`.
+- Trace layout: `h-screen` becomes `flex-1 min-h-0` inside the shell (the shell is `h-dvh flex flex-col`). The Ctrl/⌘+Enter listener and `PrintRegion` stay scoped to the trace page.
+- E2E: update `app.spec.ts` to `page.goto('/trace-table')`. New `shell.spec.ts`: the nav reaches all four routes; reloading a deep link works; `/#s=<valid payload>` lands on `/trace-table` with the review banner and does **not** run; the theme toggle persists across routes.
+
+**H1.4: Static-hosting SPA fallback**
+- `public/_redirects`: `/*  /index.html  200` (Netlify and Cloudflare Pages). For Vercel, see D2.
+- A unit test that `_redirects` exists and is well-formed, and that `_headers` still has its `/*` block. Document the deploy in README.
+
+### Phase 2: Truth tables (`/truth-tables`)
+
+**T2.1: Boolean expression core (`src/core/logic/`)**
+- Tokenizer → recursive-descent parser → AST. No `eval`.
+- Operators: `NOT ! ~ ¬`, `AND && & · ∧`, `NAND`, `XOR ^ ⊕`, `OR || | + ∨`, `NOR`. Literals `0 1 TRUE FALSE`, parentheses, variables `A`–`D`. Keywords are case-insensitive.
+- Precedence, from tightest: NOT > AND/NAND > XOR > OR/NOR (left-associative). The page always shows the **fully bracketed reading** back, so a student can see how the expression was parsed.
+- Several outputs: `S = A XOR B; C = A AND B` (up to 4 named outputs), needed for the half adder.
+- Errors carry a position and a friendly message ("Expected a variable or '(' after AND"). Limits: 300 characters and nesting depth 40.
+- `evaluate`, `subexpressions(ast)` (post-order, deduplicated by canonical form, excluding bare variables) and `print(ast, notation)`.
+- Tests: precedence, associativity, every operator against its definition over all rows, De Morgan equivalences over all 2^n rows, error positions, limits, and a fuzz test that a print-then-parse round trip gives the same AST.
+
+**T2.2: Truth table model and presets**
+- `buildTruthTable(program, { intermediates, notation: '01' | 'TF' })` returns columns (inputs, intermediates, outputs) and rows in D4 order. An `equivalent` flag is set when all outputs agree (for De Morgan demos).
+- Presets in `src/core/logic/presets.json` (validated on load): half adder, De Morgan (both laws), 3-input alarm, majority vote, XOR from NAND gates, full adder (sum and carry). The golden tables in `tests/fixtures/logic/*.txt` are **checked by hand**.
+
+**T2.3: Truth Table page UI**
+- `ToolHeader`: preset select, the notation toggle (0/1 or T/F) and the intermediate-columns toggle (SegmentedToggle), plus Export and Study controls.
+- Expression input with live parsing, debounced. Errors are announced with `aria-live="polite"` and the error position is underlined. A keyword/symbol cheat-sheet, and buttons that insert operators for touch users.
+- The table uses the shared `DataTable` styles. Input, intermediate and output column groups are visually separated, as in mark schemes.
+- URL state: `?expr=` (sanitised, length-capped) and `?preset=`, both deep-linkable. The last expression persists under `hub:truth:last`.
+
+**T2.4: Generic answer grid + truth-table Study Mode**
+- Extract from `components/study/` a tool-agnostic `useAnswerGrid({ keys, grade })` + `AnswerCell` + `ScoreBar`. They keep the full keyboard contract (Enter/↓ next, Shift+Enter/↑ previous, Alt+H hint, Alt+R reveal) and the "row handler ignores keys bubbling from inputs" fix. Trace Study Mode is refactored onto them, and its existing tests must pass unchanged.
+- Truth-table masks: outputs only, intermediates + outputs, or a seeded random % (`rng.ts`).
+- Grader: accepts `0/1/T/F/true/false` whatever the display notation, and gives "Almost" credit when the answer is right but in the other notation. Messages never reveal the answer.
+- Tests: grading, masks with a fixed seed, the keyboard contract (reusing the `verdicts()` helper pattern).
+
+**T2.5: Generic export panel + truth-table exports**
+- Split `ExportMenu` into `ui/ExportPanel({ table: TableModel, baseName, extras })`, with the trace `ExportMenu` as a thin wrapper. The trace export tests and goldens must not change.
+- Truth table → `TableModel`: title "Truth table", the expression as `code` (language `text`), and the worksheet variant blanks the masked cells. Markdown, CSV, LaTeX and PNG (JSON is optional).
+- Goldens `tests/fixtures/export/truth-*.{md,csv,tex}`, **reviewed by hand**. The CSV formula guard matters here too (`=` cannot reach a cell, but the test stays).
+
+**T2.6: E2E for truth tables**
+- The half-adder preset shows 4 rows with the correct Sum/Carry. An invalid expression shows the error and no table.
+- Study mode: one correct and one wrong answer graded. Markdown export downloads `truth-table*.md`. The `?expr=` deep link renders.
+- Axe audit on the real page, light + dark.
+
+### Phase 3: Number systems (`/number-systems`)
+
+**N3.1: Number core (`src/core/numbers/`)**
+- Bit-array model for widths 8 and 16: `toUnsigned`, `toSigned` (two's complement), `fromUnsigned` and `fromSigned` (range-checked), `toHex` and `fromHex`.
+- Tolerant input parsing (`0b`, `0x`, `&`, `h`, spaces, underscores) that reports width overflow.
+- `shiftLeftLogical`, `shiftRightLogical`, `shiftRightArithmetic` (and `shiftLeftArithmetic` with a sign-change overflow flag). Each returns the new bits, the bit shifted out and the flags.
+- `add(a, b)` returns the result bits, a per-column carry array, the unsigned carry-out and the signed overflow flag (with the reason, such as "two positives gave a negative").
+- Tests: **exhaustive over all 256×256 8-bit additions** against integer arithmetic, all 8-bit conversion round trips, and sampled 16-bit values.
+
+**N3.2: Bit sandbox UI**
+- A register of 8 or 16 toggle buttons (`aria-pressed`, labels such as "bit 7, weight 128", with the weight shown as −128 in signed view), a live weights row and a sum-of-set-weights line ("64 + 8 + 1 = 73").
+- Four linked fields (denary unsigned, denary signed, binary, hex). Editing any of them updates the rest, and invalid or out-of-range input shows an inline error without clobbering the bits.
+- Width toggle, shift buttons (with the bit that fell out and any overflow flag), Clear, Invert and Negate (two's complement shown as "invert + 1").
+
+**N3.3: Binary addition visualiser**
+- Two operand registers, then the column layout an exam uses: a carry row, operand rows and a result row. Carries are highlighted, and a step-through goes column by column (right to left).
+- The verdict panel explains the unsigned reading (carry out) and the signed reading (overflow) separately.
+
+**N3.4: Practice mode**
+- Seeded question generators: denary→binary, binary→denary, binary↔hex, negative denary→two's complement, two's complement→denary, 8-bit addition (including "has overflow occurred?").
+- The checker is tolerant of formatting. A missing leading zero gets "Almost: write all 8 bits". After checking, a step-by-step breakdown shows the bit-weight table or the invert-and-add-1 working.
+- A session score with the generic `ScoreBar`; no ground truth in feedback before reveal.
+
+**N3.5: URL state + E2E**
+- URL parameters: `?mode=sandbox|add|practice`, `?bits=01001001`, `?width=8|16`, `?topic=twos` (sanitised).
+- E2E: toggling bits updates the denary and hex fields; `?bits=` deep link; the overflow example (`01111111 + 00000001`) flags signed overflow; one practice question answered right (using a fixed seed through `?seed=`). Axe light + dark.
+
+### Phase 4: Sorting and searching (`/sorting-visualizer`)
+
+**S4.1: Algorithm core (`src/core/algorithms/`)**
+- Each algorithm is a pure function `(input, options) → Step[]`. Step kinds: `compare i,j`, `swap i,j`, `shift`/`insert` (insertion sort), `split`/`merge` (merge sort), `inspect i`, `range low,mid,high`, `found`/`not-found`, and `pass-end` (with a snapshot of the array).
+- Bubble sort (early-exit option), insertion sort, merge sort (top-down; one "pass" = one merge level), linear search and binary search (D5; it refuses an unsorted array with a clear message).
+- Counters: comparisons and swaps (or shifts).
+- Tests: the final state equals the sorted array for random inputs; golden pass tables for the textbook arrays (`[5,1,4,2,8]` and others), **checked by hand** against your own working; stability of merge and insertion sort.
+
+**S4.2: Visualiser UI**
+- Card/bar view (cards for ≤ 12 items, values written on them). States: comparing, swapping, sorted, and out-of-range/discarded for binary search. State is shown by colour **and** an icon or label, never colour alone.
+- Controls: step back, step, play/pause, reset and speed. Animations are CSS transforms that honour reduced motion. A live caption (`aria-live`) narrates each step ("Compare 5 and 1 → swap").
+- Input: an algorithm select, presets, and a custom array (2–12 integers between −99 and 999, validated) plus a target for the searches.
+
+**S4.3: Pass-by-pass history table**
+- The array after each pass/iteration (binary search: low, mid, high and the compared value on each row), in `DataTable` styles, with the current pass highlighted and kept in sync with the visualiser.
+- Exports through `ExportPanel` (a `TableModel` built from the passes); goldens reviewed by hand.
+
+**S4.4: Predict-the-next-pass quiz**
+- At each `pass-end`/`range` boundary the run pauses and asks for the next state: an array typed as a list or built by reordering cards (both keyboard-accessible), or the `mid` index for binary search.
+- Graded with the generic grid. Then Reveal or Continue, with a score at the end. Feedback never shows the answer before reveal.
+
+**S4.5: URL state + E2E**
+- URL parameters: `?algo=bubble|insertion|merge|linear|binary`, `?data=5,1,4,2,8`, `?target=` and `?quiz=1` (sanitised).
+- E2E: bubble sort on the preset gives the pass table rows hand-checked in S4.1; the binary search deep link shows the right mid sequence; one quiz answer graded right and one wrong. Axe light + dark.
+
+### Phase 5: Home page (`/`), built last
+
+**W5.1: Home page**
+- Hero (one-line value proposition: zero login, nothing to install, everything runs in your browser) and a primary CTA.
+- A 2×2 tool directory (one column on phones). Each card has an inline-SVG icon, curriculum tags (`GCSE`, `SQA Higher`, `A-Level`, `CS1` as `Badge`s), 2–3 capabilities and a CTA `Link`.
+- The page must not load CodeMirror or Pyodide: check the network log in E2E.
+
+**W5.2: Quick-start exam presets strip**
+- Deep links, each backed by the sanitised URL parameters above:
+  - "Trace Bubble Sort in Python" → `/trace-table?preset=bubble-sort`. **New**: the trace page accepts `?preset=<built-in id>`, loads and runs that built-in preset (safe, not user code) and then removes the parameter.
+  - "Half-Adder Truth Table" → `/truth-tables?preset=half-adder`
+  - "Two's Complement Overflow Check" → `/number-systems?mode=add&a=01111111&b=00000001`
+  - "Binary Search for 23" → `/sorting-visualizer?algo=binary&data=…&target=23`
+  - "Bubble Sort: predict each pass" → `/sorting-visualizer?algo=bubble&quiz=1`
+
+**W5.3: SEO and discoverability**
+- A per-route `<title>` and `<meta name="description">` through React 19's native metadata hoisting (a small `PageMeta` component in each page), plus `<link rel="canonical">` when `VITE_SITE_URL` is set. `index.html` keeps sensible defaults for crawlers that do not run JS.
+- `public/robots.txt`, and `sitemap.xml` generated at build time from the route table (D3) covering `/` and the four tools.
+- Prerendering for non-JS crawlers is a later idea, not in scope.
+
+**W5.4: Final E2E, accessibility and documentation pass**
+- `home.spec.ts`: every card navigates to its tool and every quick-start link opens the right preset; the document title changes per route; 404 page.
+- Real-page axe audits for all five routes, light + dark. Mobile-width (375 px) check of the nav and each tool.
+- Update README, CLAUDE.md (hub rules from 16.1) and the §16 status, with test counts.
+
+### 16.4 Ticket order
+
+H0 → H1.1 → H1.2 → H1.3 → H1.4 → T2.1 → T2.2 → T2.3 → T2.4 → T2.5 → T2.6 → N3.1 → N3.2 → N3.3 → N3.4 → N3.5 → S4.1 → S4.2 → S4.3 → S4.4 → S4.5 → W5.1 → W5.2 → W5.3 → W5.4
+
+One ticket at a time, and each ends with the checks in 16.2 and one commit. T2.4 and T2.5 build the shared answer grid and export panel that Phases 3 and 4 reuse, so they must land before N3.4 and S4.3.
