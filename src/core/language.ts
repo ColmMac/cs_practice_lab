@@ -21,7 +21,7 @@ export interface LanguageDescriptor {
   presets: Preset[]
   /** Python: "[1, 2]", "'hi'", "True", "None" */
   formatValue(v: Value): string
-  /** Study Mode: user text → Value, or unparseable. */
-  parseAnswer(text: string): ParsedAnswer
+  /** Study Mode: user text → Value, or unparseable. Absent ⇒ Study Mode is unavailable for the language. */
+  parseAnswer?(text: string): ParsedAnswer
   defaultOptions?: Partial<TraceOptions>
 }

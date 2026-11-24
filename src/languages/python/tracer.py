@@ -1,0 +1,587 @@
+"""Trace harness for Trace Table Studio.
+
+Runs user code under ``sys.settrace`` and returns a JSON document describing every executed line.
+Imports nothing from ``js``/``pyodide`` so it can be tested on plain CPython (see tests/tracer).
+
+Design notes (PLAN.md section 4):
+* Rows are POST-state. A ``line`` event fires *before* the line runs, so each frame keeps a "pending
+  line" which is finalised (snapshot, diff, stdout) on that frame's next event.
+* Values are serialised to immutable JSON the moment a step is finalised, so later mutation can
+  never alter an earlier row.
+* The abort exception is a BaseException so ``except Exception`` can't swallow it; broad handlers
+  (bare ``except:`` / ``except BaseException``) get a re-raise guard injected by an AST transform.
+"""
+
+from __future__ import annotations
+
+import ast
+import builtins
+import json
+import random
+import sys
+import time
+import traceback
+import types
+
+USER_FILE = "<user>"
+TRANSPARENT = frozenset({"<genexpr>", "<lambda>", "<listcomp>", "<dictcomp>", "<setcomp>"})
+BLOCKED_IMPORTS = frozenset({"js", "pyodide", "pyodide_js", "micropip", "_pyodide"})
+MAX_STDOUT = 100_000
+CO_NEWLOCALS = 0x2  # function code objects have it; module and class bodies don't
+
+_MISSING = object()
+
+
+class TraceAbort(BaseException):
+    """Raised from the trace function to stop the user program."""
+
+    def __init__(self, reason: str):
+        super().__init__(reason)
+        self.reason = reason
+
+
+class InputExhausted(BaseException):
+    """Raised by the patched input() when the supplied stdin has run out."""
+
+    def __init__(self, prompt: str, consumed: int):
+        super().__init__(prompt)
+        self.prompt = prompt
+        self.consumed = consumed
+
+
+# ───────────────────────────── options ─────────────────────────────
+
+
+class Options:
+    def __init__(self, d: dict):
+        self.max_steps = int(d.get("maxSteps", 1000))
+        self.timeout_ms = float(d.get("timeoutMs", 3000))
+        self.max_call_depth = int(d.get("maxCallDepth", 100))
+        self.stdin = [str(x) for x in d.get("stdin", [])]
+        self.seed = d.get("randomSeed", 0)
+        lim = d.get("valueLimits", {})
+        self.max_items = int(lim.get("maxItems", 50))
+        self.max_depth = int(lim.get("maxDepth", 4))
+        self.max_str = int(lim.get("maxStringLength", 200))
+        self.show_callables = bool(d.get("showCallables", False))
+
+
+# ───────────────────────────── stdout capture ─────────────────────────────
+
+
+class StepBuffer:
+    """Replaces sys.stdout/sys.stderr. ``take()`` returns what was written since the last call."""
+
+    encoding = "utf-8"
+
+    def __init__(self, cap: int):
+        self._pending: list[str] = []
+        self._all: list[str] = []
+        self._size = 0
+        self._cap = cap
+        self.truncated = False
+
+    def write(self, s) -> int:
+        if not isinstance(s, str):
+            s = str(s)
+        n = len(s)
+        if self._size + n > self._cap:
+            s = s[: max(0, self._cap - self._size)]
+            self.truncated = True
+        if s:
+            self._pending.append(s)
+            self._all.append(s)
+            self._size += len(s)
+        return n
+
+    def writelines(self, lines) -> None:
+        for line in lines:
+            self.write(line)
+
+    def flush(self) -> None:
+        pass
+
+    def isatty(self) -> bool:
+        return False
+
+    def take(self) -> str:
+        s = "".join(self._pending)
+        self._pending = []
+        return s
+
+    def getvalue(self) -> str:
+        return "".join(self._all)
+
+
+# ───────────────────────────── value serialisation ─────────────────────────────
+
+
+class RefTable:
+    """Maps id(obj) -> small stable int. Holds strong refs so ids can't be recycled during a run."""
+
+    def __init__(self):
+        self._ids: dict[int, int] = {}
+        self._keep: list[object] = []
+
+    def get(self, obj) -> int:
+        i = id(obj)
+        if i not in self._ids:
+            self._ids[i] = len(self._ids) + 1
+            self._keep.append(obj)
+        return self._ids[i]
+
+
+def safe_repr(v, limit: int = 80) -> str:
+    try:
+        s = repr(v)
+    except Exception:
+        s = f"<{type(v).__name__}>"
+    return s if len(s) <= limit else s[: limit - 1] + "…"
+
+
+_CONTAINERS = ((list, "list"), (tuple, "tuple"), (frozenset, "frozenset"), (set, "set"))
+
+
+class Serialiser:
+    def __init__(self, refs: RefTable, opts: Options):
+        self.refs = refs
+        self.max_items = opts.max_items
+        self.max_depth = opts.max_depth
+        self.max_str = opts.max_str
+
+    def __call__(self, v, depth: int = 0, path: tuple = ()):
+        if v is None:
+            return {"k": "none"}
+        if isinstance(v, bool):
+            return {"k": "bool", "v": v}
+        if isinstance(v, int):
+            try:
+                return {"k": "int", "v": str(v)}
+            except ValueError:  # int -> str digit limit
+                return {"k": "opaque", "type": "int", "repr": "<very large int>"}
+        if isinstance(v, float):
+            return {"k": "float", "v": repr(v)}
+        if isinstance(v, str):
+            if len(v) > self.max_str:
+                return {"k": "str", "v": v[: self.max_str], "truncated": len(v)}
+            return {"k": "str", "v": v}
+
+        if isinstance(v, (dict, list, tuple, set, frozenset)):
+            ref = self.refs.get(v)
+            if id(v) in path:
+                return {"k": "cycle", "ref": ref}
+            if depth >= self.max_depth:
+                return {"k": "opaque", "type": type(v).__name__, "repr": "…"}
+            inner = path + (id(v),)
+            if isinstance(v, dict):
+                items = list(v.items())
+                out = {
+                    "k": "dict",
+                    "entries": [
+                        [self(a, depth + 1, inner), self(b, depth + 1, inner)] for a, b in items[: self.max_items]
+                    ],
+                    "ref": ref,
+                }
+            else:
+                kind = next(name for cls, name in _CONTAINERS if isinstance(v, cls))
+                items = list(v)
+                out = {"k": kind, "items": [self(x, depth + 1, inner) for x in items[: self.max_items]], "ref": ref}
+            if len(items) > self.max_items:
+                out["truncated"] = len(items)
+            return out
+
+        if callable(v) or isinstance(v, types.ModuleType):
+            return {"k": "opaque", "type": type(v).__name__, "repr": safe_repr(v)}
+
+        d = getattr(v, "__dict__", None)
+        if isinstance(d, dict):
+            ref = self.refs.get(v)
+            if id(v) in path:
+                return {"k": "cycle", "ref": ref}
+            if depth >= self.max_depth:
+                return {"k": "opaque", "type": type(v).__name__, "repr": "…"}
+            inner = path + (id(v),)
+            fields = {k: self(x, depth + 1, inner) for k, x in list(d.items())[: self.max_items] if not k.startswith("__")}
+            return {"k": "object", "type": type(v).__name__, "fields": fields, "ref": ref}
+
+        return {"k": "opaque", "type": type(v).__name__, "repr": safe_repr(v)}
+
+
+def visible(name: str, val, show_callables: bool) -> bool:
+    if name.startswith("__"):
+        return False
+    if show_callables:
+        return True
+    return not (callable(val) or isinstance(val, types.ModuleType))
+
+
+# ───────────────────────────── tracer ─────────────────────────────
+
+
+class Tracer:
+    def __init__(self, opts: Options, return_lines: set[int]):
+        self.o = opts
+        self.return_lines = return_lines
+        self.refs = RefTable()
+        self.ser = Serialiser(self.refs, opts)
+        self.out = StepBuffer(MAX_STDOUT)
+        self.steps: list[dict] = []
+        self.raw = 0
+        self.last_line = 0
+        self.deadline = time.monotonic() + opts.timeout_ms / 1000
+        self.abort_reason: str | None = None
+        self.next_fid = 0
+        self.fids: dict[int, int] = {}  # id(frame) -> fid
+        self.frames: dict[int, dict] = {}  # fid -> wire frame info
+        self.stack: list[int] = []  # live user frames, outermost first
+        self.pending: dict[int, tuple[object, int]] = {}  # fid -> (frame, line)
+        self.exc: dict[int, tuple[str, str]] = {}  # fid -> (type, message) raised in that frame
+        self.last: dict[int, dict] = {}  # fid -> {name: Value} as of the last emitted step
+        self.var_meta: dict[str, dict] = {}
+        self.module_frame = None
+
+    # ── trace callbacks ──
+
+    def global_trace(self, frame, event, arg):
+        code = frame.f_code
+        if code.co_filename != USER_FILE:
+            return None  # never trace stdlib / harness frames
+        if self.abort_reason:
+            raise TraceAbort(self.abort_reason)
+        name = code.co_name
+        if name != "<module>" and (name in TRANSPARENT or not code.co_flags & CO_NEWLOCALS):
+            return self.transparent_trace  # lambdas, genexprs, class bodies: count steps, emit no rows
+        self.on_call(frame)
+        return self.local_trace
+
+    def transparent_trace(self, frame, event, arg):
+        if event == "line":
+            self.tick(frame)
+        return self.transparent_trace
+
+    def local_trace(self, frame, event, arg):
+        if event == "line":
+            self.finalise(frame)
+            self.tick(frame)
+            fid = self.fids[id(frame)]
+            self.pending[fid] = (frame, frame.f_lineno)
+        elif event == "exception":
+            if not issubclass(arg[0], StopIteration):
+                self.exc[self.fids[id(frame)]] = (arg[0].__name__, str(arg[1]))
+        elif event == "return":
+            self.finalise(frame, closing=True, ret=arg)
+            self.on_return(frame)
+        return self.local_trace
+
+    # ── limits ──
+
+    def tick(self, frame) -> None:
+        self.raw += 1
+        self.last_line = frame.f_lineno
+        if self.raw > self.o.max_steps:
+            self.abort("step-limit")
+        if (self.raw & 63) == 0 and time.monotonic() > self.deadline:
+            self.abort("timeout")
+
+    def abort(self, reason: str) -> None:
+        self.abort_reason = reason  # sticky: re-raised at every later call event / guarded handler
+        raise TraceAbort(reason)
+
+    # ── frames ──
+
+    def on_call(self, frame) -> None:
+        code = frame.f_code
+        is_module = code.co_name == "<module>"
+        depth = len(self.stack)
+        if depth > self.o.max_call_depth:
+            self.abort("depth-limit")
+        fid = self.next_fid
+        self.next_fid += 1
+        self.fids[id(frame)] = fid
+        info = {"id": fid, "name": "<module>" if is_module else code.co_qualname.replace(".<locals>", ""), "depth": depth}
+        if is_module:
+            self.module_frame = frame
+        else:
+            back = frame.f_back
+            if back is not None and back.f_code.co_filename == USER_FILE:
+                info["callLine"] = back.f_lineno
+        self.frames[fid] = info
+        self.stack.append(fid)
+        self.last[fid] = {}
+        if is_module:
+            return
+        cur = self.snapshot(frame)
+        raw = dict(frame.f_locals)
+        nparams = code.co_argcount + code.co_kwonlyargcount
+        parts = [f"{n}={safe_repr(raw[n], 20)}" for n in code.co_varnames[:nparams] if n in raw]
+        info["argsLabel"] = f"{info['name']}({', '.join(parts)})"
+        writes = [(fid, n, v) for n, v in cur.items()]
+        self.last[fid] = cur
+        self.emit("c", frame.f_lineno, fid, writes, [], "")
+
+    def on_return(self, frame) -> None:
+        fid = self.fids.pop(id(frame))
+        if self.stack and self.stack[-1] == fid:
+            self.stack.pop()
+        elif fid in self.stack:
+            self.stack.remove(fid)
+        self.last.pop(fid, None)
+        self.exc.pop(fid, None)
+
+    # ── snapshots ──
+
+    def snapshot(self, frame) -> dict:
+        show = self.o.show_callables
+        return {n: self.ser(v) for n, v in dict(frame.f_locals).items() if visible(n, v, show)}
+
+    def diff(self, fid: int, cur: dict) -> tuple[list, list]:
+        prev = self.last.get(fid, {})
+        writes = [(fid, n, v) for n, v in cur.items() if prev.get(n, _MISSING) != v]
+        deletes = [(fid, n) for n in prev if n not in cur]
+        self.last[fid] = cur
+        return writes, deletes
+
+    def finalise(self, frame, closing: bool = False, ret=None) -> None:
+        fid = self.fids.get(id(frame))
+        p = self.pending.pop(fid, None) if fid is not None else None
+        if p is None:
+            return
+        line = p[1]
+        writes, deletes = self.diff(fid, self.snapshot(frame))
+        if fid != 0 and self.module_frame is not None:  # a callee can rebind globals
+            w, d = self.diff(0, self.snapshot(self.module_frame))
+            writes += w
+            deletes += d
+        exc = self.exc.pop(fid, None)
+        kind, rv = "l", None
+        if closing and exc is not None:
+            kind = "x"
+        elif closing and line in self.return_lines:
+            kind, rv = "r", self.ser(ret)
+        x = {"t": exc[0], "m": exc[1], "c": not closing} if exc else None
+        self.emit(kind, line, fid, writes, deletes, self.out.take(), rv, x)
+
+    def emit(self, kind, line, fid, writes, deletes, out, ret=None, exc=None) -> None:
+        i = len(self.steps)
+        step = {"i": i, "k": kind, "ln": line, "f": fid, "stk": list(self.stack)}
+        if writes:
+            step["w"] = [[f, n, v] for f, n, v in writes]
+        if deletes:
+            step["d"] = [[f, n] for f, n in deletes]
+        if out:
+            step["o"] = out
+        if ret is not None:
+            step["r"] = ret
+        if exc is not None:
+            step["x"] = exc
+        self.steps.append(step)
+        for f, n, _ in writes:
+            scope = self.frames[f]["name"]
+            col = f"{scope}:{n}"
+            if col not in self.var_meta:
+                self.var_meta[col] = {
+                    "columnId": col,
+                    "scopeName": scope,
+                    "name": n,
+                    "firstStep": i,
+                    "ephemeral": False,
+                }
+
+    def flush_pending(self) -> None:
+        """After an abort the tracer is switched off, so finalise whatever lines were mid-flight."""
+        for fid in reversed(list(self.pending)):
+            frame, _ = self.pending[fid]
+            self.finalise(frame)
+
+
+# ───────────────────────────── sandbox pieces ─────────────────────────────
+
+
+def _is_broad(t) -> bool:
+    if t is None:
+        return True
+    if isinstance(t, ast.Name):
+        return t.id == "BaseException"
+    if isinstance(t, ast.Tuple):
+        return any(_is_broad(e) for e in t.elts)
+    return False
+
+
+class _AbortGuard(ast.NodeTransformer):
+    """Inserts ``__tt_check__()`` first in broad except handlers so TraceAbort can't be swallowed.
+
+    The injected node reuses the first body statement's location, so it adds no extra line events.
+    """
+
+    def visit_ExceptHandler(self, node):
+        self.generic_visit(node)
+        if _is_broad(node.type):
+            call = ast.Expr(ast.Call(ast.Name("__tt_check__", ast.Load()), [], []))
+            ast.copy_location(call, node.body[0])
+            ast.fix_missing_locations(call)
+            for n in ast.walk(call):
+                ast.copy_location(n, node.body[0])
+            node.body.insert(0, call)
+        return node
+
+
+def _make_builtins(opts: Options, tracer: Tracer):
+    b = dict(vars(builtins))
+    queue = list(opts.stdin)
+    consumed = [0]
+
+    def _input(prompt=""):
+        prompt = str(prompt)
+        tracer.out.write(prompt)
+        if not queue:
+            raise InputExhausted(prompt, consumed[0])
+        value = queue.pop(0)
+        consumed[0] += 1
+        tracer.out.write(value + "\n")
+        return value
+
+    real_import = builtins.__import__
+
+    def _guarded_import(name, globals=None, locals=None, fromlist=(), level=0):
+        if level == 0 and name.split(".")[0] in BLOCKED_IMPORTS:
+            raise ImportError(f"Importing '{name}' is not available in Trace Table Studio")
+        return real_import(name, globals, locals, fromlist, level)
+
+    def _check():
+        if tracer.abort_reason:
+            raise TraceAbort(tracer.abort_reason)
+
+    b["input"] = _input
+    b["__import__"] = _guarded_import
+    b["__tt_check__"] = _check
+    return b
+
+
+def _error_from_exception(e: BaseException, kind: str) -> dict:
+    tb = traceback.extract_tb(e.__traceback__)
+    user = [(f.lineno, f.name) for f in tb if f.filename == USER_FILE]
+    name = type(e).__name__
+    msg = str(e)
+    return {
+        "kind": kind,
+        "type": name,
+        "message": f"{name}: {msg}" if msg else name,
+        "line": user[-1][0] if user else None,
+        "traceback": [{"line": ln, "functionName": fn} for ln, fn in user],
+    }
+
+
+def _empty_result(status: str, error: dict | None, t0: float) -> dict:
+    return {
+        "status": status,
+        "error": error,
+        "steps": [],
+        "frames": [],
+        "variables": [],
+        "functions": [],
+        "stdout": "",
+        "stats": {"rawSteps": 0, "truncated": False, "durationMs": round((time.perf_counter() - t0) * 1000, 2)},
+    }
+
+
+def run_trace(code: str, opts_json: str) -> str:
+    """Entry point. Returns a JSON string; never raises for problems in the user's program."""
+    t0 = time.perf_counter()
+    opts = Options(json.loads(opts_json))
+
+    try:
+        tree = ast.parse(code, filename=USER_FILE)
+        return_lines = {n.lineno for n in ast.walk(tree) if isinstance(n, ast.Return)}
+        tree = ast.fix_missing_locations(_AbortGuard().visit(tree))
+        code_obj = compile(tree, USER_FILE, "exec")
+    except SyntaxError as e:
+        err = {
+            "kind": "syntax-error",
+            "type": type(e).__name__,
+            "message": f"{type(e).__name__}: {e.msg}",
+            "line": e.lineno,
+            "column": e.offset,
+            "endLine": getattr(e, "end_lineno", None),
+            "endColumn": getattr(e, "end_offset", None),
+        }
+        return json.dumps(_empty_result("syntax-error", err, t0))
+    except (ValueError, RecursionError, MemoryError) as e:  # null bytes, absurd nesting
+        err = {"kind": "syntax-error", "type": type(e).__name__, "message": f"{type(e).__name__}: {e}"}
+        return json.dumps(_empty_result("syntax-error", err, t0))
+
+    tracer = Tracer(opts, return_lines)
+    g = {"__name__": "__main__", "__builtins__": _make_builtins(opts, tracer)}
+    saved = (sys.stdout, sys.stderr, sys.getrecursionlimit())
+    status, error, input_request = "ok", None, None
+
+    random.seed(opts.seed)
+    sys.stdout = sys.stderr = tracer.out
+    sys.setrecursionlimit(max(saved[2], opts.max_call_depth * 3 + 100))
+    try:
+        sys.settrace(tracer.global_trace)
+        exec(code_obj, g)
+    except TraceAbort:
+        pass  # status comes from tracer.abort_reason below
+    except InputExhausted as e:
+        status = "awaiting-input"
+        input_request = {"prompt": e.prompt, "consumedCount": e.consumed}
+        error = {"kind": status, "message": f"The program asked for input ({e.prompt!r}) but none was left.", "line": tracer.last_line}
+    except SystemExit:
+        pass
+    except KeyboardInterrupt as e:
+        status = "cancelled"
+        error = _error_from_exception(e, status)
+    except BaseException as e:
+        status = "runtime-error"
+        error = _error_from_exception(e, status)
+    finally:
+        sys.settrace(None)
+        tracer.flush_pending()
+        sys.stdout, sys.stderr = saved[0], saved[1]
+        sys.setrecursionlimit(saved[2])
+
+    # The abort reason is sticky, so it wins even if user code swallowed the exception somehow.
+    reason = tracer.abort_reason
+    if reason == "step-limit":
+        status = "step-limit"
+        error = {
+            "kind": status,
+            "message": f"Stopped after {opts.max_steps} steps. Your program may contain an infinite loop.",
+            "line": tracer.last_line,
+        }
+    elif reason == "timeout":
+        status = "timeout"
+        error = {
+            "kind": status,
+            "message": f"Stopped after {opts.timeout_ms / 1000:g} s. Your program ran for too long and may contain an infinite loop.",
+            "line": tracer.last_line,
+        }
+    elif reason == "depth-limit":
+        status = "runtime-error"
+        error = {
+            "kind": status,
+            "type": "RecursionError",
+            "message": f"RecursionError: more than {opts.max_call_depth} nested function calls (infinite recursion?)",
+            "line": tracer.last_line,
+        }
+
+    functions = []
+    for info in tracer.frames.values():
+        if info["name"] != "<module>" and info["name"] not in functions:
+            functions.append(info["name"])
+    result = {
+        "status": status,
+        "error": error,
+        "inputRequest": input_request,
+        "steps": tracer.steps,
+        "frames": list(tracer.frames.values()),
+        "variables": list(tracer.var_meta.values()),
+        "functions": functions,
+        "stdout": tracer.out.getvalue(),
+        "stats": {
+            "rawSteps": tracer.raw,
+            "truncated": tracer.out.truncated,
+            "durationMs": round((time.perf_counter() - t0) * 1000, 2),
+        },
+    }
+    return json.dumps(result)

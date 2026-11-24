@@ -1,0 +1,48 @@
+{
+ "code": "name = input('Name? ')\nprint(name)\n",
+ "options": {},
+ "wire": {
+  "status": "awaiting-input",
+  "error": {
+   "kind": "awaiting-input",
+   "message": "The program asked for input ('Name? ') but none was left.",
+   "line": 1
+  },
+  "inputRequest": {
+   "prompt": "Name? ",
+   "consumedCount": 0
+  },
+  "steps": [
+   {
+    "i": 0,
+    "k": "x",
+    "ln": 1,
+    "f": 0,
+    "stk": [
+     0
+    ],
+    "o": "Name? ",
+    "x": {
+     "t": "InputExhausted",
+     "m": "Name? ",
+     "c": false
+    }
+   }
+  ],
+  "frames": [
+   {
+    "id": 0,
+    "name": "<module>",
+    "depth": 0
+   }
+  ],
+  "variables": [],
+  "functions": [],
+  "stdout": "Name? ",
+  "stats": {
+   "rawSteps": 1,
+   "truncated": false,
+   "durationMs": 0
+  }
+ }
+}

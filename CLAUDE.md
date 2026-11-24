@@ -2,9 +2,10 @@
 
 Client-side Python trace-table generator (React + TS + Vite, Pyodide in a Web Worker). Full design: [PLAN.md](PLAN.md) — read it before changing contracts.
 
-## Commands (once scaffolded in M0)
-- `npm run dev` / `npm test` (Vitest) / `npx tsc --noEmit` / `npx playwright test`
-- `npm run test:py` (= `uv run --no-project --python 3.12 --with pytest python -m pytest tests/tracer -p no:cacheprovider`) — tracer tests; also run with `--python 3.13`. Default `python` on this machine is 3.7: never use it.
+## Commands
+- `npm run dev` / `npm test` (Vitest) / `npm run typecheck` / `npm run lint` / `npm run build`
+- `npm run fixtures` — regenerate `tests/fixtures/wire/*.json` from the real `tracer.py`; the Vitest suite consumes them, so review the diff (it is the Python↔TS wire contract).
+- `npm run test:py` (= `uv run --no-project --python 3.12 --with pytest python -m pytest tests/tracer -p no:cacheprovider`) — tracer tests. Run on 3.12, 3.13 AND 3.14 (swap `--python`); Pyodide 314.x ships Python **3.14**. Default `python` on this machine is 3.7: never use it.
 - Windows Application Control blocks executables inside a project `.venv` (os error 4551), so don't use `uv run pytest` / `uv sync`; use the ephemeral `--no-project --with pytest` form above.
 - Node is installed system-wide (winget). In a fresh PowerShell it may need PATH refreshed from the Machine/User environment.
 
@@ -17,5 +18,5 @@ Client-side Python trace-table generator (React + TS + Vite, Pyodide in a Web Wo
 - Code from share links must never auto-run.
 - Git: this folder is its own repo (`ColmMac/trace_table`), nested inside `C:\ip`. Commit from here.
 
-## Prototype
-`tests/tracer/proto_*.py` are throwaway prototypes that validated the settrace design (bare `except:` swallows the abort; callee mutation of caller's list). Convert into pytest cases in M1.
+## Status
+M0 (scaffold) and M1 (vertical slice: tracer → worker → runner → table) are done; see PLAN.md §9 and its "M1 implementation notes". Strict `xfail` tests in `tests/tracer/test_tracer.py` mark the remaining M2 gaps; when one starts passing, pytest fails until you remove the marker.

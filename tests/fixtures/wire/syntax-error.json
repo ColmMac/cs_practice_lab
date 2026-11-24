@@ -1,0 +1,26 @@
+{
+ "code": "if x\n    pass\n",
+ "options": {},
+ "wire": {
+  "status": "syntax-error",
+  "error": {
+   "kind": "syntax-error",
+   "type": "SyntaxError",
+   "message": "SyntaxError: expected ':'",
+   "line": 1,
+   "column": 5,
+   "endLine": 1,
+   "endColumn": 6
+  },
+  "steps": [],
+  "frames": [],
+  "variables": [],
+  "functions": [],
+  "stdout": "",
+  "stats": {
+   "rawSteps": 0,
+   "truncated": false,
+   "durationMs": 0
+  }
+ }
+}
