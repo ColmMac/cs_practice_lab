@@ -1,4 +1,7 @@
 import { useEffect } from 'react'
+import { AdSlot } from './components/ui/AdSlot'
+import { useAdsAllowed } from './components/ui/useAdsAllowed'
+import { useProjector } from './components/ui/projector'
 import { CodeEditor } from './components/editor/CodeEditor'
 import { InputsPanel } from './components/editor/InputsPanel'
 import { PseudocodePanel } from './components/editor/PseudocodePanel'
@@ -45,6 +48,10 @@ export function App({ preparingStudy = false }: { preparingStudy?: boolean }) {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
+  const projector = useProjector((s) => s.on)
+  // `preparingStudy`: a practice link is about to start Study mode
+  const ads = useAdsAllowed(preparingStudy || study !== null || challenge !== null || projector)
+
   const stale = result !== null && ranSig !== signature
   // A challenge shows its table only once it is masked; every other state shows the panel instead.
   const gated = challenge !== null && !(challenge.stage === 'active' && study)
@@ -65,6 +72,8 @@ export function App({ preparingStudy = false }: { preparingStudy?: boolean }) {
           <PseudocodePanel />
           <InputsPanel />
           <WatchPanel />
+          {/* wide screens only: on phones this spot is between the editor and the table */}
+          <AdSlot ads={ads} at="desktop" />
         </section>
 
         <section ref={paneRef} className="min-h-0 overflow-auto" aria-label="Trace" data-scroll-parent>
@@ -104,6 +113,7 @@ export function App({ preparingStudy = false }: { preparingStudy?: boolean }) {
             </div>
           )}
         </section>
+        <AdSlot ads={ads} at="phone" />
       </main>
     </div>
     <PrintRegion />

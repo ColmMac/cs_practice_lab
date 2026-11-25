@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import axe from 'axe-core'
 import { readFileSync } from 'node:fs'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { MemoryRouter } from 'react-router'
 import { App } from '../../src/App'
 import { FakeTraceRunner } from '../../src/core/fake/FakeTraceRunner'
 import { encodeShare } from '../../src/core/share/urlState'
@@ -32,7 +33,7 @@ const CLEAN = {
 function mount(result: TraceResult = traces.digitSum, workspace: Partial<ReturnType<typeof defaultWorkspace>> = {}) {
   setRunnerOverride(new FakeTraceRunner(result))
   useStore.setState({ ...defaultWorkspace('n = 1234\n'), ...workspace, ...CLEAN })
-  return render(<App />)
+  return render(<App />, { wrapper: MemoryRouter })
 }
 
 /** Fails with a readable list of every WCAG problem axe finds on the whole page. */
@@ -103,7 +104,7 @@ describe('axe: no accessibility violations in any major state', () => {
     runner.init = () => new Promise(() => {})
     setRunnerOverride(runner)
     useStore.setState({ ...defaultWorkspace('n = 1\n'), ...CLEAN, runnerStatus: { state: 'loading', message: 'Downloading…' } })
-    render(<App />)
+    render(<App />, { wrapper: MemoryRouter })
     await expectAccessible('loading')
     act(() => useStore.setState({ runnerStatus: { state: 'failed', message: 'offline' } }))
     await expectAccessible('failed')

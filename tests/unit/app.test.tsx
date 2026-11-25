@@ -1,6 +1,7 @@
 import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { MemoryRouter } from 'react-router'
 import { App } from '../../src/App'
 import { FakeTraceRunner } from '../../src/core/fake/FakeTraceRunner'
 import { encodeShare } from '../../src/core/share/urlState'
@@ -39,7 +40,7 @@ function mount(result: Result = traces.digitSum, opts: { validate?: Validate; wo
   const runSpy = vi.spyOn(runner, 'runTrace')
   setRunnerOverride(runner)
   useStore.setState({ ...defaultWorkspace('x = 1\n'), ...opts.workspace, ...CLEAN })
-  render(<App />)
+  render(<App />, { wrapper: MemoryRouter })
   return { runner, runSpy }
 }
 
@@ -410,7 +411,7 @@ describe('Watch panel', () => {
     }
     setRunnerOverride(runner)
     useStore.setState({ ...defaultWorkspace('x = 1\n'), ...CLEAN })
-    render(<App />)
+    render(<App />, { wrapper: MemoryRouter })
     await screen.findByRole('table')
     const id = useStore.getState().addWatch('a.pop()')!
     useStore.getState().updateWatch(id, { expr: 'a' }) // edited again before the slow answer returns
@@ -632,7 +633,7 @@ describe('Opening a shared link', () => {
       vi.spyOn(runner, 'cancel')
       setRunnerOverride(runner)
       useStore.setState({ ...defaultWorkspace('mine = 1\n'), ...CLEAN })
-      render(<App />)
+      render(<App />, { wrapper: MemoryRouter })
       await waitFor(() => expect(useStore.getState().running).toBe(true))
 
       await arrive(share('print("shared")\n'))

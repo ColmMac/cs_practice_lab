@@ -1,6 +1,8 @@
 import { PageMeta } from '../../app/PageMeta'
 import { toolDescription } from '../../app/tools'
 import { findLogicPreset, logicPresets } from '../../core/logic'
+import { AdSlot } from '../ui/AdSlot'
+import { useAdsAllowed } from '../ui/useAdsAllowed'
 import { Badge } from '../ui/Badge'
 import { Panel } from '../ui/Panel'
 import { SegmentedToggle } from '../ui/SegmentedToggle'
@@ -21,6 +23,7 @@ export function TruthTablePage() {
   const s = useTruthPage()
   const preset = findLogicPreset(s.selectValue)
   const study = useTruthStudy(s.table, s.notation)
+  const ads = useAdsAllowed(study.active)
 
   return (
     <>
@@ -100,6 +103,7 @@ export function TruthTablePage() {
                 {s.parsedSource.trim() ? 'Fix the error to see the table.' : 'Type an expression, or pick an example.'}
               </p>
             )}
+            <AdSlot ads={ads} />
           </div>
         </main>
       </ToolWorkspace>

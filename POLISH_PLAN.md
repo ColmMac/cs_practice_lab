@@ -194,22 +194,22 @@ Gate: build once with a fake valid ID into a temp dir and inspect `index.html` a
 
 ## P7. `AdSlot` component and placement rules
 
-- [ ] `src/components/ui/AdSlot.tsx` exports `AdSlot` (the placement wrapper) and `GoogleAdUnit` (the `<ins>`):
+- [x] `src/components/ui/AdSlot.tsx` exports `AdSlot` (the placement wrapper) and `GoogleAdUnit` (the `<ins>`):
   - **Reserved box:** fixed outer height (label + 100 px), `border border-[--color-border]`, `rounded`, and a tiny "Advertisement" label above. The box size never changes between loading, filled, unfilled and fallback, so CLS is zero.
   - **Enabled** when the client and slot env vars are both valid. It renders `<ins class="adsbygoogle" style="display:block;width:100%;height:100px" data-ad-client data-ad-slot data-full-width-responsive="false">`. Use a fixed CSS height, not `data-ad-format="auto"`, so the ad can't grow the box. Don't clip it with `overflow:hidden` (cropping ads is against policy). Add `data-adtest="on"` when `import.meta.env.DEV`.
   - **Push exactly once per `<ins>`:** in an effect, skip if the element already has `data-adsbygoogle-status`. This survives StrictMode's double effect, which otherwise throws "All 'ins' elements already have ads". Wrap the push in `try/catch`.
   - **Route change:** key the unit by `pathname`, so each navigation mounts a fresh `<ins>` and push. Never refresh on a timer (policy).
   - **Fallback house card** in the same box when ads are disabled, when the script fails to load (blocked: `window.adsbygoogle` lacks the loaded flag after a timeout, or the `<script>` errored), or when AdSense marks the unit `data-ad-status="unfilled"` (watched with a `MutationObserver`). The card is one line linking to a sibling tool or the "student challenge link" tip, rotating deterministically by route rather than randomly, so tests are stable.
   - **One placement per page, chosen by breakpoint:** a `useMediaQuery('(min-width: 1024px)')` hook decides whether the desktop or mobile placement renders. **Only one is ever mounted.** Don't render both and hide one with CSS, because a `display:none` unit has zero width and AdSense errors on it.
-- [ ] **Never shown** (hook `useAdsAllowed()`): Study mode on any tool (trace study, truth study, number practice, sorting quiz), any challenge stage, projector mode, print (`print:hidden`), `/privacy` and the 404. Once a mode has suppressed the slot, keep the **house card** until the next route change, so toggling Study mode doesn't fire new ad requests.
-- [ ] **Placement map** (desktop / phone). Never between editor and table, never sticky, never overlapping controls:
+- [x] **Never shown** (hook `useAdsAllowed()`): Study mode on any tool (trace study, truth study, number practice, sorting quiz), any challenge stage, projector mode, print (`print:hidden`), `/privacy` and the 404. Once a mode has suppressed the slot, keep the **house card** until the next route change, so toggling Study mode doesn't fire new ad requests.
+- [x] **Placement map** (desktop / phone). Never between editor and table, never sticky, never overlapping controls:
   - `/`: below the tool cards / same
   - `/trace-table`: bottom of the Code column after `WatchPanel` / after the Trace pane. On phones the Code column sits **above** the table, so the desktop spot would be "between editor and table" there. That's why the placement switches.
   - `/truth-tables`, `/number-systems`, `/sorting-visualizer`: bottom of the secondary (right-hand) column / after the last workspace section, before the guide (P9)
   - `/about`: after the content
-- [ ] Unit tests: env unset → house card; env set → `<ins>` with the right attributes and one push even under StrictMode; `unfilled` → house card; study and challenge active → nothing ad-like rendered.
+- [x] Unit tests: env unset → house card; env set → `<ins>` with the right attributes and one push even under StrictMode; `unfilled` → house card; study and challenge active → nothing ad-like rendered.
 
-Gate: unit green. In the browser pane at 1280×800 and 375×812, the box is visible, nothing overlaps, and the layout doesn't move when the fallback swaps in.
+Gate: unit green. In the browser pane at 1280×800 and 375×812, the box is visible, nothing overlaps, and the layout doesn't move when the fallback swaps in. *2026-11-25: green. Typecheck, build, lint, 1222 unit tests and 12 targeted E2E specs (148 tests, with the new `adslot.spec.ts`), plus `adsense`, `layout`, `hub` and `trust-pages`. The full E2E suite was not run. `adslot.spec.ts` checks every placement at 1280×800 and 375×812, and swaps in the fallback on a build with fake IDs (no Google traffic) without moving anything. `/trace-table` (desktop) and `/` (phone) were also looked at in the browser pane. Notes: `useAdsAllowed(suppressed)` is called by each page, so the home page never imports the trace store. A suppressed slot renders nothing; afterwards it holds the house card. A slot that has sent a request and is then remounted (a mode or breakpoint change) also gets the house card, so there is at most one request per route visit. The push waits one tick, so a challenge link is read before anything is requested. Only the trace page uses the breakpoint switch: on the other tools, the bottom of the second column is also after the last section on a phone. The house card is labelled “From CS Practice Lab”, not “Advertisement”. Real filled ads are unverified until AdSense approval.*
 
 ---
 

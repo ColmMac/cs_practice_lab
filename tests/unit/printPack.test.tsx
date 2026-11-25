@@ -1,6 +1,7 @@
 import { act, cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { MemoryRouter } from 'react-router'
 import { App } from '../../src/App'
 import { applyColumnPrefs, deriveColumns } from '../../src/core/derive/columns'
 import { deriveRows } from '../../src/core/derive/rows'
@@ -116,7 +117,7 @@ describe('printing the pack from the app', () => {
   async function printPack() {
     const print = vi.spyOn(window, 'print').mockImplementation(() => void window.dispatchEvent(new Event('beforeprint')))
     const user = userEvent.setup()
-    render(<App />)
+    render(<App />, { wrapper: MemoryRouter })
     await screen.findByRole('table')
     await user.click(screen.getByRole('button', { name: /export/i }))
     const dialog = screen.getByRole('dialog', { name: 'Export' })
@@ -182,7 +183,7 @@ describe('printing the pack from the app', () => {
   })
 
   it('a challenge refuses the pack: no menu, no job, and the print view holds only a notice', async () => {
-    render(<App />)
+    render(<App />, { wrapper: MemoryRouter })
     await screen.findByRole('table')
     act(() =>
       useStore.setState({

@@ -13,6 +13,8 @@ import {
   sortingUrlParams,
   type AlgorithmId,
 } from '../../core/algorithms'
+import { AdSlot } from '../ui/AdSlot'
+import { useAdsAllowed } from '../ui/useAdsAllowed'
 import { Button } from '../ui/Button'
 import { ExportUnavailable } from '../ui/ExportPanel'
 import { HistoryExport } from './HistoryExport'
@@ -36,6 +38,7 @@ export function SortingPage() {
   // Read the link once; after that the page owns the state and writes it back to the URL.
   const [start] = useState(() => parseSortingUrl(params))
   const s = useSorting(start)
+  const ads = useAdsAllowed(s.quizOn)
   // A LAYOUT effect: a passive one can still be pending when the next nav link is clicked, and then overwrites it.
   useLayoutEffect(() => {
     setParams(
@@ -204,93 +207,96 @@ export function SortingPage() {
               </Panel>
             )}
           </div>
-          <Panel title="Input" className="min-w-0 self-start">
-            <div className="flex flex-col gap-3 p-3">
-              <div className="flex flex-col gap-1">
-                <label htmlFor="sort-list" className="text-sm font-semibold">
-                  List{' '}
-                  <span className="text-xs font-normal text-slate-600 dark:text-slate-400">
-                    {MIN_ITEMS} to {MAX_CARDS} whole numbers, {MIN_VALUE} to {MAX_VALUE}
-                  </span>
-                </label>
-                <input
-                  id="sort-list"
-                  value={s.text}
-                  onChange={(e) => s.setText(e.target.value)}
-                  spellCheck={false}
-                  autoComplete="off"
-                  aria-invalid={s.listError ? true : undefined}
-                  aria-describedby="sort-list-err"
-                  className={`${fieldClass} font-mono ${s.listError ? 'border-red-500' : okBorder}`}
-                />
-                <p
-                  id="sort-list-err"
-                  aria-live="polite"
-                  className="min-h-4 text-xs text-red-700 dark:text-red-300"
-                >
-                  {s.listError}
-                </p>
-                {unsorted && (
-                  <div>
-                    <Button onClick={s.sortTheList}>Sort the list</Button>
-                  </div>
-                )}
-              </div>
-              {s.search && (
+          <div className="flex min-w-0 flex-col gap-3 self-start">
+            <Panel title="Input">
+              <div className="flex flex-col gap-3 p-3">
                 <div className="flex flex-col gap-1">
-                  <label htmlFor="sort-target" className="text-sm font-semibold">
-                    Target{' '}
+                  <label htmlFor="sort-list" className="text-sm font-semibold">
+                    List{' '}
                     <span className="text-xs font-normal text-slate-600 dark:text-slate-400">
-                      the number to find
+                      {MIN_ITEMS} to {MAX_CARDS} whole numbers, {MIN_VALUE} to {MAX_VALUE}
                     </span>
                   </label>
                   <input
-                    id="sort-target"
-                    value={s.targetText}
-                    onChange={(e) => s.setTargetText(e.target.value)}
+                    id="sort-list"
+                    value={s.text}
+                    onChange={(e) => s.setText(e.target.value)}
                     spellCheck={false}
                     autoComplete="off"
-                    inputMode="numeric"
-                    aria-invalid={s.targetError ? true : undefined}
-                    aria-describedby="sort-target-err"
-                    className={`${fieldClass} w-28 font-mono ${s.targetError ? 'border-red-500' : okBorder}`}
+                    aria-invalid={s.listError ? true : undefined}
+                    aria-describedby="sort-list-err"
+                    className={`${fieldClass} font-mono ${s.listError ? 'border-red-500' : okBorder}`}
                   />
                   <p
-                    id="sort-target-err"
+                    id="sort-list-err"
                     aria-live="polite"
                     className="min-h-4 text-xs text-red-700 dark:text-red-300"
                   >
-                    {s.targetError}
+                    {s.listError}
                   </p>
+                  {unsorted && (
+                    <div>
+                      <Button onClick={s.sortTheList}>Sort the list</Button>
+                    </div>
+                  )}
                 </div>
-              )}
-              {s.algo === 'bubble' && (
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={s.earlyExit}
-                    onChange={(e) => s.setEarlyExit(e.target.checked)}
-                  />
-                  Stop early when a pass makes no swaps
-                </label>
-              )}
-              {s.run && !s.quizActive && (
-                <p className="text-sm text-slate-700 dark:text-slate-300">
-                  {s.search
-                    ? s.run.foundAt === null || s.run.foundAt === undefined
-                      ? `Result: ${s.run.target} is not in the list (${s.run.comparisons} comparisons).`
-                      : `Result: found ${s.run.target} at index ${s.run.foundAt} (${s.run.comparisons} comparisons).`
-                    : `Whole run: ${s.run.comparisons} comparisons, ${
-                        s.algo === 'insertion'
-                          ? `${s.run.shifts} shifts`
-                          : s.algo === 'merge'
-                            ? 'no swaps (merging copies values)'
-                            : `${s.run.swaps} swaps`
-                      }.`}
-                </p>
-              )}
-            </div>
-          </Panel>
+                {s.search && (
+                  <div className="flex flex-col gap-1">
+                    <label htmlFor="sort-target" className="text-sm font-semibold">
+                      Target{' '}
+                      <span className="text-xs font-normal text-slate-600 dark:text-slate-400">
+                        the number to find
+                      </span>
+                    </label>
+                    <input
+                      id="sort-target"
+                      value={s.targetText}
+                      onChange={(e) => s.setTargetText(e.target.value)}
+                      spellCheck={false}
+                      autoComplete="off"
+                      inputMode="numeric"
+                      aria-invalid={s.targetError ? true : undefined}
+                      aria-describedby="sort-target-err"
+                      className={`${fieldClass} w-28 font-mono ${s.targetError ? 'border-red-500' : okBorder}`}
+                    />
+                    <p
+                      id="sort-target-err"
+                      aria-live="polite"
+                      className="min-h-4 text-xs text-red-700 dark:text-red-300"
+                    >
+                      {s.targetError}
+                    </p>
+                  </div>
+                )}
+                {s.algo === 'bubble' && (
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={s.earlyExit}
+                      onChange={(e) => s.setEarlyExit(e.target.checked)}
+                    />
+                    Stop early when a pass makes no swaps
+                  </label>
+                )}
+                {s.run && !s.quizActive && (
+                  <p className="text-sm text-slate-700 dark:text-slate-300">
+                    {s.search
+                      ? s.run.foundAt === null || s.run.foundAt === undefined
+                        ? `Result: ${s.run.target} is not in the list (${s.run.comparisons} comparisons).`
+                        : `Result: found ${s.run.target} at index ${s.run.foundAt} (${s.run.comparisons} comparisons).`
+                      : `Whole run: ${s.run.comparisons} comparisons, ${
+                          s.algo === 'insertion'
+                            ? `${s.run.shifts} shifts`
+                            : s.algo === 'merge'
+                              ? 'no swaps (merging copies values)'
+                              : `${s.run.swaps} swaps`
+                        }.`}
+                  </p>
+                )}
+              </div>
+            </Panel>
+            <AdSlot ads={ads} />
+          </div>
         </main>
       </ToolWorkspace>
     </>

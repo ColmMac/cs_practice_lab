@@ -1,4 +1,6 @@
 import { Link } from 'react-router'
+import { AdSlot } from '../components/ui/AdSlot'
+import { useAdsAllowed } from '../components/ui/useAdsAllowed'
 import { ToolHeader } from '../components/ui/ToolHeader'
 import { CookieChoicesButton } from './CookieChoicesButton'
 import type { Block, InfoDoc, Inline } from './info/content'
@@ -47,6 +49,7 @@ const longDate = (iso: string) =>
 /** A page of plain prose: /about and /privacy. */
 export function InfoPage({ path, doc }: { path: '/about' | '/privacy'; doc: InfoDoc }) {
   const page = infoPage(path)
+  const ads = useAdsAllowed(path === '/privacy') // never on the privacy page
   return (
     <>
       <PageMeta title={page.name} description={page.description} />
@@ -71,6 +74,7 @@ export function InfoPage({ path, doc }: { path: '/about' | '/privacy'; doc: Info
             </p>
           )}
         </div>
+        <AdSlot ads={ads} className="mt-6 max-w-prose" />
       </main>
     </>
   )

@@ -4,6 +4,8 @@ import { PageMeta } from '../../app/PageMeta'
 import { toolDescription } from '../../app/tools'
 import { numberUrlParams, parseNumberUrl, toBinary, type Mode, type Topic, type Width } from '../../core/numbers'
 import { newSeed } from '../../core/study/rng'
+import { AdSlot } from '../ui/AdSlot'
+import { useAdsAllowed } from '../ui/useAdsAllowed'
 import { Badge } from '../ui/Badge'
 import { Button } from '../ui/Button'
 import { Panel } from '../ui/Panel'
@@ -51,6 +53,8 @@ export function NumberSystemsPage() {
   const [seed, setSeed] = useState(() => start.seed ?? newSeed())
   const [topic, setTopic] = useState<Topic | null>(start.topic)
 
+  const ads = useAdsAllowed(mode === 'practice')
+
   // A LAYOUT effect: a passive one can still be pending when the next nav link is clicked, and then overwrites it.
   useLayoutEffect(() => {
     setParams(numberUrlParams({ mode, width: s.width, bits: s.bits, topic, seed }), { replace: true })
@@ -96,7 +100,7 @@ export function NumberSystemsPage() {
         {mode === 'practice' ? (
           <PracticeView seed={seed} topic={topic} onTopic={setTopic} onSeed={setSeed} />
         ) : mode === 'add' ? (
-          <AdditionView width={s.width} initial={{ a: start.a, b: start.b }} />
+          <AdditionView width={s.width} initial={{ a: start.a, b: start.b }} footer={<AdSlot ads={ads} />} />
         ) : (
           <main className="grid flex-1 content-start gap-4 p-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
             <div className="flex min-w-0 flex-col gap-3">
@@ -131,41 +135,44 @@ export function NumberSystemsPage() {
                 </div>
               </Panel>
             </div>
-            <Panel title="Values" className="min-w-0 self-start">
-              <div className="flex flex-col gap-3 p-3">
-                {FIELDS.map((f) => {
-                  const err = s.errors[f.base]
-                  return (
-                    <div key={f.base} className="flex flex-col gap-1">
-                      <label htmlFor={`num-${f.base}`} className="text-sm font-semibold">
-                        {f.label}{' '}
-                        <span className="text-xs font-normal text-slate-600 dark:text-slate-400">{f.hint}</span>
-                      </label>
-                      <input
-                        id={`num-${f.base}`}
-                        value={s.values[f.base]}
-                        onChange={(e) => s.edit(f.base, e.target.value)}
-                        onBlur={s.endEdit}
-                        spellCheck={false}
-                        autoComplete="off"
-                        aria-invalid={err ? true : undefined}
-                        aria-describedby={`num-${f.base}-err`}
-                        className={`w-full rounded border bg-white px-2 py-1 font-mono text-sm text-slate-900 dark:bg-slate-900 dark:text-slate-100 ${
-                          err ? 'border-red-500' : 'border-slate-300 dark:border-slate-700'
-                        }`}
-                      />
-                      <p
-                        id={`num-${f.base}-err`}
-                        aria-live="polite"
-                        className="min-h-4 text-xs text-red-700 dark:text-red-300"
-                      >
-                        {err}
-                      </p>
-                    </div>
-                  )
-                })}
-              </div>
-            </Panel>
+            <div className="flex min-w-0 flex-col gap-3 self-start">
+              <Panel title="Values">
+                <div className="flex flex-col gap-3 p-3">
+                  {FIELDS.map((f) => {
+                    const err = s.errors[f.base]
+                    return (
+                      <div key={f.base} className="flex flex-col gap-1">
+                        <label htmlFor={`num-${f.base}`} className="text-sm font-semibold">
+                          {f.label}{' '}
+                          <span className="text-xs font-normal text-slate-600 dark:text-slate-400">{f.hint}</span>
+                        </label>
+                        <input
+                          id={`num-${f.base}`}
+                          value={s.values[f.base]}
+                          onChange={(e) => s.edit(f.base, e.target.value)}
+                          onBlur={s.endEdit}
+                          spellCheck={false}
+                          autoComplete="off"
+                          aria-invalid={err ? true : undefined}
+                          aria-describedby={`num-${f.base}-err`}
+                          className={`w-full rounded border bg-white px-2 py-1 font-mono text-sm text-slate-900 dark:bg-slate-900 dark:text-slate-100 ${
+                            err ? 'border-red-500' : 'border-slate-300 dark:border-slate-700'
+                          }`}
+                        />
+                        <p
+                          id={`num-${f.base}-err`}
+                          aria-live="polite"
+                          className="min-h-4 text-xs text-red-700 dark:text-red-300"
+                        >
+                          {err}
+                        </p>
+                      </div>
+                    )
+                  })}
+                </div>
+              </Panel>
+              <AdSlot ads={ads} />
+            </div>
           </main>
         )}
       </ToolWorkspace>

@@ -1,6 +1,7 @@
 import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { MemoryRouter } from 'react-router'
 import { App } from '../../src/App'
 import { FakeTraceRunner } from '../../src/core/fake/FakeTraceRunner'
 import { encodeShare, decodeShare } from '../../src/core/share/urlState'
@@ -48,7 +49,7 @@ function mount(result: Result = traces.digitSum, workspace: Partial<ReturnType<t
   const runSpy = vi.spyOn(runner, 'runTrace')
   setRunnerOverride(runner)
   useStore.setState({ ...defaultWorkspace('x = 1\n'), ...workspace, ...CLEAN })
-  render(<App />)
+  render(<App />, { wrapper: MemoryRouter })
   return { runner, runSpy }
 }
 
@@ -117,7 +118,7 @@ describe('Study Mode: turning it on', () => {
     runner.runTrace = () => new Promise(() => {}) // never finishes: no result yet
     setRunnerOverride(runner)
     useStore.setState({ ...defaultWorkspace('x = 1\n'), ...CLEAN })
-    render(<App />)
+    render(<App />, { wrapper: MemoryRouter })
     expect(toggle()).toBeDisabled()
     expect(toggle()).toHaveAttribute('title', expect.stringMatching(/run/i))
   })

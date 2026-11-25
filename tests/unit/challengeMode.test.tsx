@@ -1,6 +1,7 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { MemoryRouter } from 'react-router'
 import { App } from '../../src/App'
 import { FakeTraceRunner } from '../../src/core/fake/FakeTraceRunner'
 import { decodeShare, encodeShare, parseShareHash, type ChallengeSpec } from '../../src/core/share/urlState'
@@ -66,7 +67,7 @@ async function open(hash: string, result: TraceResult = traces.digitSum, { watch
   history.replaceState(null, '', `/${hash}`)
   useStore.setState({ ...defaultWorkspace(MINE), ...CLEAN })
   if (watch) watchForOpenTables()
-  render(<App />)
+  render(<App />, { wrapper: MemoryRouter })
   await waitFor(() => expect(runner.getStatus().state).toBe('ready'))
   return { runner, runSpy, user: userEvent.setup() }
 }
@@ -298,7 +299,7 @@ describe('while the challenge is on', () => {
       },
       studyOrder: [SPEC.executionKey],
     })
-    render(<App />)
+    render(<App />, { wrapper: MemoryRouter })
     await waitFor(() => expect(startButton()).toBeEnabled())
     await userEvent.setup().click(startButton())
     await screen.findByRole('table', { name: 'Trace table' })
@@ -351,7 +352,7 @@ describe('authoring: hand-picked cells and the link button', () => {
     setRunnerOverride(runner)
     history.replaceState(null, '', '/')
     useStore.setState({ ...defaultWorkspace(MINE), ...workspace, ...CLEAN })
-    render(<App />)
+    render(<App />, { wrapper: MemoryRouter })
     await screen.findByRole('table')
     const user = userEvent.setup()
     const clipboard = vi.fn<(text: string) => Promise<void>>().mockResolvedValue(undefined)

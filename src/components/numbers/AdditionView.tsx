@@ -58,7 +58,16 @@ function Reading({ title, children }: { title: string; children: ReactNode }) {
   )
 }
 
-export function AdditionView({ width, initial }: { width: Width; initial?: { a: Bits | null; b: Bits | null } }) {
+export function AdditionView({
+  width,
+  initial,
+  footer,
+}: {
+  width: Width
+  initial?: { a: Bits | null; b: Bits | null }
+  /** Goes under the verdict, at the bottom of the second column. */
+  footer?: ReactNode
+}) {
   const s = useAddition(width, initial)
   const { a, b, result } = s
   const n = width
@@ -189,44 +198,47 @@ export function AdditionView({ width, initial }: { width: Width; initial?: { a: 
           </div>
         </Panel>
       </div>
-      <Panel title="Verdict" className="min-w-0 self-start">
-        <div className="flex flex-col gap-4 p-3" data-testid="verdict">
-          {!s.done ? (
-            <p className="text-sm text-slate-600 dark:text-slate-400">
-              Finish the last column to see the verdict.
-            </p>
-          ) : (
-            <>
-              <Reading title="Unsigned reading">
-                <p className="font-mono">
-                  {s.unsigned.a} + {s.unsigned.b} = {s.unsigned.sum}
-                </p>
-                {result.carryOut ? (
-                  <Badge tone="warn">
-                    Carry out of the top column: the answer needs {n + 1} bits, so {n} bits gives{' '}
-                    {s.unsigned.shown}, not {s.unsigned.sum}.
-                  </Badge>
-                ) : (
-                  <Badge tone="ok">No carry out: the result fits in {n} bits.</Badge>
-                )}
-              </Reading>
-              <Reading title="Signed reading (two’s complement)">
-                <p className="font-mono">
-                  {s.signed.a} + {s.signed.b} = {s.signed.sum}
-                </p>
-                {result.overflow ? (
-                  <Badge tone="warn">
-                    Overflow: {result.overflowReason}. The register shows {s.signed.shown}, not {s.signed.sum}
-                    .
-                  </Badge>
-                ) : (
-                  <Badge tone="ok">No overflow: the signed result {s.signed.shown} is correct.</Badge>
-                )}
-              </Reading>
-            </>
-          )}
-        </div>
-      </Panel>
+      <div className="flex min-w-0 flex-col gap-3 self-start">
+        <Panel title="Verdict">
+          <div className="flex flex-col gap-4 p-3" data-testid="verdict">
+            {!s.done ? (
+              <p className="text-sm text-slate-600 dark:text-slate-400">
+                Finish the last column to see the verdict.
+              </p>
+            ) : (
+              <>
+                <Reading title="Unsigned reading">
+                  <p className="font-mono">
+                    {s.unsigned.a} + {s.unsigned.b} = {s.unsigned.sum}
+                  </p>
+                  {result.carryOut ? (
+                    <Badge tone="warn">
+                      Carry out of the top column: the answer needs {n + 1} bits, so {n} bits gives{' '}
+                      {s.unsigned.shown}, not {s.unsigned.sum}.
+                    </Badge>
+                  ) : (
+                    <Badge tone="ok">No carry out: the result fits in {n} bits.</Badge>
+                  )}
+                </Reading>
+                <Reading title="Signed reading (two’s complement)">
+                  <p className="font-mono">
+                    {s.signed.a} + {s.signed.b} = {s.signed.sum}
+                  </p>
+                  {result.overflow ? (
+                    <Badge tone="warn">
+                      Overflow: {result.overflowReason}. The register shows {s.signed.shown}, not {s.signed.sum}
+                      .
+                    </Badge>
+                  ) : (
+                    <Badge tone="ok">No overflow: the signed result {s.signed.shown} is correct.</Badge>
+                  )}
+                </Reading>
+              </>
+            )}
+          </div>
+        </Panel>
+        {footer}
+      </div>
     </main>
   )
 }

@@ -1,6 +1,7 @@
 import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { MemoryRouter } from 'react-router'
 import { App } from '../../src/App'
 import { encodeShare } from '../../src/core/share/urlState'
 import type { RunnerStatus, TraceRunner } from '../../src/core/runner'
@@ -50,7 +51,7 @@ function controllableRunner(initScript: Array<(set: (s: RunnerStatus) => void) =
 function mount(runner: TraceRunner, extra: Record<string, unknown> = {}) {
   setRunnerOverride(runner)
   useStore.setState({ ...defaultWorkspace('n = 1234\n'), ...CLEAN, ...extra })
-  render(<App />)
+  render(<App />, { wrapper: MemoryRouter })
 }
 
 beforeEach(() => {

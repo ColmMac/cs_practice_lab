@@ -23,6 +23,11 @@ export function isAdsenseClient(raw: string | undefined): boolean {
   return /^ca-pub-\d{16}$/.test(raw ?? '')
 }
 
+/** A display ad unit's slot ID: digits only. */
+export function isAdsenseSlot(raw: string | undefined): boolean {
+  return /^\d+$/.test(raw ?? '')
+}
+
 export const SITE_NAME = 'CS Practice Lab'
 
 export const SITE_DESCRIPTION =

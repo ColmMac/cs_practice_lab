@@ -1,6 +1,8 @@
 import { Binary, ChartColumn, Table, ToggleLeft, type LucideIcon } from 'lucide-react'
 import { Link, Navigate, useLocation } from 'react-router'
 import { parseShareHash, SHARE_KEY } from '../core/share/urlState'
+import { AdSlot } from '../components/ui/AdSlot'
+import { useAdsAllowed } from '../components/ui/useAdsAllowed'
 import { Badge } from '../components/ui/Badge'
 import { BUTTON_CLASSES } from '../components/ui/Button'
 import { Panel } from '../components/ui/Panel'
@@ -46,6 +48,7 @@ function TraceMasteryBadge() {
 
 export function HomePage() {
   const { hash } = useLocation()
+  const ads = useAdsAllowed(false)
   // Old share links lived at `/#s=…`. Forward them before anything renders; the trace page still never auto-runs them.
   const payload = parseShareHash(hash)
   if (payload) return <Navigate to={`/trace-table#${SHARE_KEY}${payload}`} replace />
@@ -97,6 +100,7 @@ export function HomePage() {
             )
           })}
         </ul>
+        <AdSlot ads={ads} className="mt-6" />
         <section aria-labelledby="quick-heading" className="mt-6">
           <h2 id="quick-heading" className="text-sm font-semibold">
             Quick starts

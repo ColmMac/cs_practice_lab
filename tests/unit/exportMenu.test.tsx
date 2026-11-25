@@ -1,6 +1,7 @@
 import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { MemoryRouter } from 'react-router'
 import { App } from '../../src/App'
 import { ExportTable } from '../../src/components/export/ExportTable'
 import { FakeTraceRunner } from '../../src/core/fake/FakeTraceRunner'
@@ -34,7 +35,7 @@ const PNG = 'data:image/png;base64,iVBORw0KGgo='
 function mount(result: TraceResult = traces.digitSum, workspace: Partial<ReturnType<typeof defaultWorkspace>> = {}) {
   setRunnerOverride(new FakeTraceRunner(result))
   useStore.setState({ ...defaultWorkspace(CODE), ...workspace, ...CLEAN })
-  render(<App />)
+  render(<App />, { wrapper: MemoryRouter })
 }
 
 /** Records every file the app saves: name → bytes. */
@@ -76,7 +77,7 @@ describe('Export menu: availability', () => {
     runner.runTrace = () => new Promise(() => {})
     setRunnerOverride(runner)
     useStore.setState({ ...defaultWorkspace(CODE), ...CLEAN })
-    render(<App />)
+    render(<App />, { wrapper: MemoryRouter })
     expect(exportButton()).toBeDisabled()
     expect(exportButton()).toHaveAttribute('title', expect.stringMatching(/run a program/i))
   })
@@ -404,7 +405,7 @@ describe('Printing', () => {
     runner.runTrace = () => new Promise(() => {})
     setRunnerOverride(runner)
     useStore.setState({ ...defaultWorkspace(CODE), ...CLEAN })
-    render(<App />)
+    render(<App />, { wrapper: MemoryRouter })
     act(() => void window.dispatchEvent(new Event('beforeprint')))
     expect(screen.getByTestId('print-region')).toBeEmptyDOMElement()
   })
