@@ -307,6 +307,8 @@ Gate: `npm run test:e2e` green on both projects. *2026-11-25: green. The full su
 
 ## P14. Rebrand, repository rename and README (last, after P13 is green)
 
+**Owner decision, 2026-11-25: P14 is the next ticket, ahead of P13’s open items.** Those wait on the owner, a deployment or AdSense approval, and `REPO_URL` already names the renamed repo. Take P14 next, and leave P13’s unticked items open.
+
 - [ ] `package.json` `"name": "cs_practice_lab"`, then run `npm install` to update the lockfile's name. Remaining brand strings (`Trace Table Studio`, `CS Study Hub`) → **CS Practice Lab** in `README.md`, `CLAUDE.md` (title, and the Git line → `ColmMac/cs_practice_lab`), the `PLAN.md` header note, `Toolbar.tsx`, the export headers (`json.ts`, `latex.ts`, re-review the goldens), the docstring and blocked-import message in `tracer.py` (users see that message; run `test:py` and `fixtures` afterwards) and the E2E title assertions. **Don't** touch the `tts:`/`hub:` storage keys (F14).
 - [ ] Rename the GitHub repo (outward-facing, so confirm with the owner at execution time):
   ```powershell
