@@ -10,12 +10,13 @@ import { isAdsenseClient, resolveSiteUrl } from './src/config/site.ts'
 /**
  * The production headers live in ONE place: public/_headers, the file Netlify and Cloudflare Pages serve. The
  * `/*` block is read here so `vite preview` serves exactly what production will, which is how the CSP is tested.
- * (COOP/COEP also enable SharedArrayBuffer; the app works without them.)
+ * The per-path blocks (caching) are the host's job: `vite preview` doesn't apply them. `#` lines are comments.
  */
 function readSiteHeaders(): Record<string, string> {
   const headers: Record<string, string> = {}
   let inSiteBlock = false
   for (const line of readFileSync(new URL('./public/_headers', import.meta.url), 'utf8').split(/\r?\n/)) {
+    if (line.trim().startsWith('#')) continue
     if (/^\S/.test(line)) inSiteBlock = line.trim() === '/*'
     else if (inSiteBlock && line.trim()) {
       const at = line.indexOf(':')

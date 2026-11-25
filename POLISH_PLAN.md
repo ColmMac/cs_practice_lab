@@ -141,12 +141,12 @@ Gate: unit and E2E green. `curl` the built files (`dist/sitemap.xml`, `dist/robo
 
 ## P5. Hosting config: `_headers`, `_redirects`, `ads.txt`
 
-- [ ] `public/_headers` `/*` block:
+- [x] `public/_headers` `/*` block:
   - remove `Cross-Origin-Embedder-Policy` (F2). `Cross-Origin-Opener-Policy: same-origin-allow-popups`
   - `Referrer-Policy: strict-origin-when-cross-origin` (F4)
   - CSP widened for AdSense and Google's CMP, still with no `'unsafe-eval'` and no inline scripts of our own. Start from Google's published AdSense CSP host list: `script-src` adds `https://pagead2.googlesyndication.com https://*.googlesyndication.com https://*.doubleclick.net https://*.google https://*.adtrafficquality.google https://fundingchoicesmessages.google.com https://www.googletagservices.com`, `frame-src` lists those ad and CMP frame hosts plus `https://www.google.com`, `img-src` adds `https:`, and `connect-src` adds the googlesyndication, adtrafficquality and `*.google` hosts. Keep `frame-ancestors 'none'`, `object-src 'none'`, `base-uri 'none'` and `form-action 'none'`.
   - **Expect iteration.** Ad networks change hosts. Before launch, run with ads live on a preview deployment and fix every CSP violation in the console. Optionally add a `Content-Security-Policy-Report-Only` stricter variant for a week to see what would break.
-- [ ] Add cache blocks (order matters: Cloudflare merges matching blocks):
+- [x] Add cache blocks (order matters: Cloudflare merges matching blocks):
   ```
   /assets/*
     Cache-Control: public, max-age=31536000, immutable
@@ -156,18 +156,18 @@ Gate: unit and E2E green. `curl` the built files (`dist/sitemap.xml`, `dist/robo
     Cache-Control: no-cache
   ```
   Pyodide is on jsDelivr (F6). Note that in a comment instead of pretending to set it.
-- [ ] `vite.config.ts` `readSiteHeaders()` reads only the `/*` block. Keep that, and also update the stale comment (no more COEP).
-- [ ] `public/_redirects`: keep `/*  /index.html  200` (the brief, `deploy.test.ts`). **Check the Cloudflare Pages build log** on the first deploy. If Pages reports the rule as ignored ("infinite loop detected"), rely on Pages' built-in SPA fallback (no top-level `404.html`) and record that in `PLAN.md`. Either way, an unknown path must still render the app's own 404 (`noindex`).
-- [ ] `public/ads.txt`:
+- [x] `vite.config.ts` `readSiteHeaders()` reads only the `/*` block. Keep that, and also update the stale comment (no more COEP).
+- [x] `public/_redirects`: keep `/*  /index.html  200` (the brief, `deploy.test.ts`). **Check the Cloudflare Pages build log** on the first deploy. If Pages reports the rule as ignored ("infinite loop detected"), rely on Pages' built-in SPA fallback (no top-level `404.html`) and record that in `PLAN.md`. Either way, an unknown path must still render the app's own 404 (`noindex`).
+- [x] `public/ads.txt`:
   ```
   # Replace with your publisher ID after AdSense approval, then remove the leading '# '.
   # google.com, pub-XXXXXXXXXXXXXXXX, DIRECT, f08c47fec0942fa0
   ```
-- [ ] Static files beat the SPA rule only if they exist. E2E (P12) must assert `content-type: text/plain` for `robots.txt` and `ads.txt` and `application/xml` for `sitemap.xml`, not just HTTP 200 (a missing file would return `index.html` with 200).
-- [ ] Update `tests/unit/deploy.test.ts`: no COEP, the CSP contains the AdSense hosts and still no `'unsafe-eval'`, the `/assets/*` immutable rule is present, and `ads.txt` exists.
-- [ ] `CLAUDE.md`: update the Security-headers rule (COEP removed on purpose, AdSense hosts allowed).
+- [x] Static files beat the SPA rule only if they exist. E2E (P12) must assert `content-type: text/plain` for `robots.txt` and `ads.txt` and `application/xml` for `sitemap.xml`, not just HTTP 200 (a missing file would return `index.html` with 200).
+- [x] Update `tests/unit/deploy.test.ts`: no COEP, the CSP contains the AdSense hosts and still no `'unsafe-eval'`, the `/assets/*` immutable rule is present, and `ads.txt` exists.
+- [x] `CLAUDE.md`: update the Security-headers rule (COEP removed on purpose, AdSense hosts allowed).
 
-Gate: `npm run build` + `npm run preview`, then load every route in the browser pane: no CSP errors, Pyodide still loads, and the trace page still runs and stops `while True: pass`.
+Gate: `npm run build` + `npm run preview`, then load every route in the browser pane: no CSP errors, Pyodide still loads, and the trace page still runs and stops `while True: pass`. *2026-11-25: green. Typecheck, build, lint and unit tests, plus the targeted E2E specs (`hosting`, `app`, `trust-pages`, `seo`: 59 tests). The gate ran in Playwright against the production build under `vite preview` with the real `/*` headers, not by hand in the browser pane: all seven routes with no console errors or CSP violations, Python loading and `while True: pass` stopping with `crossOriginIsolated` false, and the widened CSP letting stubbed ad hosts through while blocking others (no real Google traffic). The full E2E suite was not run. **Not done**, because nothing is deployed (both are in P13): the `_redirects` line in the Cloudflare build log, and the CSP check with live ads. `vite preview` does not apply the per-path cache rules, so only the unit test covers them, and it serves `sitemap.xml` as `text/xml`. The optional Report-Only policy was not added. Python runs in a worker served with the same CSP, so its `connect-src` now allows the listed Google hosts too.*
 
 ---
 

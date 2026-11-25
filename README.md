@@ -39,9 +39,12 @@ On Windows, application-control policies can block programs inside a project `.v
 
 It is a static site. Upload `dist/` to Netlify, Cloudflare Pages, or any static host that honours a `_headers` file; `public/_headers` is copied into `dist/` and sets:
 
-- `Cross-Origin-Opener-Policy` / `Cross-Origin-Embedder-Policy` (cross-origin isolation; optional, the app works without it)
-- a strict **Content-Security-Policy**: scripts only from the site itself and the pinned Pyodide build on `cdn.jsdelivr.net` (`'wasm-unsafe-eval'` for WebAssembly, no `'unsafe-eval'`, no inline scripts), no framing, no form posts
-- `nosniff`, `Referrer-Policy: no-referrer`, and a `Permissions-Policy` that turns off camera, microphone and location
+- `Cross-Origin-Opener-Policy: same-origin-allow-popups`. There is deliberately no `Cross-Origin-Embedder-Policy`: it would block ad frames, and the app doesn't need cross-origin isolation
+- a **Content-Security-Policy**: scripts only from the site itself, the pinned Pyodide build on `cdn.jsdelivr.net` and Google's AdSense and consent-message hosts (`'wasm-unsafe-eval'` for WebAssembly, no `'unsafe-eval'`, no inline scripts), no framing of the site, no form posts
+- `nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, and a `Permissions-Policy` that turns off camera, microphone and location
+- caching: a year for the hashed files under `/assets/`, revalidation for the HTML
+
+`public/ads.txt` is a commented-out template until there is an AdSense publisher ID.
 
 `public/_redirects` (`/*  /index.html  200`) is the single-page-app fallback, so deep links such as `/trace-table` and reloads work on Netlify and Cloudflare Pages. Vercel ignores both files and would need a `vercel.json` with the same headers and a rewrite (see PLAN.md D2).
 
