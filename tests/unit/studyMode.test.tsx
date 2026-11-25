@@ -607,6 +607,74 @@ describe('Study Mode: keyboard', () => {
     expect(document.activeElement).toBe(screen.getByRole('button', { name: /check answers/i }))
   })
 
+  it('Tab on the last box goes to Check answers, and Shift+Tab on the first box is left alone', async () => {
+    mount()
+    const user = userEvent.setup()
+    await startStudy(user)
+    const boxes = answerBoxes()
+    boxes[0]!.focus()
+    await user.tab()
+    expect(document.activeElement).toBe(boxes[1]) // along the row; Hint and Reveal are not stops
+    boxes.at(-1)!.focus()
+    await user.tab()
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: /check answers/i }))
+    boxes[0]!.focus()
+    await user.tab({ shift: true })
+    expect(document.activeElement).not.toBe(screen.getByRole('button', { name: /check answers/i }))
+    expect(answerBoxes()).not.toContain(document.activeElement)
+  })
+
+  it('with the last box revealed, Tab on the one before it goes to Check answers', async () => {
+    mount()
+    const user = userEvent.setup()
+    await startStudy(user)
+    const boxes = answerBoxes()
+    act(() => useStore.getState().revealCell(boxes.at(-1)!.dataset.studyKey!))
+    answerBoxes().at(-1)!.focus()
+    await user.tab()
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: /check answers/i }))
+  })
+
+  it('while hand-picking cells, the "Blank this" buttons after the last box stay reachable by Tab', async () => {
+    mount()
+    const user = userEvent.setup()
+    await startStudy(user)
+    await user.click(screen.getByRole('radio', { name: 'Chosen cells' }))
+    await user.click(screen.getAllByRole('button', { name: /^Blank this/ })[0]!)
+    answerBoxes()[0]!.focus()
+    await user.tab()
+    expect(document.activeElement).toHaveAccessibleName(/^Show: Row 1/)
+    await user.tab()
+    expect(document.activeElement).toHaveAccessibleName(/^Blank this/)
+  })
+
+  it('after Check, focus goes to the first wrong answer in reading order (an "almost" is not wrong)', async () => {
+    mount()
+    const user = userEvent.setup()
+    await startStudy(user)
+    await fillAll(user, EVERYTHING)
+    const [almost, , wrong, alsoWrong] = answerBoxes()
+    act(() => {
+      useStore.getState().setAnswer(almost!.dataset.studyKey!, `${almost!.value}.0`)
+      useStore.getState().setAnswer(wrong!.dataset.studyKey!, 'nope')
+      useStore.getState().setAnswer(alsoWrong!.dataset.studyKey!, 'nope')
+    })
+    await user.click(screen.getByRole('button', { name: /check answers/i }))
+    expect(verdicts()[0]).toContain('Almost')
+    expect(document.activeElement).toBe(wrong)
+    expect(useStore.getState().selectedStep).toBe(Number(wrong!.dataset.studyKey!.split(':')[0]))
+  })
+
+  it('after Check with nothing wrong, focus goes to the score', async () => {
+    mount()
+    const user = userEvent.setup()
+    await startStudy(user)
+    await fillAll(user, EVERYTHING)
+    await user.click(screen.getByRole('button', { name: /check answers/i }))
+    expect(document.activeElement).toBe(screen.getByRole('region', { name: 'Score' }))
+    expect(screen.getByRole('region', { name: 'Score' })).toHaveAttribute('tabindex', '-1')
+  })
+
   it('Space and Enter typed in a box reach the box (they must not be swallowed by the row)', async () => {
     mount()
     const user = userEvent.setup()

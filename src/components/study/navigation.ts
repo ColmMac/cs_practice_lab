@@ -22,6 +22,15 @@ export function nextStudyInput(root: ParentNode, from: HTMLInputElement, delta: 
   return (delta > 0 ? list[0] : list[list.length - 1]) ?? null
 }
 
+/**
+ * Whether `from` is the last thing Tab would stop on inside `root`. Not just the last answer box: while cells are
+ * being hand-picked, "Blank this" buttons can follow it and must stay reachable.
+ */
+export function isLastTabStop(root: ParentNode, from: HTMLElement): boolean {
+  const stops = root.querySelectorAll('input:not([tabindex="-1"]):not(:disabled), button:not([tabindex="-1"]):not(:disabled)')
+  return stops[stops.length - 1] === from
+}
+
 export function focusInput(el: HTMLElement | null): boolean {
   if (!el) return false
   el.focus()

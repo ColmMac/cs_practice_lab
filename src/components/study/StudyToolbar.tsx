@@ -1,15 +1,20 @@
 import { useMemo } from 'react'
+import { flushSync } from 'react-dom'
 import { columnLabel } from '../../core/derive/columns'
 import { summarise } from '../../core/study/score'
 import type { MaskMode } from '../../core/study/types'
 import type { TraceResult } from '../../core/types'
 import { useStore } from '../../store'
 import { Segmented } from '../table/Segmented'
+import { focusInput, studyInputs } from './navigation'
 import { ScoreBar } from './ScoreBar'
+import { CHECK_ID } from './useAnswerGrid'
 import { useStudyModel } from './useStudyModel'
 
 const btn =
   'rounded border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-emerald-700 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800'
+
+const SCORE_ID = 'study-score'
 
 /** Controls for a study session: what to hide, Check answers, and the score. */
 export function StudyToolbar({ result }: { result: TraceResult }) {
@@ -29,6 +34,16 @@ export function StudyToolbar({ result }: { result: TraceResult }) {
     const header = new Map(study.columns.map((c) => [c.id, columnLabel(c)]))
     return summarise(model.masked, study.graded, study.revealed, study.config.closeCredit, (id) => header.get(id) ?? id)
   }, [study, model])
+
+  /** Marks the answers, then takes the keyboard to the first wrong one, or to the score if nothing is wrong. */
+  const check = () => {
+    let wrong: string | null = null
+    flushSync(() => {
+      wrong = checkAnswers()
+    })
+    const box = wrong === null ? undefined : studyInputs(document).find((i) => i.dataset.studyKey === wrong)
+    focusInput(box ?? document.getElementById(SCORE_ID))
+  }
 
   if (!study || !model) return null
   const { config } = study
@@ -133,9 +148,9 @@ export function StudyToolbar({ result }: { result: TraceResult }) {
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <button
-          id="study-check"
+          id={CHECK_ID}
           type="button"
-          onClick={checkAnswers}
+          onClick={check}
           disabled={model.masked.length === 0}
           className="rounded bg-emerald-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700 disabled:opacity-50"
         >
@@ -145,7 +160,7 @@ export function StudyToolbar({ result }: { result: TraceResult }) {
           Reset answers
         </button>
         <p className="text-[11px] text-slate-600 dark:text-slate-400">
-          <kbd>Enter</kbd> / <kbd>↓</kbd> next · <kbd>Shift+Enter</kbd> / <kbd>↑</kbd> previous · <kbd>Tab</kbd> across · <kbd>Alt+H</kbd> hint ·{' '}
+          <kbd>Enter</kbd> / <kbd>↓</kbd> next · <kbd>Shift+Enter</kbd> / <kbd>↑</kbd> previous · <kbd>Tab</kbd> across (after the last box: Check answers) · <kbd>Alt+H</kbd> hint ·{' '}
           {challenge && !challenge.checkedOnce ? (
             'Reveal unlocks after Check answers'
           ) : (
@@ -157,7 +172,7 @@ export function StudyToolbar({ result }: { result: TraceResult }) {
         </p>
       </div>
 
-      {score && <ScoreBar score={score} />}
+      {score && <ScoreBar id={SCORE_ID} score={score} />}
     </section>
   )
 }

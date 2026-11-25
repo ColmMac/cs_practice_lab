@@ -11,16 +11,19 @@ import { InputPrompt } from './components/table/InputPrompt'
 import { StudyToolbar } from './components/study/StudyToolbar'
 import { TableControls } from './components/table/TableControls'
 import { TraceTable } from './components/table/TraceTable'
+import { PANE_WIDTH, useSizeVariable } from './components/table/useSizeVariable'
 import { SharedBanner } from './components/layout/SharedBanner'
 import { ChallengePanel } from './components/layout/ChallengePanel'
 import { WatchPanel } from './components/editor/WatchPanel'
 import { useProjectorClass } from './components/ui/useProjectorClass'
 import { runSignature, useStore } from './store'
 
-export function App() {
+/** `preparingStudy`: a practice link is about to replace whatever table is here, so none may show. */
+export function App({ preparingStudy = false }: { preparingStudy?: boolean }) {
   const { init, result, ranSig, study, exitStudy, shared, challenge, endChallenge } = useStore()
   const signature = useStore((s) => runSignature(s))
   useProjectorClass()
+  const paneRef = useSizeVariable(PANE_WIDTH)
   useEffect(() => init(), [init])
 
   // A share link pasted into a tab that already has the app open only changes the #fragment (no reload).
@@ -62,37 +65,41 @@ export function App() {
           <WatchPanel />
         </section>
 
-        <section className="min-h-0 overflow-auto" aria-label="Trace" data-scroll-parent>
+        <section ref={paneRef} className="min-h-0 overflow-auto" aria-label="Trace" data-scroll-parent>
           {gated ? (
             <ChallengePanel />
-          ) : result === null ? (
+          ) : preparingStudy || result === null ? (
             <EmptyState />
           ) : (
-            <>
-              {stale && !study && (
-                <p role="status" className="mb-2 text-xs text-amber-800 dark:text-amber-300">
-                  The code, inputs or watches have changed since this table was generated — run again to update it.
-                </p>
-              )}
-              {stale && study && (
-                <p role="alert" className="mb-2 flex flex-wrap items-center gap-2 text-xs text-amber-900 dark:text-amber-200">
-                  The code has changed since this {challenge ? 'challenge' : 'study session'} began, so the answers below belong to the old
-                  program.
-                  <button
-                    type="button"
-                    onClick={challenge ? endChallenge : exitStudy}
-                    className="rounded border border-amber-700 px-2 py-0.5 font-medium"
-                  >
-                    {challenge ? 'End the challenge' : 'End the session'}
-                  </button>
-                </p>
-              )}
-              {!shared && <Welcome />}
-              <ErrorBanner result={result} />
-              {result.status === 'awaiting-input' && <InputPrompt prompt={result.inputRequest?.prompt ?? ''} />}
-              {result.steps.length > 0 && (study ? <StudyToolbar result={result} /> : <TableControls result={result} />)}
+            // as wide as the table needs; what sits above the table stays put when the pane scrolls sideways
+            <div className="w-fit min-w-full">
+              {/* z-20: its pop-ups must open over the table's sticky header */}
+              <div className="sticky left-0 z-20 w-[var(--pane-width,100%)]">
+                {stale && !study && (
+                  <p role="status" className="mb-2 text-xs text-amber-800 dark:text-amber-300">
+                    The code, inputs or watches have changed since this table was generated — run again to update it.
+                  </p>
+                )}
+                {stale && study && (
+                  <p role="alert" className="mb-2 flex flex-wrap items-center gap-2 text-xs text-amber-900 dark:text-amber-200">
+                    The code has changed since this {challenge ? 'challenge' : 'study session'} began, so the answers below belong to the old
+                    program.
+                    <button
+                      type="button"
+                      onClick={challenge ? endChallenge : exitStudy}
+                      className="rounded border border-amber-700 px-2 py-0.5 font-medium"
+                    >
+                      {challenge ? 'End the challenge' : 'End the session'}
+                    </button>
+                  </p>
+                )}
+                {!shared && <Welcome />}
+                <ErrorBanner result={result} />
+                {result.status === 'awaiting-input' && <InputPrompt prompt={result.inputRequest?.prompt ?? ''} />}
+                {result.steps.length > 0 && (study ? <StudyToolbar result={result} /> : <TableControls result={result} />)}
+              </div>
               <TraceTable result={result} stale={stale} />
-            </>
+            </div>
           )}
         </section>
       </main>

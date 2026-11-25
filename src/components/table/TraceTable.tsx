@@ -9,6 +9,7 @@ import { useStore } from '../../store'
 import { TABLE, TD as td, TH as th, THEAD } from '../ui/tableStyles'
 import { AnswerCell } from '../study/AnswerCell'
 import { answerGridKeyDown } from '../study/useAnswerGrid'
+import { HEADER_HEIGHT, useSizeVariable } from './useSizeVariable'
 import { useRowWindow, VIRTUALISE_ABOVE } from './useRowWindow'
 import { useTableData } from './useTableData'
 
@@ -28,6 +29,9 @@ export function TraceTable({ result, stale }: { result: TraceResult; stale: bool
   const questions = useMemo(() => new Map((model?.cells ?? []).map((c) => [c.key, c])), [model])
   // Long traces render only the rows near the viewport. Study mode renders them all (keyboard navigation needs the boxes).
   const { view: win, refs: { body: bodyRef, row: rowRef } } = useRowWindow(rows.length, !study && rows.length > VIRTUALISE_ABOVE)
+
+  // the sticky header's height, as a CSS variable the answer boxes use as their scroll margin
+  const headRef = useSizeVariable(HEADER_HEIGHT)
 
   if (result.steps.length === 0) return null
 
@@ -71,7 +75,8 @@ export function TraceTable({ result, stale }: { result: TraceResult; stale: bool
       : null
 
   return (
-    <div className={`overflow-auto ${stale ? 'opacity-60' : ''}`} aria-busy={stale}>
+    // not a scroll container itself: that would stop the header sticking. The pane around it scrolls both ways.
+    <div className={stale ? 'opacity-60' : ''} aria-busy={stale}>
       {rows.length === 0 && (
         <p className="p-3 text-sm text-slate-600 dark:text-slate-400">
           No rows to show in Compact mode (nothing changed). Switch to “Every line” to see each executed line.
@@ -84,7 +89,7 @@ export function TraceTable({ result, stale }: { result: TraceResult; stale: bool
         aria-rowcount={win.active ? rows.length + headerRows : undefined}
         onKeyDown={study ? onStudyKey : undefined}
       >
-        <thead className={THEAD}>
+        <thead ref={headRef} className={THEAD}>
           {showGroups && (
             <tr>
               {groups.map((g, i) =>

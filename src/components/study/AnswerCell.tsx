@@ -62,7 +62,11 @@ export function AnswerCell({ cellKey, colId, label, answer, grade, revealed, tru
           type="text"
           value={answer}
           onChange={(e) => onAnswer(e.target.value)}
-          onFocus={onFocusCell}
+          onFocus={(e) => {
+            // honours the scroll margin, so the box doesn't sit under a sticky table header (Tab and Shift+Tab too)
+            e.currentTarget.scrollIntoView?.({ block: 'nearest' })
+            onFocusCell?.()
+          }}
           onClick={(e) => e.stopPropagation()}
           data-study-key={cellKey}
           data-study-col={colId}
@@ -73,7 +77,7 @@ export function AnswerCell({ cellKey, colId, label, answer, grade, revealed, tru
           autoComplete="off"
           autoCapitalize="off"
           spellCheck={false}
-          className={`min-w-0 flex-1 rounded border px-1.5 py-0.5 font-mono text-sm projector:text-[1.18rem] ${grade ? TONE[grade.state] : NEUTRAL}`}
+          className={`min-w-0 flex-1 scroll-mt-[var(--study-head,0px)] rounded border px-1.5 py-0.5 font-mono text-sm projector:text-[1.18rem] ${grade ? TONE[grade.state] : NEUTRAL}`}
         />
         <button
           type="button"

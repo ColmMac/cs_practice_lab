@@ -5,11 +5,11 @@ import { usePresetParam } from './usePresetParam'
 
 /** The trace-table route: the app plus `?preset=` handling. Lazy-loaded, so the home page never pulls in the store. */
 export function TraceTableRoute() {
-  usePresetParam()
+  const preparingStudy = usePresetParam()
   return (
     <>
       <PageMeta title="Trace tables" description={toolDescription('/trace-table')} />
-      <App />
+      <App preparingStudy={preparingStudy} />
     </>
   )
 }

@@ -1,11 +1,14 @@
 import { formatPoints, type Score } from '../../core/study/score'
 
 /** The result of Check answers (tool-agnostic): points, counts, anything edited since, and a per-column breakdown. */
-export function ScoreBar({ score }: { score: Score }) {
+/** `id` makes it a focus target (not a Tab stop). */
+export function ScoreBar({ score, id }: { score: Score; id?: string }) {
   return (
     <section
+      id={id}
+      tabIndex={id ? -1 : undefined}
       aria-label="Score"
-      className="mt-3 rounded border border-slate-300 bg-slate-50 p-3 text-sm dark:border-slate-700 dark:bg-slate-900"
+      className="mt-3 rounded border border-slate-300 bg-slate-50 p-3 text-sm focus-visible:outline-2 focus-visible:outline-emerald-700 dark:border-slate-700 dark:bg-slate-900"
     >
       <p role="status" className="text-base font-semibold">
         Score: {formatPoints(score.points, score.total)} · {score.percent}%

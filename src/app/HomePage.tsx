@@ -5,8 +5,11 @@ import { Badge } from '../components/ui/Badge'
 import { BUTTON_CLASSES } from '../components/ui/Button'
 import { Panel } from '../components/ui/Panel'
 import { ToolHeader } from '../components/ui/ToolHeader'
+import { MasteryStrip } from './MasteryStrip'
 import { PageMeta } from './PageMeta'
 import { BRAND, HOME_DESCRIPTION, TOOLS } from './tools'
+import { TRACE_PRESET_IDS, useMastery } from './useMastery'
+import { presetProgress } from '../core/mastery/mastery'
 
 const linkClass = 'text-emerald-800 underline focus-visible:outline-2 focus-visible:outline-emerald-700 dark:text-emerald-300'
 
@@ -79,6 +82,19 @@ function Icon({ children }: { children: ReactNode }) {
   )
 }
 
+/** "2/6 mastered" on the trace card, once there is something to say. */
+function TraceMasteryBadge() {
+  const { mastered, practised, total } = presetProgress(useMastery(), 'trace', TRACE_PRESET_IDS)
+  if (practised === 0) return null
+  return (
+    <p className="mt-2">
+      <Badge tone={mastered === total ? 'ok' : 'info'}>
+        {mastered}/{total} mastered
+      </Badge>
+    </p>
+  )
+}
+
 export function HomePage() {
   const { hash } = useLocation()
   // Old share links lived at `/#s=…`. Forward them before anything renders; the trace page still never auto-runs them.
@@ -100,6 +116,7 @@ export function HomePage() {
             Start with a trace table
           </Link>
         </section>
+        <MasteryStrip />
         <section aria-labelledby="quick-heading" className="mb-6">
           <h2 id="quick-heading" className="text-sm font-semibold">
             Quick starts
@@ -124,6 +141,7 @@ export function HomePage() {
                     {card && <Icon>{card.icon}</Icon>}
                     <div>
                       <p className="text-slate-700 dark:text-slate-300">{t.blurb}</p>
+                      {t.path === '/trace-table' && <TraceMasteryBadge />}
                       {card && (
                         <>
                           <ul aria-label="Curriculum" className="mt-2 flex flex-wrap gap-2">

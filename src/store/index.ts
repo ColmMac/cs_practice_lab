@@ -1,17 +1,20 @@
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import { CONDITION_COL, resolveColumns, watchColumnId } from '../core/derive/columns'
+import { isQualifying, matchingItemId } from '../core/mastery/mastery'
 import type { RunnerStatus, TraceRunner } from '../core/runner'
 import { buildChallengeUrl, buildShareUrl, decodeShare, parseShareHash, type ChallengeSpec, type ShareUrl } from '../core/share/urlState'
 import { gradeAnswer, type GradingLanguage } from '../core/study/grade'
 import { buildStudyModel, type StudyView } from '../core/study/model'
+import { summarise } from '../core/study/score'
 import { rememberSession, sanitizeStudyConfig, MAX_ANSWER_LENGTH, type StudySessionData } from '../core/study/session'
 import { newSeed } from '../core/study/rng'
 import type { ExportVariant } from '../core/export/tableModel'
-import type { Grade, StudyConfig } from '../core/study/types'
+import { DEFAULT_STUDY_CONFIG, type Grade, type StudyConfig } from '../core/study/types'
 import { DEFAULT_TRACE_OPTIONS, type TraceOptions, type TraceResult, type WatchExpression } from '../core/types'
 import { defaultWorkspace, LIMITS, type Workspace } from '../core/workspace'
 import { getLanguage } from '../languages/registry'
+import { saveAttempt } from './masteryStorage'
 import { mergePersisted, migrateWorkspace, safeStorage, STORAGE_KEY, STORAGE_VERSION, type PersistedState } from './persistence'
 import { getRunner } from './runner'
 
@@ -29,6 +32,8 @@ export interface StudyState extends StudyView {
   graded: Record<string, Grade> | null
   /** Answers were restored from a saved session. */
   resumed: boolean
+  /** This session has already been counted as a practice attempt (not persisted). */
+  counted: boolean
 }
 
 /** A challenge opened from a student link (not persisted: a reload reopens it from the link). */
@@ -93,7 +98,10 @@ interface AppState extends PersistedState {
   shared: { backup: Workspace; brokenChallenge?: true } | null
   sharedLinkInvalid: boolean
   challenge: ChallengeState | null
-  /** Start this study session in the SAME update that delivers the next result, so no unmasked table renders. */
+  /**
+   * Start this study session in the SAME update that delivers the next result, so no unmasked table renders.
+   * Set by a challenge’s Start button and by a `?preset=…&study=1` practice link.
+   */
   studyOnRun: { config: StudyConfig; seed: number } | null
 
   init(): void
@@ -102,7 +110,8 @@ interface AppState extends PersistedState {
   dismissWelcome(): void
   setCode(code: string): void
   setStdinText(text: string): void
-  loadPreset(id: string): void
+  /** `study`: practise it. The table first appears already masked, as a study session with every cell hidden. */
+  loadPreset(id: string, options?: { study?: boolean }): void
   run(): Promise<void>
   cancel(): void
   answerInput(text: string): Promise<void>
@@ -145,7 +154,8 @@ interface AppState extends PersistedState {
   /** Hand-pick a cell to hide or show (the `cells` mask mode). */
   toggleCellMask(key: string): void
   resetAnswers(): void
-  checkAnswers(): void
+  /** Marks the answers. Returns the first cell (in reading order) marked not correct, or null. */
+  checkAnswers(): string | null
   selectStepExclusive(i: number): void
 
   // sharing
@@ -261,7 +271,17 @@ function studyStateFor(
     why: {},
     graded: null,
     resumed: !!saved && (Object.keys(saved.answers).length > 0 || saved.revealed.length > 0),
+    counted: false,
   }
+}
+
+/**
+ * The session for a practice link: every cell hidden, whatever the last mask was, so the score can count towards
+ * mastery. Answers already typed for this exact program come back rather than being overwritten.
+ */
+function practiceSession(s: AppState, result: TraceResult, request: { config: StudyConfig; seed: number }): StudyState {
+  const saved = s.studySessions[result.executionKey]
+  return studyStateFor(result, s, request.config, saved?.seed || request.seed, saved)
 }
 
 /** The state update that puts a study session on screen and remembers it by executionKey. */
@@ -307,13 +327,13 @@ function afterRun(s: AppState, result: TraceResult): Partial<AppState> {
     return { ...sessionPatch(s, study), studyOnRun: null, challenge: { ...s.challenge, stage: 'active', hidNothing } }
   }
   if (request && studyable) {
-    return { ...sessionPatch(s, studyStateFor(result, s, request.config, request.seed)), studyOnRun: null }
+    return { ...sessionPatch(s, practiceSession(s, result, request)), studyOnRun: null }
   }
   // a session belongs to one exact program run; a different one ends it
   return { study: s.study && s.study.executionKey === result.executionKey ? s.study : null, studyOnRun: null }
 }
 
-/** A run that was stopped or never happened: a starting challenge goes back to waiting for Start. */
+/** A run that was stopped: a starting challenge goes back to waiting for Start. */
 const abandonedRun = (s: AppState): Partial<AppState> => ({
   running: false,
   studyOnRun: null,
@@ -411,13 +431,15 @@ export const useStore = create<AppState>()(
           set({ welcomed: true })
         },
 
-        setCode: (code) => set({ code }),
-        setStdinText: (stdinText) => set({ stdinText }),
+        // editing the program drops a waiting practice request: it was for the built-in, not for this
+        setCode: (code) => set((s) => ({ code, studyOnRun: s.challenge ? s.studyOnRun : null })),
+        setStdinText: (stdinText) => set((s) => ({ stdinText, studyOnRun: s.challenge ? s.studyOnRun : null })),
 
-        loadPreset(id) {
+        loadPreset(id, options) {
           const p = getLanguage(get().language).presets.find((x) => x.id === id)
           if (!p) return
           clearTimeout(rerunTimer)
+          if (get().running) get().cancel() // first: cancelling also drops a waiting study request
           const taken = new Set<string>()
           const watches = (p.suggestedWatches ?? []).map((expr) => {
             const wid = newWatchId(taken)
@@ -436,9 +458,19 @@ export const useStore = create<AppState>()(
             challenge: null,
             studyOnRun: null,
           })
+          if (options?.study) {
+            // the table on screen could be this very program, unmasked: it goes before the new one is asked for
+            set((s) => ({
+              result: null,
+              ranSig: null,
+              ranInput: null,
+              hoverStep: null,
+              selectedStep: null,
+              studyOnRun: { config: { ...DEFAULT_STUDY_CONFIG, closeCredit: s.studyConfig.closeCredit }, seed: newSeed() },
+            }))
+          }
           if (watches.length) watches.forEach((w) => void get().validateWatch(w.id))
           // Built-in examples are safe to run, and a student who picks one expects to see its table.
-          if (get().running) get().cancel()
           void get().run()
         },
 
@@ -471,8 +503,9 @@ export const useStore = create<AppState>()(
               }))
             }
           } catch {
-            // the runtime itself is broken; runnerStatus already says so
-            if (token === runToken) set(abandonedRun)
+            // the runtime itself is broken; runnerStatus already says so. A practice request waits for "Try again",
+            // so that the retry doesn't show the table unmasked.
+            if (token === runToken) set((s) => ({ ...abandonedRun(s), studyOnRun: s.challenge ? null : s.studyOnRun }))
           }
         },
 
@@ -591,7 +624,10 @@ export const useStore = create<AppState>()(
           const st = get().study
           if (!st || get().challenge) return
           const seed = newSeed()
-          commitStudy({ ...st, seed, answers: {}, revealed: {}, hints: {}, why: {}, graded: null, resumed: false }, { studySeed: seed })
+          commitStudy(
+            { ...st, seed, answers: {}, revealed: {}, hints: {}, why: {}, graded: null, resumed: false, counted: false },
+            { studySeed: seed },
+          )
         },
 
         setAnswer(key, text) {
@@ -639,22 +675,31 @@ export const useStore = create<AppState>()(
         resetAnswers() {
           const st = get().study
           if (!st) return
-          commitStudy({ ...st, answers: {}, revealed: {}, hints: {}, why: {}, graded: null, resumed: false })
+          commitStudy({ ...st, answers: {}, revealed: {}, hints: {}, why: {}, graded: null, resumed: false, counted: false })
         },
 
         checkAnswers() {
-          const st = get().study
-          const r = get().result
-          if (!st || !r) return
+          const { study: st, result: r, ranInput } = get()
+          if (!st || !r) return null
           const lang = getLanguage(r.language)
-          if (!lang.parseAnswer) return
+          if (!lang.parseAnswer) return null
           const grader: GradingLanguage = { formatValue: lang.formatValue, parseAnswer: lang.parseAnswer, looseParse: lang.looseParse }
           const graded: Record<string, Grade> = {}
-          for (const cell of buildStudyModel(r, st, lang.formatValue).masked) {
+          const model = buildStudyModel(r, st, lang.formatValue)
+          for (const cell of model.masked) {
             if (!st.revealed[cell.key]) graded[cell.key] = gradeAnswer(st.answers[cell.key] ?? '', cell.truth, grader)
           }
+          // practice on an unedited built-in counts towards mastery, if enough of the table was really answered
+          const itemId = ranInput && r.language === 'python' ? matchingItemId(ranInput, lang.presets) : null
+          const score = summarise(model.masked, graded, st.revealed, st.config.closeCredit, (id) => id)
+          const counts = itemId !== null && isQualifying(score.total, model.cells.length)
+          if (counts) saveAttempt({ tool: 'trace', itemId, percent: score.percent, newSession: !st.counted })
           const { challenge } = get()
-          set({ study: { ...st, graded }, challenge: challenge && { ...challenge, checkedOnce: true } })
+          set({
+            study: { ...st, graded, counted: st.counted || counts },
+            challenge: challenge && { ...challenge, checkedOnce: true },
+          })
+          return model.masked.find((c) => graded[c.key]?.state === 'incorrect')?.key ?? null
         },
 
         selectStepExclusive: (i) => set({ selectedStep: i }),

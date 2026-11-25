@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState, type KeyboardEvent } from 'react'
 import type { Grade } from '../../core/study/types'
-import { focusInput, nextStudyInput } from './navigation'
+import { focusInput, isLastTabStop, nextStudyInput } from './navigation'
 
 /** The id of the "Check answers" button: the end of the quiz, where Enter on the last box lands. */
 export const CHECK_ID = 'study-check'
@@ -15,8 +15,8 @@ export interface AnswerKeyActions {
 
 /**
  * The keyboard contract for a grid of answer boxes, as a `keydown` handler for the `<table>`:
- * Enter/↓ next, Shift+Enter/↑ previous, Alt+H hint, Alt+R reveal, Alt+W why (Ctrl/⌘ combinations are left alone, so
- * Ctrl+Enter still runs). Only keys that come from an answer box are handled: a row's own handlers must
+ * Enter/↓ next, Shift+Enter/↑ previous, Tab on the last box → Check answers, Alt+H hint, Alt+R reveal, Alt+W why
+ * (Ctrl/⌘ combinations are left alone, so Ctrl+Enter still runs). Shift+Tab is never touched. Only keys that come from an answer box are handled: a row's own handlers must
  * ignore keys that bubble up from an input.
  */
 export function answerGridKeyDown({ onHint, onReveal, onWhy }: AnswerKeyActions) {
@@ -26,7 +26,10 @@ export function answerGridKeyDown({ onHint, onReveal, onWhy }: AnswerKeyActions)
     const key = input.dataset.studyKey
     const grid = e.currentTarget
 
-    if (e.altKey && e.key.toLowerCase() === 'h') {
+    if (e.key === 'Tab' && !e.shiftKey && !e.altKey && isLastTabStop(grid, input)) {
+      // nothing left in the table: on to Check answers instead of falling off the end of the page
+      if (focusInput(document.getElementById(CHECK_ID))) e.preventDefault()
+    } else if (e.altKey && e.key.toLowerCase() === 'h') {
       e.preventDefault()
       onHint(key)
     } else if (onWhy && e.altKey && e.key.toLowerCase() === 'w') {

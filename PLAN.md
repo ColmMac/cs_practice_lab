@@ -1561,7 +1561,7 @@ Every ticket ends with the §16.2 definition of done: typecheck, lint, `npm test
       - It persists across a reload, and it is off on `/truth-tables`.
     - `hub.spec.ts`: 375 px and axe light + dark with the projector on.
 
-- [ ] **Ticket 6 (C6): Keyboard-first Study Mode and the local mastery tracker**
+- [x] **Ticket 6 (C6): Keyboard-first Study Mode and the local mastery tracker**
   - Files: `useAnswerGrid.ts`, `navigation.ts`, `TraceTable.tsx` (`scroll-margin-top` = header height on answer inputs), `StudyToolbar.tsx` (after Check, focus the first incorrect box, else the score), `core/mastery/*`, `store/index.ts` (`checkAnswers` → `recordAttempt` when `ranInput` equals a built-in preset's code and stdin, after normalising `\r\n` and trailing whitespace), `app/useMastery.ts`, `app/MasteryStrip.tsx`, `HomePage.tsx`, `usePresetParam.ts` (`?study=1`).
   - Edge cases (keyboard):
     - Tab on the last box → Check answers; Shift+Tab on the first box → the previous control (no trap).
@@ -1648,6 +1648,15 @@ Every ticket ends with the §16.2 definition of done: typecheck, lint, `npm test
 - **Print layout:** the `AppShell` (a screen-height flex column with a dark background) is now a plain white block in print. This was added before the first PDF run, so the old shell was never shown to fail.
 - **Verified:** `digit-sum.pack.md` was written by hand before the code and matched on the first run. `classroom.spec.ts` counts the pages of real Chromium PDFs (a short pack is exactly 2; a long one is at least 4). A vowel-counter pack made from dark theme with projector mode on was read page by page. `hub.spec.ts` runs 375 px and axe light + dark with the projector on. **Not verified:** a real printer, other browsers' paginators, or an actual projector.
 - Tracer unchanged. Full suite 1096 unit, 131 E2E.
+
+#### Implementation notes: C6
+
+- **Keyboard:** `isLastTabStop` (in `navigation.ts`) sends Tab to Check answers only when nothing else in the table would take it, so the "Blank this" buttons after the last box stay reachable while cells are being hand-picked. The shared grid handler gives the truth-table, number and sorting grids the same behaviour. `checkAnswers` now returns the first key graded incorrect in reading order ("Almost" doesn't count); the toolbar focuses that box, or else the score (`tabIndex={-1}`).
+- **Existing bug: the trace table header never stuck.** The table's own `overflow-auto` wrapper was the sticky container and never scrolled vertically, so the header scrolled away with the rows (measured at y = -413 after a 600 px scroll). The first version of the new header test passed even without the scroll margin, which showed it. The wrapper no longer scrolls; the Trace pane scrolls both ways. What sits above the table is pinned sideways, at the pane's measured width (`--pane-width`). `w-[100cqw]` was tried first and was 16 px too wide in Chromium, because it included the scrollbar. The answer boxes' scroll margin is the measured header height (`--study-head`, `useSizeVariable.ts`); with the margin removed, the E2E now fails.
+- **Mastery:** `core/mastery/` is pure. Storage is in `store/masteryStorage.ts` (it doesn't import the trace store), so `app/useMastery.ts` stays a thin hook over it and `presets.json`. A file with `v > 1` is ignored and never overwritten. Pressing Check again in one session updates the scores without counting another attempt (`StudyState.counted`, not persisted; Reset answers or a new mask starts a new one).
+- **Practice links:** `loadPreset(id, { study: true })` drops the old table in the same tick, and the route shows no table until the parameter has been handled; without both, a table left in memory from an earlier visit (possibly the same preset, with every answer) rendered first. The session hides every cell whatever the last mask was, keeps the user's "Almost" setting, and restores answers and reveals already saved for that program. If Python fails to load, the request waits for **Try again**; editing the code or input drops it.
+- **Limits:** "the table's questions" means the table as shown, so hiding columns first makes mastery easier. It is a self-check on one device, not a verified score.
+- Tests: `tests/unit/mastery.test.ts`, `masteryHome.test.tsx`, 5 more in `studyMode.test.tsx`, `tests/e2e/keyboard.spec.ts` (7) and `mastery.spec.ts` (7, with axe light + dark and 375 px). The Linear search answers in the E2E were worked by hand and matched on the first run. Tracer unchanged. Full suite 1164 unit, 145 E2E.
 
 ### 17.7 Ticket order
 
