@@ -117,7 +117,7 @@ describe('Truth Table Study Mode', () => {
     await user.type(boxes()[0]!, 'F') // the next box: row 1 C = 0
     await user.click(screen.getByRole('button', { name: 'Check answers' }))
     expect(verdicts()[0]).toMatch(/Almost — Right value, but this table uses 0 and 1\./)
-    expect(screen.getByText(/👁 1 revealed/)).toBeInTheDocument()
+    expect(screen.getByText(/1 revealed .not scored./)).toBeInTheDocument()
     expect(screen.getByText(/Score: 0.5 \/ 7/)).toBeInTheDocument()
   })
 

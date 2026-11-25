@@ -533,7 +533,7 @@ describe('Opening a shared link', () => {
   it('the user must press Run themselves', async () => {
     const { runSpy } = mountShared(share('print("shared")\n'))
     await screen.findByRole('region', { name: 'Shared workspace' })
-    await userEvent.setup().click(screen.getByRole('button', { name: /^▶ run/i }))
+    await userEvent.setup().click(screen.getByRole('button', { name: /^run$/i }))
     await waitFor(() => expect(runSpy).toHaveBeenCalledTimes(1))
   })
 

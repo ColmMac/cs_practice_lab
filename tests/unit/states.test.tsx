@@ -71,7 +71,7 @@ describe('while Python is loading', () => {
     const panel = await screen.findByText('Getting Python ready…')
     expect(panel.closest('[role=status]')).toHaveTextContent('Downloading Python runtime…')
     expect(panel.closest('[role=status]')).toHaveTextContent('about 10 MB')
-    expect(screen.queryByText(/Press ▶ Run/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Press Run/)).not.toBeInTheDocument()
   })
 
   it('shows the table the moment it is ready, with nothing left to do', async () => {
@@ -156,7 +156,7 @@ describe('ready but nothing run yet / running', () => {
   it('invites the user to press Run', async () => {
     const { runner } = controllableRunner([(set) => set({ state: 'ready' })])
     mount(runner, { code: '' }) // empty code: nothing auto-runs
-    expect(await screen.findByText(/Press ▶ Run/)).toBeInTheDocument()
+    expect(await screen.findByText(/Press Run/)).toBeInTheDocument()
   })
 
   it('says Running… while a run is in progress', async () => {

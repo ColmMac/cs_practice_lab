@@ -1,5 +1,7 @@
 import { getLanguage } from '../../languages/registry'
 import { runSignature, useStore } from '../../store'
+import { PencilLine } from 'lucide-react'
+import { ICON_BEFORE } from '../ui/icons'
 
 /** The prominent switch that turns the table into a self-test. */
 export function StudyToggle() {
@@ -35,13 +37,14 @@ export function StudyToggle() {
       onClick={toggle}
       disabled={blocked}
       title={inChallenge ? 'A challenge is on: use End challenge to leave it' : on ? 'Leave study mode' : why}
-      className={`rounded border px-3 py-1.5 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700 disabled:cursor-not-allowed disabled:opacity-50 ${
+      className={`rounded border px-3 py-1.5 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50 ${
         on
-          ? 'border-emerald-700 bg-emerald-700 text-white hover:bg-emerald-800'
-          : 'border-emerald-700 text-emerald-800 hover:bg-emerald-50 dark:text-emerald-300 dark:hover:bg-emerald-950'
+          ? 'border-accent-fill bg-accent-fill text-on-accent hover:bg-accent-fill-hover'
+          : 'border-accent-fill text-accent hover:bg-accent-soft'
       }`}
     >
-      📝 Study mode{on ? ': on' : ''}
+      <PencilLine aria-hidden="true" className={ICON_BEFORE} />
+      Study mode{on ? ': on' : ''}
     </button>
   )
 }

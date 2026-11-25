@@ -13,8 +13,8 @@ export function EmptyState() {
       <div role="alert" className={`${box} border-red-400 bg-red-50 text-red-950 dark:border-red-800 dark:bg-red-950/40 dark:text-red-100`}>
         <p className="font-semibold">Python couldn’t be loaded</p>
         <p className="mt-1">
-          The Python runtime is downloaded from a CDN the first time, so this needs an internet connection (and a network that doesn’t
-          block <span className="font-mono">cdn.jsdelivr.net</span>). Your code is safe.
+          Your code is safe: check your internet connection and that your network allows{' '}
+          <span className="font-mono">cdn.jsdelivr.net</span>, where Python is downloaded from.
         </p>
         <p className="mt-1 font-mono text-xs">{status.message}</p>
         <button
@@ -34,15 +34,14 @@ export function EmptyState() {
       <div role="status" className={muted}>
         <p className="font-semibold">Getting Python ready…</p>
         <p className="mt-1">
-          {status.state === 'loading' ? status.message : 'Starting'}. The first visit downloads about 10 MB; after that it comes from your
-          browser’s cache. Your table will appear here automatically.
+          {status.state === 'loading' ? status.message : 'Starting'}: the first visit downloads about 10 MB, then your table appears here.
         </p>
       </div>
     )
   }
   return (
     <p className={muted}>
-      {running ? 'Running…' : 'Press ▶ Run (or Ctrl/⌘ + Enter) to generate the trace table.'}
+      {running ? 'Running…' : 'Press Run (or Ctrl/⌘ + Enter) to generate the trace table.'}
     </p>
   )
 }

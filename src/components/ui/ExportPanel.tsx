@@ -7,6 +7,8 @@ import { toMarkdown } from '../../core/export/markdown'
 import type { TableModel } from '../../core/export/tableModel'
 import { Button } from './Button'
 import { Popover } from './Popover'
+import { Download } from 'lucide-react'
+import { ICON_BEFORE } from './icons'
 
 /** What a slot can do: save a text file or copy text, reporting the outcome in the panel's status line. */
 export interface ExportApi {
@@ -65,7 +67,8 @@ export function ExportPanel({ table, baseName, controls, extras, trailing }: Pro
       onToggle={() => setMessage(null)}
       trigger={(p) => (
         <Button {...p}>
-          ⇩ Export
+          <Download aria-hidden="true" className={ICON_BEFORE} />
+          Export
         </Button>
       )}
     >
@@ -124,7 +127,8 @@ export function ExportPanel({ table, baseName, controls, extras, trailing }: Pro
 export function ExportUnavailable({ reason }: { reason: string }) {
   return (
     <Button disabled title={reason}>
-      ⇩ Export
+      <Download aria-hidden="true" className={ICON_BEFORE} />
+      Export
     </Button>
   )
 }

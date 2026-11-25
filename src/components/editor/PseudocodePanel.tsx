@@ -6,6 +6,7 @@ import { getRunner } from '../../store/runner'
 import { Button } from '../ui/Button'
 import { Panel } from '../ui/Panel'
 import { SegmentedToggle } from '../ui/SegmentedToggle'
+import { ChevronDown, ChevronRight } from 'lucide-react'
 
 export const DIALECT_KEY = 'tts:pseudo-dialect'
 /** Typing must not send a request per key. */
@@ -47,6 +48,8 @@ export function PseudocodePanel() {
     }
   }
 
+  const Chevron = open ? ChevronDown : ChevronRight
+
   return (
     <Panel className="shrink-0 projector:hidden">
       <h2 className="text-sm font-semibold">
@@ -55,11 +58,11 @@ export function PseudocodePanel() {
           aria-expanded={open}
           aria-controls={open ? bodyId : undefined}
           onClick={() => setOpen(!open)}
-          className={`flex w-full items-center gap-2 bg-slate-50 px-3 py-1.5 text-left focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-emerald-700 dark:bg-slate-900 ${
+          className={`flex w-full items-center gap-2 bg-slate-50 px-3 py-1.5 text-left focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent dark:bg-slate-900 ${
             open ? 'border-b border-slate-300 dark:border-slate-700' : ''
           }`}
         >
-          <span aria-hidden="true">{open ? '▾' : '▸'}</span>
+          <Chevron aria-hidden="true" className="size-4 shrink-0" />
           Exam pseudocode
         </button>
       </h2>
@@ -170,7 +173,7 @@ function Lines({ lines, busy, linked }: { lines: PseudoLine[]; busy: boolean; li
       aria-label="Exam pseudocode lines"
       aria-busy={busy}
       tabIndex={0}
-      className={`mt-2 max-h-64 overflow-auto rounded border border-slate-300 py-1 font-mono text-sm focus-visible:outline-2 focus-visible:outline-emerald-700 dark:border-slate-700 ${
+      className={`mt-2 max-h-64 overflow-auto rounded border border-slate-300 py-1 font-mono text-sm focus-visible:outline-2 focus-visible:outline-accent dark:border-slate-700 ${
         busy ? 'opacity-60' : ''
       }`}
     >

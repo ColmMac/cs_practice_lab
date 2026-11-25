@@ -3,16 +3,16 @@ import type { Frame, Mark } from '../../core/algorithms'
 /** Colour AND a word AND a symbol for every state, so no meaning rests on colour alone. */
 export const MARK_STYLE: Record<Mark, { label: string; icon: string; cls: string }> = {
   none: { label: '', icon: '', cls: 'border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-900' },
-  compare: { label: 'Comparing', icon: '?', cls: 'border-amber-600 bg-amber-100 dark:border-amber-500 dark:bg-amber-950' },
-  swap: { label: 'Swapped', icon: '⇄', cls: 'border-sky-600 bg-sky-100 dark:border-sky-500 dark:bg-sky-950' },
-  shift: { label: 'Shifted', icon: '→', cls: 'border-sky-600 bg-sky-100 dark:border-sky-500 dark:bg-sky-950' },
-  placed: { label: 'Placed', icon: '↓', cls: 'border-sky-600 bg-sky-100 dark:border-sky-500 dark:bg-sky-950' },
-  held: { label: 'Key', icon: '↑', cls: 'border-fuchsia-600 bg-fuchsia-100 dark:border-fuchsia-500 dark:bg-fuchsia-950' },
-  active: { label: 'In play', icon: '◇', cls: 'border-indigo-600 bg-indigo-100 dark:border-indigo-500 dark:bg-indigo-950' },
-  merged: { label: 'Merged', icon: '+', cls: 'border-emerald-600 bg-emerald-100 dark:border-emerald-500 dark:bg-emerald-950' },
-  sorted: { label: 'Sorted', icon: '✓', cls: 'border-emerald-600 bg-emerald-100 dark:border-emerald-500 dark:bg-emerald-950' },
-  mid: { label: 'Middle', icon: '◆', cls: 'border-indigo-600 bg-indigo-100 dark:border-indigo-500 dark:bg-indigo-950' },
-  found: { label: 'Found', icon: '★', cls: 'border-emerald-800 bg-emerald-700 text-white dark:border-emerald-300' },
+  compare: { label: 'Comparing', icon: '?', cls: 'border-state-compare bg-state-compare-soft' },
+  swap: { label: 'Swapped', icon: '⇄', cls: 'border-state-swap bg-state-swap-soft' },
+  shift: { label: 'Shifted', icon: '→', cls: 'border-state-swap bg-state-swap-soft' },
+  placed: { label: 'Placed', icon: '↓', cls: 'border-state-swap bg-state-swap-soft' },
+  held: { label: 'Key', icon: '↑', cls: 'border-state-held bg-state-held-soft' },
+  active: { label: 'In play', icon: '◇', cls: 'border-state-active bg-state-active-soft' },
+  merged: { label: 'Merged', icon: '+', cls: 'border-state-sorted bg-state-sorted-soft' },
+  sorted: { label: 'Sorted', icon: '✓', cls: 'border-state-sorted bg-state-sorted-soft' },
+  mid: { label: 'Middle', icon: '◆', cls: 'border-state-active bg-state-active-soft' },
+  found: { label: 'Found', icon: '★', cls: 'border-state-found-edge bg-state-found text-white' },
   discarded: {
     label: 'Ruled out',
     icon: '×',
@@ -46,7 +46,7 @@ export function ArrayStage({ frame, count }: { frame: Frame; count: number }) {
                 }`}
                 style={{ transform: `translate(${c.pos * SLOT}rem, ${c.lifted ? '-1.25rem' : '0'})` }}
               >
-                <span className="font-mono text-xl font-semibold">{c.value}</span>
+                <span className="font-mono text-xl font-semibold tabular-nums">{c.value}</span>
                 <span aria-hidden="true" className="h-4 text-xs">
                   {m.label && (
                     <>
@@ -63,7 +63,7 @@ export function ArrayStage({ frame, count }: { frame: Frame; count: number }) {
           {Array.from({ length: count }, (_, i) => (
             <span
               key={i}
-              className="w-16 text-center font-mono text-xs text-slate-600 dark:text-slate-400"
+              className="w-16 text-center font-mono text-xs tabular-nums text-slate-600 dark:text-slate-400"
               style={{ marginRight: `${SLOT - 4}rem` }}
             >
               {i}

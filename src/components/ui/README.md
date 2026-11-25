@@ -1,20 +1,24 @@
 # UI primitives and design tokens
 
-Every tool in the hub uses these, so all pages look the same. Tailwind v4: there is no config file; the tokens are the class strings.
+Every tool in the hub uses these, so all pages look the same. Tailwind v4: there is no config file; the colour tokens are the `@theme` block in `src/styles/index.css`, with dark values under `.dark`.
 
-| Token | Value |
-|-------|-------|
-| Page surface | `bg-white dark:bg-slate-950`, text `text-slate-900 dark:text-slate-100` |
-| Raised strip / header | `bg-slate-50 dark:bg-slate-900`; table head `bg-slate-100 dark:bg-slate-800` |
-| Border | `border-slate-300 dark:border-slate-700` (`rounded`) |
-| Muted text | `text-slate-600 dark:text-slate-400` |
-| Accent | `emerald-700` (hover `emerald-800`), white text |
-| Danger | `red-600` (hover `red-700`) |
-| Focus ring | `focus-visible:outline-2 focus-visible:outline-emerald-700` (`-outline-offset-2` inside tight boxes) |
+| Token | Classes |
+|-------|---------|
+| Page | `bg-bg text-text` |
+| Surfaces | header strips `bg-surface`; popovers `bg-surface-elevated`; table head `bg-surface-strong` |
+| Border | `border border-border` (`rounded`, 1 px) |
+| Muted text | `text-text-muted` |
+| Accent | text, links, focus `text-accent`; filled `bg-accent-fill text-on-accent hover:bg-accent-fill-hover`; tint `bg-accent-soft text-on-accent-soft` |
+| Status | `bg-{neutral,ok,warn,info,error}-soft` with `text-on-{…}-soft`; danger button `bg-danger-fill` |
+| Sorting states | `border-state-{…} bg-state-{…}-soft` (compare, swap, held, active, sorted), plus found |
+| Focus ring | `focus-visible:outline-2 focus-visible:outline-accent` (`-outline-offset-2` inside tight boxes) |
+| Shadow | none, except floating layers: `shadow-sm` plus a border |
+| Numbers | `tabular-nums` wherever digits line up |
+| Icons | `lucide-react` named imports, `aria-hidden`, beside a text label (sizes in `icons.ts`) |
 | Type scale | `text-base` titles, `text-sm` controls and tables, `text-xs` hints and badges |
 | Spacing | controls `px-2 py-1`, primary `px-3 py-1.5`, panels `p-3`, page gutter `p-4`, gaps `gap-3` |
 
-Dark mode is the `.dark` class on `<html>` (custom variant in `src/styles/index.css`). Every colour needs a `dark:` pair and must pass WCAG AA in both themes.
+Dark mode is the `.dark` class on `<html>` (custom variant in `src/styles/index.css`). Tokens switch by themselves; a raw palette colour still needs its own `dark:` pair. Everything must pass WCAG AA in both themes.
 
 ## Components
 

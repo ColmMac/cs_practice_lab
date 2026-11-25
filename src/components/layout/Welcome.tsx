@@ -8,17 +8,16 @@ export function Welcome() {
   return (
     <section
       aria-label="Welcome"
-      className="mb-3 flex flex-wrap items-start gap-3 rounded border border-emerald-700/40 bg-emerald-50 p-3 text-sm text-emerald-950 dark:bg-emerald-950/40 dark:text-emerald-100 projector:hidden"
+      className="mb-3 flex flex-wrap items-start gap-3 rounded border border-accent/40 bg-accent-soft p-3 text-sm text-on-accent-soft projector:hidden"
     >
       <p className="min-w-0 flex-1">
-        <strong>Welcome.</strong> This is a ready-made example. Change the code and press <strong>Run</strong>, pick another example from the
-        list, or switch on <strong>📝 Study mode</strong> to hide the answers and fill the table in yourself. Everything runs in your browser;
-        nothing is uploaded.
+        <strong>Welcome.</strong> Change the code and press <strong>Run</strong>, or switch on <strong>Study mode</strong> to fill the table in
+        yourself; everything runs in your browser and nothing is uploaded.
       </p>
       <button
         type="button"
         onClick={dismissWelcome}
-        className="rounded border border-emerald-700 px-2.5 py-1 text-xs font-medium hover:bg-emerald-100 focus-visible:outline-2 focus-visible:outline-emerald-700 dark:hover:bg-emerald-900"
+        className="rounded border border-accent px-2.5 py-1 text-xs font-medium hover:bg-bg focus-visible:outline-2 focus-visible:outline-accent"
       >
         Got it
       </button>

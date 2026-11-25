@@ -188,7 +188,7 @@ describe('Export menu: it exports what is on screen', () => {
     const files = captureDownloads()
     mount()
     await screen.findByRole('table')
-    await user.click(screen.getByRole('button', { name: /📝 study mode/i }))
+    await user.click(screen.getByRole('button', { name: /^study mode/i }))
     act(() => {
       useStore.getState().toggleColumn('<module>:digit')
       useStore.getState().setGranularity('every-line')
@@ -272,7 +272,7 @@ describe('Export menu: answer key vs worksheet', () => {
     const user = userEvent.setup()
     mount()
     await screen.findByRole('table')
-    await user.click(screen.getByRole('button', { name: /📝 study mode/i }))
+    await user.click(screen.getByRole('button', { name: /^study mode/i }))
     await user.click(screen.getByRole('radio', { name: 'Random' }))
     const pct = screen.getByLabelText('Percentage of cells to hide')
     await user.clear(pct)

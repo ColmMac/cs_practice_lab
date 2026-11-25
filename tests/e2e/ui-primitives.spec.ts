@@ -25,7 +25,7 @@ test('toolbar primitives: Export popover opens, closes on Escape, and the theme 
 test('the shared primitives keep the trace page styling', async ({ page }) => {
   await page.goto('/trace-table')
   const run = page.getByRole('button', { name: /Run/ }).first()
-  await expect(run).toHaveClass(/bg-emerald-700/)
+  await expect(run).toHaveClass(/bg-accent-fill/)
   await expect(page.getByRole('heading', { level: 1, name: 'CS Practice Lab' })).toBeVisible()
-  await expect(page.getByRole('status').filter({ hasText: 'Python ready' })).toHaveClass(/rounded px-2 py-1 text-xs font-medium bg-emerald-100/, { timeout: 80_000 })
+  await expect(page.getByRole('status').filter({ hasText: 'Python ready' })).toHaveClass(/rounded px-2 py-1 text-xs font-medium tabular-nums bg-ok-soft/, { timeout: 80_000 })
 })

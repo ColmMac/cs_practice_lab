@@ -12,7 +12,7 @@ import { CHECK_ID } from './useAnswerGrid'
 import { useStudyModel } from './useStudyModel'
 
 const btn =
-  'rounded border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-emerald-700 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800'
+  'rounded border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-accent dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800'
 
 const SCORE_ID = 'study-score'
 
@@ -50,7 +50,7 @@ export function StudyToolbar({ result }: { result: TraceResult }) {
   const revealed = model.masked.filter((c) => study.revealed[c.key]).length
 
   return (
-    <section aria-label="Study mode" className="mb-3 rounded border border-emerald-700/40 bg-emerald-50/60 p-3 text-sm dark:bg-emerald-950/30">
+    <section aria-label="Study mode" className="mb-3 rounded border border-accent/40 bg-accent-soft/40 p-3 text-sm">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <h2 className="font-semibold">{challenge ? 'Student challenge' : 'Study mode'}</h2>
         <p className="text-xs text-slate-700 dark:text-slate-300" role="status">
@@ -152,7 +152,7 @@ export function StudyToolbar({ result }: { result: TraceResult }) {
           type="button"
           onClick={check}
           disabled={model.masked.length === 0}
-          className="rounded bg-emerald-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700 disabled:opacity-50"
+          className="rounded bg-accent-fill px-3 py-1.5 text-sm font-medium text-on-accent hover:bg-accent-fill-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-50"
         >
           Check answers
         </button>

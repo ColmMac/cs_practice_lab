@@ -4,6 +4,8 @@ import { ScoreBar } from '../study/ScoreBar'
 import { CHECK_ID, useAnswerGrid } from '../study/useAnswerGrid'
 import { Button } from '../ui/Button'
 import type { Quiz } from './useQuiz'
+import { ChevronRight } from 'lucide-react'
+import { ICON_AFTER } from '../ui/icons'
 
 /** One question with its own answer grid; keyed by question id so each starts fresh. */
 function QuestionView({ q, number, total, onNext }: { q: QuizQuestion; number: number; total: number; onNext: Quiz['next'] }) {
@@ -41,7 +43,14 @@ function QuestionView({ q, number, total, onNext }: { q: QuizQuestion; number: n
           Check answer
         </Button>
         <Button onClick={() => onNext(grade, revealed)} disabled={!done}>
-          {last ? 'Finish' : 'Continue ▶'}
+          {last ? (
+            'Finish'
+          ) : (
+            <>
+              Continue
+              <ChevronRight aria-hidden="true" className={ICON_AFTER} />
+            </>
+          )}
         </Button>
         <p className="text-[11px] text-slate-600 dark:text-slate-400">
           <kbd>Alt+H</kbd> hint · <kbd>Alt+R</kbd> reveal · type a list like 1, 2, 3

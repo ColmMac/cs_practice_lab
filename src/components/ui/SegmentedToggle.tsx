@@ -9,8 +9,8 @@ interface Props<T extends string> {
 export function SegmentedToggle<T extends string>({ label, value, options, onChange }: Props<T>) {
   return (
     <div role="radiogroup" aria-label={label} className="inline-flex items-center gap-2 text-xs">
-      <span className="text-slate-600 dark:text-slate-400">{label}</span>
-      <span className="inline-flex overflow-hidden rounded border border-slate-300 dark:border-slate-700">
+      <span className="text-text-muted">{label}</span>
+      <span className="inline-flex overflow-hidden rounded border border-border">
         {options.map((o) => {
           const on = o.value === value
           return (
@@ -21,10 +21,10 @@ export function SegmentedToggle<T extends string>({ label, value, options, onCha
               aria-checked={on}
               title={o.hint}
               onClick={() => onChange(o.value)}
-              className={`px-2.5 py-1 font-medium focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-emerald-700 ${
+              className={`px-2.5 py-1 font-medium focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent ${
                 on
-                  ? 'bg-emerald-700 text-white'
-                  : 'bg-white text-slate-700 hover:bg-slate-100 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800'
+                  ? 'bg-accent-fill text-on-accent'
+                  : 'bg-surface-elevated text-text-muted hover:bg-surface-strong hover:text-text'
               }`}
             >
               {o.label}

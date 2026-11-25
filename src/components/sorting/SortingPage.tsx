@@ -23,6 +23,8 @@ import { ToolHeader } from '../ui/ToolHeader'
 import { ArrayStage } from './ArrayStage'
 import { QuizPanel } from './QuizPanel'
 import { useSorting, type Speed } from './useSorting'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ICON_AFTER, ICON_BEFORE } from '../ui/icons'
 
 const fieldClass =
   'rounded border bg-white px-2 py-1 text-sm text-slate-900 dark:bg-slate-900 dark:text-slate-100'
@@ -118,10 +120,12 @@ export function SortingPage() {
               {!s.quizOn && (
                 <div role="group" aria-label="Playback" className="flex flex-wrap items-center gap-2">
                   <Button onClick={s.back} disabled={s.atStart || !s.run}>
-                    ◀ Step back
+                    <ChevronLeft aria-hidden="true" className={ICON_BEFORE} />
+                    Step back
                   </Button>
                   <Button onClick={s.step} disabled={s.atEnd || !s.run}>
-                    Step ▶
+                    Step
+                    <ChevronRight aria-hidden="true" className={ICON_AFTER} />
                   </Button>
                   <Button variant="primary" onClick={s.togglePlay} disabled={!s.run}>
                     {s.playing ? 'Pause' : s.atEnd && s.run ? 'Replay' : 'Play'}
@@ -130,7 +134,7 @@ export function SortingPage() {
                     Reset
                   </Button>
                   {s.run && (
-                    <span className="text-xs text-slate-600 dark:text-slate-400">
+                    <span className="text-xs tabular-nums text-slate-600 dark:text-slate-400">
                       Step {s.index} of {s.frames.length - 1}
                     </span>
                   )}

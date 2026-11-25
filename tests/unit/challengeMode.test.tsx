@@ -101,8 +101,8 @@ describe('opening a student link', () => {
     expect(panel()).toHaveTextContent('Nothing has been run')
     expect(table()).toBeNull()
     expect(screen.queryByRole('region', { name: 'Shared workspace' })).toBeNull()
-    expect(screen.getByRole('button', { name: '▶ Run' })).toBeDisabled()
-    expect(screen.getByRole('button', { name: /study mode/i })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /^Run$/ })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /^study mode/i })).toBeDisabled()
     pressedRun()
     await user.type(screen.getByLabelText('Code editor'), '{Control>}{Enter}{/Control}')
     await act(() => useStore.getState().run())
@@ -180,7 +180,7 @@ describe('while the challenge is on', () => {
     expect(screen.queryAllByRole('button', { name: /^Reveal / })).toHaveLength(0)
     expect(screen.queryByRole('button', { name: /^(Blank this|Show):/ })).toBeNull()
     expect(screen.getByRole('button', { name: /export/i })).toBeDisabled()
-    expect(screen.getByRole('button', { name: /study mode/i })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /^study mode/i })).toBeDisabled()
     expect(screen.getByRole('button', { name: /copy student challenge link/i })).toBeDisabled()
 
     // Alt+R does nothing yet, from the keyboard or the store
@@ -363,7 +363,7 @@ describe('authoring: hand-picked cells and the link button', () => {
 
   it('"Chosen cells" starts with nothing hidden; Blank this and Show are pressed-state toggles', async () => {
     const { user } = await teacher()
-    await user.click(screen.getByRole('button', { name: /📝 study mode/i }))
+    await user.click(screen.getByRole('button', { name: /^study mode/i }))
     await user.click(screen.getByRole('radio', { name: 'Chosen cells' }))
     expect(answerBoxes()).toHaveLength(0)
     expect(toggles(/^Blank this:/)).toHaveLength(15)
@@ -380,7 +380,7 @@ describe('authoring: hand-picked cells and the link button', () => {
 
   it('picking a cell drops keys left over from another program', async () => {
     const { user } = await teacher({ studyConfig: { ...DEFAULT_STUDY_CONFIG, maskMode: 'cells', cells: ['999:<module>:old'] } })
-    await user.click(screen.getByRole('button', { name: /📝 study mode/i }))
+    await user.click(screen.getByRole('button', { name: /^study mode/i }))
     await user.click(toggles(/^Blank this:/)[0]!)
     expect(useStore.getState().study!.config.cells).toHaveLength(1)
   })
@@ -397,7 +397,7 @@ describe('authoring: hand-picked cells and the link button', () => {
     expect(useStore.getState().studySeed).toBe(first.workspace.studySeed) // copying again gives the same mask
 
     await user.keyboard('{Escape}')
-    await user.click(screen.getByRole('button', { name: /📝 study mode/i }))
+    await user.click(screen.getByRole('button', { name: /^study mode/i }))
     await user.click(screen.getByRole('radio', { name: 'Some columns' }))
     await user.click(screen.getByRole('checkbox', { name: 'total' }))
     await user.click(screen.getByRole('button', { name: /copy student challenge link/i }))

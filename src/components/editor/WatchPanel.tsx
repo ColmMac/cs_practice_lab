@@ -2,6 +2,7 @@ import { useId } from 'react'
 import type { WatchExpression } from '../../core/types'
 import { LIMITS } from '../../core/workspace'
 import { useStore } from '../../store'
+import { X } from 'lucide-react'
 
 const scopeValue = (s: WatchExpression['scope']) => (s.kind === 'function' ? `fn:${s.name}` : s.kind)
 const parseScope = (v: string): WatchExpression['scope'] =>
@@ -79,7 +80,7 @@ export function WatchPanel() {
                   aria-label={`Remove watch ${i + 1}`}
                   className="rounded border border-slate-300 px-2 py-0.5 text-xs hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
                 >
-                  ✕
+                  <X aria-hidden="true" className="inline-block size-3.5 align-[-0.125em]" />
                 </button>
               </div>
               {error && (

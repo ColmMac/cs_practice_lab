@@ -2,6 +2,8 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { useStore } from '../../store'
 import { Button } from '../ui/Button'
 import { POPOVER_PANEL } from '../ui/Popover'
+import { Share2 } from 'lucide-react'
+import { ICON_BEFORE } from '../ui/icons'
 
 type Link = { url: string; length: number; tooLong: boolean }
 
@@ -53,7 +55,8 @@ export function ShareButton() {
         aria-expanded={link !== null}
         aria-controls={link ? panelId : undefined}
       >
-        ⇪ Share
+        <Share2 aria-hidden="true" className={ICON_BEFORE} />
+        Share
       </Button>
       {link && (
         <div
@@ -87,7 +90,7 @@ export function ShareButton() {
           <button
             type="button"
             onClick={() => void copy(link.url)}
-            className="mt-2 rounded bg-emerald-700 px-2.5 py-1 text-xs font-medium text-white hover:bg-emerald-800"
+            className="mt-2 rounded bg-accent-fill px-2.5 py-1 text-xs font-medium text-on-accent hover:bg-accent-fill-hover"
           >
             Copy again
           </button>

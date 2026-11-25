@@ -193,7 +193,7 @@ describe('axe: no accessibility violations in any major state', () => {
     mount()
     const user = userEvent.setup()
     await screen.findByRole('table')
-    await user.click(screen.getByRole('button', { name: /📝 study mode/i }))
+    await user.click(screen.getByRole('button', { name: /^study mode/i }))
     await expectAccessible('study: unanswered')
 
     const boxes = screen.getAllByRole('textbox', { name: /^Row \d+ \(line/ })

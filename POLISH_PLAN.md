@@ -72,26 +72,26 @@ Gate: `npm run typecheck`, `npm test`, `npm run lint` green.
 This comes before the new UI (footer, pages, AdSlot) so those are built on the tokens from the start.
 
 **Tokens**
-- [ ] In `src/styles/index.css`, add `@theme` tokens: `--color-bg`, `--color-surface`, `--color-surface-elevated`, `--color-border`, `--color-text`, `--color-text-muted` and **one** `--color-accent` (emerald 700/300, which the focus rings and links already use), with dark-mode values under `.dark`. Keep the **status** colours (`ok`/red, `warn`/amber, `info`/sky) as named semantic tokens. They carry meaning.
-- [ ] Map the shell, `Panel`, `Popover`, `Button`, `Badge`, `ToolHeader` and the nav onto the tokens. Don't touch `editorTheme.ts` `PALETTES` without re-running `tests/unit/editorTheme.test.ts` (contrast-tested).
-- [ ] Sorting colours (`ArrayStage.tsx`: sky, fuchsia, indigo, emerald): keep them as distinct *state* tokens (`--color-state-swap` and so on), because they encode state. Don't collapse them to the accent.
-- [ ] Shadows: remove `shadow` / `shadow-lg` except on floating layers (`Popover`, `ColumnManager` menu), and unify those to one `shadow-sm` + border. No gradients exist; keep it that way.
-- [ ] Radii: 71 bare `rounded` are already uniform. Check there are no stray `rounded-lg/xl/full` on new components.
+- [x] In `src/styles/index.css`, add `@theme` tokens: `--color-bg`, `--color-surface`, `--color-surface-elevated`, `--color-border`, `--color-text`, `--color-text-muted` and **one** `--color-accent` (emerald 700/300, which the focus rings and links already use), with dark-mode values under `.dark`. Keep the **status** colours (`ok`/red, `warn`/amber, `info`/sky) as named semantic tokens. They carry meaning.
+- [x] Map the shell, `Panel`, `Popover`, `Button`, `Badge`, `ToolHeader` and the nav onto the tokens. Don't touch `editorTheme.ts` `PALETTES` without re-running `tests/unit/editorTheme.test.ts` (contrast-tested).
+- [x] Sorting colours (`ArrayStage.tsx`: sky, fuchsia, indigo, emerald): keep them as distinct *state* tokens (`--color-state-swap` and so on), because they encode state. Don't collapse them to the accent.
+- [x] Shadows: remove `shadow` / `shadow-lg` except on floating layers (`Popover`, `ColumnManager` menu), and unify those to one `shadow-sm` + border. No gradients exist; keep it that way.
+- [x] Radii: 71 bare `rounded` are already uniform. Check there are no stray `rounded-lg/xl/full` on new components.
 
 **Emoji → icons** (lucide, `aria-hidden`, visible text label kept)
-- [ ] `Toolbar` ▶ Run → `Play` · `ShareButton` ⇪ → `Share2` · `ExportPanel` ⇩ → `Download` · `ChallengeLinkButton` 🎓 → `GraduationCap` · `StudyToggle` and `TruthTablePage` 📝 → `PencilLine` · `ProjectorToggle` 📽 → `Presentation` · `ThemeToggle` ☀/☾ → `Sun`/`Moon` · `AnswerCell` and `ScoreBar` 👁 → `Eye` · `WatchPanel` ✕ → `X` · `ColumnManager` ▾ ↑ ↓ and `PseudocodePanel` ▾ ▸ → `ChevronDown`/`ChevronRight`/`ArrowUp`/`ArrowDown` · `SortingPage` ◀ ▶ → `ChevronLeft`/`ChevronRight` · `Welcome` "📝 Study mode" → plain text.
-- [ ] **Keep** (F13): the `ArrayStage` state glyphs, the `AnswerCell` and `ScoreBar` ✓ ≈ ✗ verdict marks, `⚠` in error cells (`rows.ts`, and the LaTeX map depends on it), and `↓ ↑` inside `<kbd>` hints.
-- [ ] Home cards: replace the inline SVG `Icon` paths with lucide (`Table`, `ToggleLeft`/`Binary`, `Hash`, `BarChart3`) at one size and one stroke.
-- [ ] Fix every unit and E2E test that queries a button by its emoji-prefixed name (`getByRole('button', { name: /📝 Study mode/ })` and similar). Grep the tests for each removed glyph.
+- [x] `Toolbar` ▶ Run → `Play` · `ShareButton` ⇪ → `Share2` · `ExportPanel` ⇩ → `Download` · `ChallengeLinkButton` 🎓 → `GraduationCap` · `StudyToggle` and `TruthTablePage` 📝 → `PencilLine` · `ProjectorToggle` 📽 → `Presentation` · `ThemeToggle` ☀/☾ → `Sun`/`Moon` · `AnswerCell` and `ScoreBar` 👁 → `Eye` · `WatchPanel` ✕ → `X` · `ColumnManager` ▾ ↑ ↓ and `PseudocodePanel` ▾ ▸ → `ChevronDown`/`ChevronRight`/`ArrowUp`/`ArrowDown` · `SortingPage` ◀ ▶ → `ChevronLeft`/`ChevronRight` · `Welcome` "📝 Study mode" → plain text.
+- [x] **Keep** (F13): the `ArrayStage` state glyphs, the `AnswerCell` and `ScoreBar` ✓ ≈ ✗ verdict marks, `⚠` in error cells (`rows.ts`, and the LaTeX map depends on it), and `↓ ↑` inside `<kbd>` hints.
+- [x] Home cards: replace the inline SVG `Icon` paths with lucide (`Table`, `ToggleLeft`/`Binary`, `Hash`, `BarChart3`) at one size and one stroke.
+- [x] Fix every unit and E2E test that queries a button by its emoji-prefixed name (`getByRole('button', { name: /📝 Study mode/ })` and similar). Grep the tests for each removed glyph.
 
 **Tabular numerals.** Monospace cells already align, so the real gaps are proportional-font numbers.
-- [ ] Add `tabular-nums` to the `TraceTable` cells and row and line-number column, the `TruthTableView` bit cells, `BitRegister`, `AdditionView`, the `HistoryTable` and `ArrayStage` indices, the `ScoreBar` counts, the `MasteryStrip` "x/y mastered", the mastery badge and the sorting step counter. Put it once on `tableStyles.ts`'s shared cell class where possible.
+- [x] Add `tabular-nums` to the `TraceTable` cells and row and line-number column, the `TruthTableView` bit cells, `BitRegister`, `AdditionView`, the `HistoryTable` and `ArrayStage` indices, the `ScoreBar` counts, the `MasteryStrip` "x/y mastered", the mastery badge and the sorting step counter. Put it once on `tableStyles.ts`'s shared cell class where possible.
 
 **Copy and the home page**
-- [ ] Home: hero h2 becomes one plain line ("Practice tools for school and university computer science"), and the sub-line stays. The **tool cards move above** the quick starts and mastery strip, so all four are visible above the fold at 1280×800 (assert this in P12). Each card is a name, a 1–2 line summary, curriculum badges and an open link. Drop the three-bullet lists or cut them to one line.
-- [ ] Tighten `Welcome`, `EmptyState` and the stale-table notice to one sentence each. Remove filler ("that just work").
+- [x] Home: hero h2 becomes one plain line ("Practice tools for school and university computer science"), and the sub-line stays. The **tool cards move above** the quick starts and mastery strip, so all four are visible above the fold at 1280×800 (assert this in P12). Each card is a name, a 1–2 line summary, curriculum badges and an open link. Drop the three-bullet lists or cut them to one line.
+- [x] Tighten `Welcome`, `EmptyState` and the stale-table notice to one sentence each. Remove filler ("that just work").
 
-Gate: unit, lint and typecheck green. **axe on the real page** (browser pane, light and dark) for `/`, `/trace-table` (including Study mode), `/truth-tables`, `/number-systems` and `/sorting-visualizer`: zero violations.
+Gate: unit, lint and typecheck green. **axe on the real page** (browser pane, light and dark) for `/`, `/trace-table` (including Study mode), `/truth-tables`, `/number-systems` and `/sorting-visualizer`: zero violations. *2026-11-25: green. axe ran in Playwright against the production build (`tests/e2e/design.spec.ts` and `hub.spec.ts`, real CodeMirror, light and dark, Study mode, quiz and popovers): zero violations. Notes: the accent is one hue with two roles (`accent` for text and focus, 700/300; `accent-fill` under white text, 700 in both themes). The `HistoryTable` current-row ▶ stays: it is the non-colour cue for that row (F13).*
 
 ---
 

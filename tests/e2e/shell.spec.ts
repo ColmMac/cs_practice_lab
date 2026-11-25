@@ -47,7 +47,7 @@ test('a legacy /#s= share link lands on /trace-table in review and does not run'
   await page.goto(`/#s=${payload}`)
   await expect(page).toHaveURL(/\/trace-table#s=/)
   await expect(page.getByText(/shared/i).first()).toBeVisible()
-  await expect(page.getByRole('button', { name: /▶ Run/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: /^Run$/ })).toBeVisible()
   // Never auto-runs: no table appears even after the runtime has had time to start.
   await page.waitForTimeout(3000)
   await expect(page.getByRole('table', { name: 'Trace table' })).toHaveCount(0)

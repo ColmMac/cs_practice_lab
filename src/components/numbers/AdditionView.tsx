@@ -6,9 +6,9 @@ import { Panel } from '../ui/Panel'
 import { BitRegister } from './BitRegister'
 import { describeColumn, useAddition, type Operand } from './useAddition'
 
-const cell = 'px-1.5 py-1 text-center font-mono text-base'
+const cell = 'px-1.5 py-1 text-center font-mono text-base tabular-nums'
 const rowHead = 'pr-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400'
-const colHead = 'px-1.5 text-center text-xs font-normal text-slate-600 dark:text-slate-400'
+const colHead = 'px-1.5 text-center text-xs font-normal tabular-nums text-slate-600 dark:text-slate-400'
 
 function OperandField({
   which,
@@ -158,7 +158,7 @@ export function AdditionView({ width, initial }: { width: Width; initial?: { a: 
                         key={i}
                         data-testid="result-bit"
                         aria-current={cur === i ? 'step' : undefined}
-                        className={`${cell} font-bold ${cur === i ? 'bg-emerald-100 outline outline-2 -outline-offset-2 outline-emerald-700 dark:bg-emerald-950' : ''}`}
+                        className={`${cell} font-bold ${cur === i ? 'bg-emerald-100 outline outline-2 -outline-offset-2 outline-accent dark:bg-emerald-950' : ''}`}
                       >
                         {i >= lo ? x : ''}
                       </td>

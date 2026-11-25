@@ -14,7 +14,7 @@ const values = (page: Page) =>
   )
 
 const algo = (page: Page, name: string) => page.getByLabel('Algorithm').selectOption({ label: name })
-const step = (page: Page) => page.getByRole('button', { name: /^Step ▶/ })
+const step = (page: Page) => page.getByRole('button', { name: /^Step$/ })
 const SEARCH_LIST = 'Sorted for searching: 3, 9, 10, 23, 27, 38, 43, 82'
 
 test('the route renders with the textbook list and the first steps are narrated', async ({ page }) => {
@@ -209,9 +209,9 @@ test('quiz: a right and a wrong answer on the bubble sort passes, and nothing le
   // The answers are hidden while questions are open: no pass table, no whole-run summary, no playback.
   await expect(page.getByRole('heading', { name: 'Pass history' })).toHaveCount(0)
   await expect(page.getByText(/^Whole run/)).toHaveCount(0)
-  await expect(page.getByRole('button', { name: /^Step ▶/ })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: /^Step$/ })).toHaveCount(0)
   expect(await values(page)).toEqual([5, 1, 4, 2, 8])
-  await expect(page.getByRole('button', { name: 'Continue ▶' })).toBeDisabled()
+  await expect(page.getByRole('button', { name: /^Continue$/ })).toBeDisabled()
 
   // Wrong (unchanged list): graded, and the message does not give the answer away.
   await page.getByRole('textbox', { name: 'Your list' }).fill('5, 1, 4, 2, 8')
@@ -224,7 +224,7 @@ test('quiz: a right and a wrong answer on the bubble sort passes, and nothing le
   await page.getByRole('textbox', { name: 'Your list' }).fill('1, 4, 2, 5, 8')
   await page.getByRole('button', { name: 'Check answer' }).click()
   await expect(feedback(page, 'q1')).toContainText('Correct')
-  await page.getByRole('button', { name: 'Continue ▶' }).click()
+  await page.getByRole('button', { name: /^Continue$/ }).click()
 
   // Question 2 starts from the previous answer; the stage still shows the pre-pass list.
   await expect(page.getByTestId('quiz-prompt')).toContainText('Start from [1, 4, 2, 5, 8]')
@@ -232,7 +232,7 @@ test('quiz: a right and a wrong answer on the bubble sort passes, and nothing le
   await page.getByRole('textbox', { name: 'Your list' }).fill('1, 2, 4, 5, 8')
   await page.getByRole('button', { name: 'Check answer' }).click()
   await expect(feedback(page, 'q2')).toContainText('Correct')
-  await page.getByRole('button', { name: 'Continue ▶' }).click()
+  await page.getByRole('button', { name: /^Continue$/ }).click()
 
   // Question 3: reveal it instead; the answer appears only now, and it is not scored.
   await expect(page.getByTestId('quiz-prompt')).toContainText('after pass 3')
@@ -266,7 +266,7 @@ test('quiz: binary search asks for mid, with the keyboard contract, and linear s
   await expect(page.getByRole('button', { name: 'Check answer' })).toBeFocused()
   await page.keyboard.press('Enter')
   await expect(feedback(page, 'q1')).toContainText('Correct')
-  await page.getByRole('button', { name: 'Continue ▶' }).click()
+  await page.getByRole('button', { name: /^Continue$/ }).click()
 
   // 23 < 43, so low = 4, high = 7, mid = 5.
   await expect(page.getByTestId('quiz-prompt')).toContainText('The last probe was index 3, which held 23; that is less than 43.')
@@ -277,7 +277,7 @@ test('quiz: binary search asks for mid, with the keyboard contract, and linear s
   await algo(page, 'Linear search')
   await expect(page.getByText(/nothing to predict/)).toBeVisible()
   await page.getByRole('radio', { name: 'Watch' }).click()
-  await expect(page.getByRole('button', { name: /^Step ▶/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: /^Step$/ })).toBeVisible()
 })
 
 test('a bubble sort deep link and the preset give the hand-checked pass table, and the URL follows the page', async ({ page }) => {
@@ -326,7 +326,7 @@ test('the quiz deep link opens in quiz mode: one right answer, one wrong', async
   await page.getByRole('textbox', { name: 'Your list' }).fill('1, 4, 2, 5, 8')
   await page.getByRole('button', { name: 'Check answer' }).click()
   await expect(feedback(page, 'q1')).toContainText('Correct')
-  await page.getByRole('button', { name: 'Continue ▶' }).click()
+  await page.getByRole('button', { name: /^Continue$/ }).click()
 
   await page.getByRole('textbox', { name: 'Your list' }).fill('1, 4, 2, 5, 8')
   await page.getByRole('button', { name: 'Check answer' }).click()
@@ -384,7 +384,7 @@ test.describe('axe audit on the real page', () => {
       await page.getByRole('button', { name: 'Check answer' }).click()
       await audit('quiz graded wrong')
       await page.getByRole('button', { name: /^Reveal/ }).click()
-      await page.getByRole('button', { name: 'Continue ▶' }).click()
+      await page.getByRole('button', { name: /^Continue$/ }).click()
       await audit('quiz next question')
       await page.goto('/sorting-visualizer?algo=binary&data=3,9,10,23,27,38,43,82&target=82&quiz=1')
       await expect(page.getByRole('radio', { name: 'Quiz' })).toBeChecked()

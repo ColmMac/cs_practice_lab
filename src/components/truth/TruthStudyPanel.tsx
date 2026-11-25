@@ -11,7 +11,7 @@ export function TruthStudyPanel({ study }: { study: TruthStudy }) {
   const revealed = Object.keys(grid.revealed).length
 
   return (
-    <section aria-label="Study mode" className="rounded border border-emerald-700/40 bg-emerald-50/60 p-3 text-sm dark:bg-emerald-950/30">
+    <section aria-label="Study mode" className="rounded border border-accent/40 bg-accent-soft/40 p-3 text-sm">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <h2 className="font-semibold">Study mode</h2>
         <p className="text-xs text-slate-700 dark:text-slate-300" role="status">

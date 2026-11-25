@@ -148,7 +148,7 @@ export function TraceTable({ result, stale }: { result: TraceResult; stale: bool
                     selectStep(step)
                   }
                 }}
-                className={`cursor-pointer focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-emerald-700 ${
+                className={`cursor-pointer focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent ${
                   selected
                     ? `bg-yellow-200 dark:bg-yellow-900/50 ${PROJECTOR_SELECTED_BAR}`
                     : hovered
@@ -201,7 +201,7 @@ export function TraceTable({ result, stale }: { result: TraceResult; stale: bool
                             e.stopPropagation()
                             toggleCellMask(key)
                           }}
-                          className={`${question ? 'mt-1' : 'ml-2'} block whitespace-nowrap rounded border border-slate-300 px-1 font-sans text-[11px] font-normal text-slate-700 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-emerald-700 disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800`}
+                          className={`${question ? 'mt-1' : 'ml-2'} block whitespace-nowrap rounded border border-slate-300 px-1 font-sans text-[11px] font-normal text-slate-700 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-accent disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800`}
                         >
                           {question ? 'Show' : 'Blank this'}
                         </button>

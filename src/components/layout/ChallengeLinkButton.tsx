@@ -2,6 +2,8 @@ import { useRef, useState } from 'react'
 import { challengeLinkBlocker, useStore, type ChallengeLink } from '../../store'
 import { Button } from '../ui/Button'
 import { Popover } from '../ui/Popover'
+import { GraduationCap } from 'lucide-react'
+import { ICON_BEFORE } from '../ui/icons'
 
 /** For teachers: a link that opens this table as a study-mode challenge, with the current Study mode mask. */
 export function ChallengeLinkButton() {
@@ -32,7 +34,8 @@ export function ChallengeLinkButton() {
   if (blocker) {
     return (
       <Button disabled title={blocker}>
-        🎓 Copy student challenge link
+        <GraduationCap aria-hidden="true" className={ICON_BEFORE} />
+        Copy student challenge link
       </Button>
     )
   }
@@ -43,7 +46,8 @@ export function ChallengeLinkButton() {
       onToggle={onToggle}
       trigger={(p) => (
         <Button {...p} title="A link that opens this table with cells hidden">
-          🎓 Copy student challenge link
+          <GraduationCap aria-hidden="true" className={ICON_BEFORE} />
+          Copy student challenge link
         </Button>
       )}
     >
@@ -85,7 +89,7 @@ export function ChallengeLinkButton() {
           <button
             type="button"
             onClick={() => void copy(link.url)}
-            className="mt-2 rounded bg-emerald-700 px-2.5 py-1 text-xs font-medium text-white hover:bg-emerald-800"
+            className="mt-2 rounded bg-accent-fill px-2.5 py-1 text-xs font-medium text-on-accent hover:bg-accent-fill-hover"
           >
             Copy again
           </button>

@@ -19,8 +19,8 @@ export function MasteryStrip() {
   }
 
   return (
-    <Panel title="Your progress" className="mb-6 max-w-3xl">
-      <div className="p-3 text-sm">
+    <Panel title="Your progress" className="mt-6 max-w-3xl">
+      <div className="p-3 text-sm tabular-nums">
         <p className="font-medium">
           {progress.mastered}/{progress.total} trace presets mastered
         </p>
@@ -28,9 +28,9 @@ export function MasteryStrip() {
           aria-label="Trace presets mastered"
           value={progress.mastered}
           max={progress.total}
-          className="mt-2 block h-2 w-full appearance-none overflow-hidden rounded bg-slate-200 dark:bg-slate-800 [&::-moz-progress-bar]:bg-emerald-700 [&::-webkit-progress-bar]:bg-transparent [&::-webkit-progress-value]:bg-emerald-700"
+          className="mt-2 block h-2 w-full appearance-none overflow-hidden rounded bg-surface-hover [&::-moz-progress-bar]:bg-accent-fill [&::-webkit-progress-bar]:bg-transparent [&::-webkit-progress-value]:bg-accent-fill"
         />
-        <p className="mt-2 text-xs text-slate-600 dark:text-slate-400">
+        <p className="mt-2 text-xs text-text-muted">
           Score {MASTERY_PERCENT}% or more in Study mode to master a preset, with at least half of its table filled in without
           Reveal. Saved only on this device.
         </p>

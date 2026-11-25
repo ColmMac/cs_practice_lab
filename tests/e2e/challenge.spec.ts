@@ -55,7 +55,7 @@ test('a teacher’s link opens for review, starts masked, and ends back at the s
   await expect(start(kid)).toBeEnabled({ timeout: 80_000 })
   await kid.waitForTimeout(1500) // Python is ready: anything that was going to auto-run would have
   await expect(traceTable(kid)).toHaveCount(0)
-  await expect(kid.getByRole('button', { name: '▶ Run' })).toBeDisabled()
+  await expect(kid.getByRole('button', { name: /^Run$/ })).toBeDisabled()
   await kid.keyboard.press('Control+Enter')
   await expect(traceTable(kid)).toHaveCount(0)
 
@@ -138,7 +138,7 @@ test('a tampered payload falls back safely and still does not run', async ({ bro
   const forged = encodeShare({ ...defaultWorkspace('print("forged-output")\n') }, { steps: -1, executionKey: '<x>' })
   await page.goto(`/trace-table#s=${forged}`)
   await expect(page.getByRole('region', { name: 'Shared workspace' })).toContainText('meant to be a student challenge')
-  await expect(page.getByRole('button', { name: '▶ Run' })).toBeEnabled({ timeout: 80_000 })
+  await expect(page.getByRole('button', { name: /^Run$/ })).toBeEnabled({ timeout: 80_000 })
   await page.waitForTimeout(1500)
   await expect(traceTable(page)).toHaveCount(0)
   await expect(start(page)).toHaveCount(0)

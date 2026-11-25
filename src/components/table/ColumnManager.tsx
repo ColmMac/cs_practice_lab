@@ -3,6 +3,8 @@ import { columnLabel, CONDITION_COL, moveColumn } from '../../core/derive/column
 import type { TraceResult } from '../../core/types'
 import { useStore } from '../../store'
 import { useColumns } from './useColumns'
+import { ArrowDown, ArrowUp, ChevronDown } from 'lucide-react'
+import { ICON_AFTER } from '../ui/icons'
 
 const label = columnLabel
 const btn =
@@ -43,9 +45,10 @@ export function ColumnManager({ result }: { result: TraceResult }) {
         aria-expanded={open}
         aria-controls={open ? panelId : undefined}
         onClick={() => setOpen((o) => !o)}
-        className="rounded border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-emerald-700 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800"
+        className="rounded border border-border bg-surface-elevated px-2.5 py-1 text-xs font-medium tabular-nums hover:bg-surface-strong focus-visible:outline-2 focus-visible:outline-accent"
       >
-        Columns ({visible.length}/{all.length}) ▾
+        Columns ({visible.length}/{all.length})
+        <ChevronDown aria-hidden="true" className={ICON_AFTER} />
       </button>
 
       {open && (
@@ -53,7 +56,7 @@ export function ColumnManager({ result }: { result: TraceResult }) {
           id={panelId}
           role="dialog"
           aria-label="Columns"
-          className="absolute left-0 z-30 mt-1 w-72 rounded border border-slate-300 bg-white p-3 text-sm shadow-lg dark:border-slate-700 dark:bg-slate-900"
+          className="absolute left-0 z-30 mt-1 w-72 rounded border border-border bg-surface-elevated p-3 text-sm shadow-sm"
         >
           <ul className="max-h-64 space-y-1 overflow-auto">
             {/* the Condition column has its own checkbox below: two controls for one column would disagree */}
@@ -71,7 +74,7 @@ export function ColumnManager({ result }: { result: TraceResult }) {
                   {canMove && (
                     <span className="flex gap-1">
                       <button type="button" className={btn} aria-label={`Move ${label(c)} left`} disabled={at <= 0} onClick={() => move(c.id, -1)}>
-                        ↑
+                        <ArrowUp aria-hidden="true" className="inline-block size-3 align-[-0.125em]" />
                       </button>
                       <button
                         type="button"
@@ -80,7 +83,7 @@ export function ColumnManager({ result }: { result: TraceResult }) {
                         disabled={at < 0 || at >= movable.length - 1}
                         onClick={() => move(c.id, 1)}
                       >
-                        ↓
+                        <ArrowDown aria-hidden="true" className="inline-block size-3 align-[-0.125em]" />
                       </button>
                     </span>
                   )}

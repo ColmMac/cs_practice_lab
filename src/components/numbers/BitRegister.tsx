@@ -21,7 +21,7 @@ export function BitRegister({
       aria-label={name ? `${name}, ${n}-bit register` : `${n}-bit register`}
       className="overflow-x-auto pb-1"
     >
-      <div className="inline-grid gap-1" style={{ gridTemplateColumns: `repeat(${n}, minmax(2.5rem, 1fr))` }}>
+      <div className="inline-grid gap-1 tabular-nums" style={{ gridTemplateColumns: `repeat(${n}, minmax(2.5rem, 1fr))` }}>
         {bits.map((b, i) => {
           const weight = i === 0 && view === 'signed' ? -(2 ** (n - 1)) : 2 ** (n - 1 - i)
           return (
@@ -32,9 +32,9 @@ export function BitRegister({
                 aria-pressed={b === 1}
                 aria-label={`${name ? `${name} ` : ''}bit ${n - 1 - i}, weight ${weight}, value ${b}`}
                 onClick={() => onToggle(i)}
-                className={`rounded border px-2 py-2 font-mono text-base font-semibold focus-visible:outline-2 focus-visible:outline-emerald-700 ${
+                className={`rounded border px-2 py-2 font-mono text-base font-semibold focus-visible:outline-2 focus-visible:outline-accent ${
                   b === 1
-                    ? 'border-emerald-700 bg-emerald-700 text-white hover:bg-emerald-800'
+                    ? 'border-accent-fill bg-accent-fill text-on-accent hover:bg-accent-fill-hover'
                     : 'border-slate-300 bg-white text-slate-900 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800'
                 }`}
               >

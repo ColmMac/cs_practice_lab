@@ -3,7 +3,7 @@ import { usePopover } from './usePopover'
 
 /** Class string of the floating panel (shared by Export and Share). */
 export const POPOVER_PANEL =
-  'absolute right-0 z-30 mt-1 w-80 rounded border border-slate-300 bg-white p-3 text-sm shadow-lg dark:border-slate-700 dark:bg-slate-900'
+  'absolute right-0 z-30 mt-1 w-80 rounded border border-border bg-surface-elevated p-3 text-sm shadow-sm'
 
 interface Props {
   /** Accessible name of the dialog. */

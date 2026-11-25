@@ -1,5 +1,96 @@
 @import 'tailwindcss';
 @custom-variant dark (&:where(.dark, .dark *));
+/*
+ * Design tokens. Components use these (bg-surface, text-text-muted, border-border, text-accent…), not raw palette
+ * classes. Light values live in @theme; .dark below overrides the same names, so no dark: pair is needed.
+ */
+@theme {
+  /* surfaces, lines and text */
+  --color-bg: var(--color-white);
+  --color-surface: var(--color-slate-50); /* header strips, panel titles */
+  --color-surface-elevated: var(--color-white); /* popovers, small buttons, fields */
+  --color-surface-strong: var(--color-slate-100); /* table head, quiet hover */
+  --color-surface-hover: var(--color-slate-200); /* toolbar and nav hover */
+  --color-border: var(--color-slate-300);
+  --color-text: var(--color-slate-900);
+  --color-text-muted: var(--color-slate-600);
+
+  /* the one accent (emerald): text, links and focus rings, plus the fill under white text and its tint */
+  --color-accent: var(--color-emerald-700);
+  --color-accent-fill: var(--color-emerald-700);
+  --color-accent-fill-hover: var(--color-emerald-800);
+  --color-on-accent: var(--color-white);
+  --color-accent-soft: var(--color-emerald-50);
+  --color-on-accent-soft: var(--color-emerald-950);
+
+  /* status: these carry meaning. *-soft is a badge background, on-* the text on it */
+  --color-neutral-soft: var(--color-slate-200);
+  --color-on-neutral-soft: var(--color-slate-800);
+  --color-ok-soft: var(--color-emerald-100);
+  --color-on-ok-soft: var(--color-emerald-900);
+  --color-warn-soft: var(--color-amber-100);
+  --color-on-warn-soft: var(--color-amber-900);
+  --color-info-soft: var(--color-sky-100);
+  --color-on-info-soft: var(--color-sky-900);
+  --color-error-soft: var(--color-red-100);
+  --color-on-error-soft: var(--color-red-900);
+  --color-danger-fill: var(--color-red-600);
+  --color-danger-fill-hover: var(--color-red-700);
+
+  /* sorting card states: each one is a different state, so they stay different hues */
+  --color-state-compare: var(--color-amber-600);
+  --color-state-compare-soft: var(--color-amber-100);
+  --color-state-swap: var(--color-sky-600);
+  --color-state-swap-soft: var(--color-sky-100);
+  --color-state-held: var(--color-fuchsia-600);
+  --color-state-held-soft: var(--color-fuchsia-100);
+  --color-state-active: var(--color-indigo-600);
+  --color-state-active-soft: var(--color-indigo-100);
+  --color-state-sorted: var(--color-emerald-600);
+  --color-state-sorted-soft: var(--color-emerald-100);
+  --color-state-found: var(--color-emerald-700);
+  --color-state-found-edge: var(--color-emerald-800);
+}
+
+/* Not in a layer, so it beats @theme's :root values. The class is on <html>. */
+.dark {
+  --color-bg: var(--color-slate-950);
+  --color-surface: var(--color-slate-900);
+  --color-surface-elevated: var(--color-slate-900);
+  --color-surface-strong: var(--color-slate-800);
+  --color-surface-hover: var(--color-slate-800);
+  --color-border: var(--color-slate-700);
+  --color-text: var(--color-slate-100);
+  --color-text-muted: var(--color-slate-400);
+
+  --color-accent: var(--color-emerald-300);
+  --color-accent-soft: var(--color-emerald-950);
+  --color-on-accent-soft: var(--color-emerald-100);
+
+  --color-neutral-soft: var(--color-slate-800);
+  --color-on-neutral-soft: var(--color-slate-200);
+  --color-ok-soft: var(--color-emerald-950);
+  --color-on-ok-soft: var(--color-emerald-200);
+  --color-warn-soft: var(--color-amber-950);
+  --color-on-warn-soft: var(--color-amber-200);
+  --color-info-soft: var(--color-sky-950);
+  --color-on-info-soft: var(--color-sky-200);
+  --color-error-soft: var(--color-red-950);
+  --color-on-error-soft: var(--color-red-200);
+
+  --color-state-compare: var(--color-amber-500);
+  --color-state-compare-soft: var(--color-amber-950);
+  --color-state-swap: var(--color-sky-500);
+  --color-state-swap-soft: var(--color-sky-950);
+  --color-state-held: var(--color-fuchsia-500);
+  --color-state-held-soft: var(--color-fuchsia-950);
+  --color-state-active: var(--color-indigo-500);
+  --color-state-active-soft: var(--color-indigo-950);
+  --color-state-sorted: var(--color-emerald-500);
+  --color-state-sorted-soft: var(--color-emerald-950);
+  --color-state-found-edge: var(--color-emerald-300);
+}
+
 /* Projector mode: bigger text and fewer panels on the trace page. The class is on <html> only while that page is up. */
 @custom-variant projector (&:where(.projector, .projector *));
 

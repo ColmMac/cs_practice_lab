@@ -1,4 +1,6 @@
 import { formatPoints, type Score } from '../../core/study/score'
+import { Eye } from 'lucide-react'
+import { ICON_BEFORE } from '../ui/icons'
 
 /** The result of Check answers (tool-agnostic): points, counts, anything edited since, and a per-column breakdown. */
 /** `id` makes it a focus target (not a Tab stop). */
@@ -8,7 +10,7 @@ export function ScoreBar({ score, id }: { score: Score; id?: string }) {
       id={id}
       tabIndex={id ? -1 : undefined}
       aria-label="Score"
-      className="mt-3 rounded border border-slate-300 bg-slate-50 p-3 text-sm focus-visible:outline-2 focus-visible:outline-emerald-700 dark:border-slate-700 dark:bg-slate-900"
+      className="mt-3 rounded border border-border bg-surface p-3 text-sm tabular-nums focus-visible:outline-2 focus-visible:outline-accent"
     >
       <p role="status" className="text-base font-semibold">
         Score: {formatPoints(score.points, score.total)} · {score.percent}%
@@ -17,7 +19,13 @@ export function ScoreBar({ score, id }: { score: Score; id?: string }) {
         <span className="text-emerald-800 dark:text-emerald-300">✓ {score.correct} correct</span> ·{' '}
         <span className="text-amber-800 dark:text-amber-300">≈ {score.close} almost</span> ·{' '}
         <span className="text-red-800 dark:text-red-300">✗ {score.incorrect} wrong</span>
-        {score.revealed > 0 && <> · 👁 {score.revealed} revealed (not scored)</>}
+        {score.revealed > 0 && (
+          <>
+            {' '}
+            · <Eye aria-hidden="true" className={ICON_BEFORE} />
+            {score.revealed} revealed (not scored)
+          </>
+        )}
       </p>
       {score.pending > 0 && (
         <p className="mt-1 text-amber-800 dark:text-amber-300">

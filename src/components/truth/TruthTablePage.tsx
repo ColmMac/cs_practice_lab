@@ -13,6 +13,8 @@ import { TruthStudyPanel } from './TruthStudyPanel'
 import { TruthTableView } from './TruthTableView'
 import { useTruthStudy } from './useTruthStudy'
 import { CUSTOM, useTruthPage } from './useTruthPage'
+import { PencilLine } from 'lucide-react'
+import { ICON_BEFORE } from '../ui/icons'
 
 export function TruthTablePage() {
   const s = useTruthPage()
@@ -66,9 +68,10 @@ export function TruthTablePage() {
           disabled={!study.active && !s.table}
           title={study.active ? 'Leave study mode' : 'Hide the answers and fill the truth table in yourself.'}
           onClick={study.active ? study.exit : study.start}
-          className={study.active ? '!border-emerald-700 !bg-emerald-700 !text-white hover:!bg-emerald-800' : '!border-emerald-700 !text-emerald-800 dark:!text-emerald-300'}
+          className={study.active ? '!border-accent-fill !bg-accent-fill !text-on-accent hover:!bg-accent-fill-hover' : '!border-accent-fill !text-accent'}
         >
-          📝 Study mode{study.active ? ': on' : ''}
+          <PencilLine aria-hidden="true" className={ICON_BEFORE} />
+          Study mode{study.active ? ': on' : ''}
         </Button>
       </ToolHeader>
       <main className="grid min-h-0 flex-1 content-start gap-4 overflow-auto p-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">

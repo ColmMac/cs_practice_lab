@@ -9,6 +9,8 @@ import { ChallengeLinkButton } from './ChallengeLinkButton'
 import { Button } from '../ui/Button'
 import { ToolHeader } from '../ui/ToolHeader'
 import { ProjectorToggle } from '../ui/ProjectorToggle'
+import { Play } from 'lucide-react'
+import { ICON_BEFORE } from '../ui/icons'
 
 export function Toolbar() {
   const { language, run, cancel, running, runnerStatus, loadPreset } = useStore()
@@ -20,7 +22,7 @@ export function Toolbar() {
     <ToolHeader title={SITE_NAME}>
       {running ? (
         <Button variant="danger" onClick={cancel}>
-Cancel
+          Cancel
         </Button>
       ) : (
         <Button
@@ -29,7 +31,8 @@ Cancel
           disabled={notReady || inChallenge}
           title={inChallenge ? 'Run is off during a challenge: use Start challenge or End challenge' : 'Run (Ctrl/⌘ + Enter)'}
         >
-▶ Run
+          <Play aria-hidden="true" className={ICON_BEFORE} />
+          Run
         </Button>
       )}
 

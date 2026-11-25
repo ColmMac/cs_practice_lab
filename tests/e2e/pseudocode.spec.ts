@@ -59,12 +59,12 @@ test('a syntax error and a construct with no equivalent are both reported honest
   await expect(page.getByText('This pseudocode matches the table')).toBeVisible()
   await expect(pseudo(page)).toContainText('ENDWHILE')
 
-  await page.getByRole('button', { name: '▶ Run' }).click()
+  await page.getByRole('button', { name: /^Run$/ }).click()
   await expect(page.getByRole('alert').filter({ hasText: /Line 1: This is not valid Python yet/ })).toBeVisible()
   await expect(pseudo(page)).toHaveCount(0)
 
   await page.locator('.cm-content').fill('squares = [n * n for n in range(4)]\nprint(squares)')
-  await page.getByRole('button', { name: '▶ Run' }).click()
+  await page.getByRole('button', { name: /^Run$/ }).click()
   await expect(pseudo(page).locator('li').first()).toContainText('squares = [n * n for n in range(4)]')
   await expect(pseudo(page).locator('li').first()).toContainText('no exam equivalent')
   await expect(pseudo(page).locator('li').nth(1)).toHaveText('OUTPUT squares')

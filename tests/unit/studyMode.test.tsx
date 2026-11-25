@@ -52,7 +52,7 @@ function mount(result: Result = traces.digitSum, workspace: Partial<ReturnType<t
   return { runner, runSpy }
 }
 
-const toggle = () => screen.getByRole('button', { name: /📝 study mode/i })
+const toggle = () => screen.getByRole('button', { name: /^study mode/i })
 const answerBoxes = () => screen.queryAllByRole('textbox', { name: /^Row \d+ \(line/ }) as HTMLInputElement[]
 /** The feedback text under each answer box ("Correct", "Almost — …", "Not correct"), '' when ungraded. */
 const verdicts = () =>

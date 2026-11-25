@@ -77,7 +77,7 @@ export function App({ preparingStudy = false }: { preparingStudy?: boolean }) {
               <div className="sticky left-0 z-20 w-[var(--pane-width,100%)]">
                 {stale && !study && (
                   <p role="status" className="mb-2 text-xs text-amber-800 dark:text-amber-300">
-                    The code, inputs or watches have changed since this table was generated — run again to update it.
+                    The code, inputs or watches have changed since this table was generated: run it again.
                   </p>
                 )}
                 {stale && study && (

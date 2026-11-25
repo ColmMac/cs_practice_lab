@@ -10,18 +10,18 @@ import { ToolHeader } from '../../src/components/ui/ToolHeader'
 
 describe('design tokens', () => {
   it('pins the class strings the trace page was built with', () => {
-    expect(BUTTON_CLASSES.primary).toContain('bg-emerald-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-800')
-    expect(BUTTON_CLASSES.danger).toContain('bg-red-600 px-3 py-1.5')
-    expect(BUTTON_CLASSES.toolbar).toContain('rounded border border-slate-300 px-2 py-1 text-sm hover:bg-slate-200')
+    expect(BUTTON_CLASSES.primary).toContain('bg-accent-fill px-3 py-1.5 text-sm font-medium text-on-accent hover:bg-accent-fill-hover')
+    expect(BUTTON_CLASSES.danger).toContain('bg-danger-fill px-3 py-1.5')
+    expect(BUTTON_CLASSES.toolbar).toContain('rounded border border-border px-2 py-1 text-sm hover:bg-surface-hover')
     expect(BUTTON_CLASSES.small).toContain('px-2 py-0.5 text-xs font-medium')
     const projector = 'projector:px-4 projector:py-2 projector:text-[1.18rem]'
-    expect(TH).toBe(`border border-slate-300 px-3 py-1.5 text-left font-semibold dark:border-slate-700 ${projector}`)
-    expect(TD).toBe(`border border-slate-300 px-3 py-1 font-mono dark:border-slate-700 ${projector}`)
-    expect(POPOVER_PANEL).toContain('absolute right-0 z-30 mt-1 w-80 rounded border border-slate-300 bg-white p-3')
+    expect(TH).toBe(`border border-border px-3 py-1.5 text-left font-semibold tabular-nums ${projector}`)
+    expect(TD).toBe(`border border-border px-3 py-1 font-mono tabular-nums ${projector}`)
+    expect(POPOVER_PANEL).toContain('absolute right-0 z-30 mt-1 w-80 rounded border border-border bg-surface-elevated p-3')
   })
 
-  it('every badge tone has a light and a dark colour pair', () => {
-    for (const tone of Object.values(BADGE_TONES)) expect(tone).toMatch(/^bg-\S+ text-\S+ dark:bg-\S+ dark:text-\S+$/)
+  it('every badge tone is a token background with the token text made for it', () => {
+    for (const tone of Object.values(BADGE_TONES)) expect(tone).toMatch(/^bg-([a-z]+)-soft text-on-\1-soft$/)
   })
 })
 

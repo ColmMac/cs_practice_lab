@@ -1,6 +1,7 @@
 import type { Explanation } from '../../core/explain/stepExplainer'
 import type { Grade } from '../../core/study/types'
 import { WhyCallout } from './WhyCallout'
+import { Eye } from 'lucide-react'
 
 interface Props {
   /** `${stepIndex}:${columnId}`; also what keyboard navigation groups by column */
@@ -104,7 +105,7 @@ export function AnswerCell({ cellKey, colId, label, answer, grade, revealed, tru
               onReveal()
             }}
           >
-            👁
+            <Eye aria-hidden="true" className="inline-block size-3 align-[-0.125em]" />
           </button>
         )}
       </div>
