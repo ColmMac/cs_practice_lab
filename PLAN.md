@@ -1531,7 +1531,7 @@ Every ticket ends with the §16.2 definition of done: typecheck, lint, `npm test
       - A hand-tampered payload falls back safely and still does not run.
     - Axe light + dark over review, active and unreproducible.
 
-- [ ] **Ticket 5 (C5): Printable worksheet + mark scheme, and projector mode**
+- [x] **Ticket 5 (C5): Printable worksheet + mark scheme, and projector mode**
   - Files: `PrintPack.tsx`, `PrintRegion.tsx`, `ExportMenu.tsx`, `core/export/tableModel.ts` (`blankAll`, `extraRows`), `store/index.ts` (`printJob`), `styles/index.css`, `ui/projector.ts`, `ProjectorToggle.tsx`, `Toolbar.tsx`, `ui/tableStyles.ts`, `CodeEditor.tsx`, `TraceTable.tsx`, `App.tsx`, `InputsPanel.tsx`, `WatchPanel.tsx`, `Welcome.tsx`.
   - Edge cases (print):
     - Long tables (100+ rows): the header repeats, no row is split, and the key always starts on a new page.
@@ -1639,6 +1639,15 @@ Every ticket ends with the §16.2 definition of done: typecheck, lint, `npm test
 - **Names:** the store action is `challengeLink()` (the button does the copying, as `ShareButton` does), not `copyChallengeLink()`. `printJob` belongs to C5 and was not added. `studyOnRun` is in place for C6.
 - **Existing bugs fixed:** `discardShared` did not bump `runToken` or cancel, so a run of shared code that was still going could land on the restored workspace (now tested). The shared banner kept saying "Nothing has been run" after the visitor had pressed Run.
 - Tests: `tests/unit/challengeUrl.test.ts`, `challengeMode.test.tsx`, `tests/e2e/challenge.spec.ts` (7, with axe light + dark and 375 px). C4 did not need splitting.
+
+#### Implementation notes: C5
+
+- **Print pack:** `buildPrintPack` (in `core/export/tableModel.ts`, with the new `blankAll` and `extraRows`), `components/export/PrintPack.tsx`, and `printJob` / `setPrintJob` in the store (a no-op during a challenge; `PrintRegion` also checks the challenge first). `exportOptions.packStudyBlanks` is the "Use the Study mode blanks on the worksheet" box.
+- **Projector:** `ui/projector.ts`, `ProjectorToggle.tsx`, `useProjectorClass.ts` (called by `App`, so only the trace page ever has the class). `useRowWindow` uses a taller estimate and drops its measurements when the mode changes. `CodeEditor` asks CodeMirror to measure again.
+- **Additions:** the worksheet lists the program inputs (`TableModel.inputs`), because a program that calls `input()` cannot be traced without them. If "Use the Study mode blanks" is on but nothing is masked, the grid is printed fully blank (not filled with the answers) and the menu says so.
+- **Print layout:** the `AppShell` (a screen-height flex column with a dark background) is now a plain white block in print. This was added before the first PDF run, so the old shell was never shown to fail.
+- **Verified:** `digit-sum.pack.md` was written by hand before the code and matched on the first run. `classroom.spec.ts` counts the pages of real Chromium PDFs (a short pack is exactly 2; a long one is at least 4). A vowel-counter pack made from dark theme with projector mode on was read page by page. `hub.spec.ts` runs 375 px and axe light + dark with the projector on. **Not verified:** a real printer, other browsers' paginators, or an actual projector.
+- Tracer unchanged. Full suite 1096 unit, 131 E2E.
 
 ### 17.7 Ticket order
 

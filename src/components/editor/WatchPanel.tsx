@@ -18,7 +18,7 @@ export function WatchPanel() {
   const heading = useId()
 
   return (
-    <section aria-labelledby={heading}>
+    <section aria-labelledby={heading} className="projector:hidden">
       <div className="mb-1 flex items-center justify-between">
         <h2 id={heading} className="text-xs font-medium text-slate-600 dark:text-slate-400">
           Watch expressions <span className="font-normal">(shown as extra columns)</span>

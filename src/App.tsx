@@ -14,11 +14,13 @@ import { TraceTable } from './components/table/TraceTable'
 import { SharedBanner } from './components/layout/SharedBanner'
 import { ChallengePanel } from './components/layout/ChallengePanel'
 import { WatchPanel } from './components/editor/WatchPanel'
+import { useProjectorClass } from './components/ui/useProjectorClass'
 import { runSignature, useStore } from './store'
 
 export function App() {
   const { init, result, ranSig, study, exitStudy, shared, challenge, endChallenge } = useStore()
   const signature = useStore((s) => runSignature(s))
+  useProjectorClass()
   useEffect(() => init(), [init])
 
   // A share link pasted into a tab that already has the app open only changes the #fragment (no reload).

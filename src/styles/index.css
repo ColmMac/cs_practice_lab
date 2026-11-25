@@ -1,5 +1,7 @@
 @import 'tailwindcss';
 @custom-variant dark (&:where(.dark, .dark *));
+/* Projector mode: bigger text and fewer panels on the trace page. The class is on <html> only while that page is up. */
+@custom-variant projector (&:where(.projector, .projector *));
 
 /*
  * Printing / Save as PDF. The app itself is hidden (`print:hidden` in App) and only <PrintRegion> shows:
@@ -24,6 +26,11 @@
   .print-region tr {
     break-inside: avoid; /* never split a row across two pages */
     page-break-inside: avoid;
+  }
+  /* the worksheet ends its page, so the mark scheme can be handed out separately */
+  .print-region .print-page-break {
+    break-after: page;
+    page-break-after: always;
   }
   .print-region h2,
   .print-region pre {

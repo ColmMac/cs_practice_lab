@@ -3,7 +3,7 @@ import { useStore } from '../../store'
 export function InputsPanel() {
   const { stdinText, setStdinText } = useStore()
   return (
-    <label className="block">
+    <label className="block projector:hidden">
       <span className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">
         Program inputs <span className="font-normal">(one line per input() call)</span>
       </span>

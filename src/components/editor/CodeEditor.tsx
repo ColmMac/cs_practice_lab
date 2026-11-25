@@ -5,6 +5,7 @@ import CodeMirror from '@uiw/react-codemirror'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { getLanguage } from '../../languages/registry'
 import { useStore } from '../../store'
+import { useProjector } from '../ui/projector'
 import { useTheme } from '../ui/theme'
 import { diagnosticsFor } from './diagnostics'
 import { darkTheme, editorChrome, lightTheme } from './editorTheme'
@@ -64,6 +65,12 @@ export function CodeEditor() {
     scrolledFor.current = selectedLine
   }, [view, hoverLine, selectedLine])
 
+  // A new font size changes every line's height: CodeMirror has to measure again.
+  const projector = useProjector((s) => s.on)
+  useEffect(() => {
+    view?.requestMeasure()
+  }, [view, projector])
+
   // Errors from the last run become a red underline on the offending line.
   useEffect(() => {
     if (!view) return
@@ -78,7 +85,7 @@ export function CodeEditor() {
       extensions={extensions}
       theme={theme === 'dark' ? darkTheme : lightTheme}
       height="100%"
-      className="h-full text-sm"
+      className="h-full text-sm projector:text-[1.18rem]"
       aria-label="Code editor"
       basicSetup={{ lineNumbers: true, highlightActiveLine: true, foldGutter: false }}
     />

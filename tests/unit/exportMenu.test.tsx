@@ -25,7 +25,8 @@ vi.mock('../../src/components/editor/CodeEditor', () => ({
 const CLEAN = {
   result: null, ranSig: null, ranInput: null, running: false, hoverStep: null, selectedStep: null, watchErrors: {},
   shared: null, sharedLinkInvalid: false, study: null, studySessions: {}, studyOrder: [],
-  exportOptions: { variant: 'key' as const, includeCode: false },
+  exportOptions: { variant: 'key' as const, includeCode: false, packStudyBlanks: false },
+  printJob: 'table' as const,
 }
 const CODE = 'n = 1234\ntotal = 0\nwhile n > 0:\n    digit = n % 10\n    total = total + digit\n    n = n // 10\nprint(total)\n'
 const PNG = 'data:image/png;base64,iVBORw0KGgo='

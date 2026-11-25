@@ -15,6 +15,8 @@ import { getLanguage } from '../languages/registry'
 import { mergePersisted, migrateWorkspace, safeStorage, STORAGE_KEY, STORAGE_VERSION, type PersistedState } from './persistence'
 import { getRunner } from './runner'
 
+export type PrintJob = 'table' | 'pack'
+
 /** A study session in progress. The view (columns, row options, masks) is FROZEN when it starts. */
 export interface StudyState extends StudyView {
   executionKey: string
@@ -69,8 +71,10 @@ interface AppState extends PersistedState {
   ranInput: { code: string; stdin: string[] } | null
   /** The first-visit welcome has been dismissed (remembered in its own localStorage key, not in the workspace). */
   welcomed: boolean
-  /** Export dialog choices (not persisted). */
-  exportOptions: { variant: ExportVariant; includeCode: boolean }
+  /** Export dialog choices (not persisted). `packStudyBlanks`: the printed worksheet keeps the unmasked cells. */
+  exportOptions: { variant: ExportVariant; includeCode: boolean; packStudyBlanks: boolean }
+  /** What the next print shows: the table as chosen, or worksheet + mark scheme. Back to 'table' afterwards. */
+  printJob: PrintJob
 
   /** stepIndex of the table row under the mouse / focused, and of the clicked row. */
   hoverStep: number | null
@@ -106,6 +110,7 @@ interface AppState extends PersistedState {
   setDisplayStyle(d: Workspace['displayStyle']): void
   setHoverStep(i: number | null): void
   setExportOptions(patch: Partial<AppState['exportOptions']>): void
+  setPrintJob(job: PrintJob): void
   selectStep(i: number | null): void
 
   // column manager
@@ -356,7 +361,8 @@ export const useStore = create<AppState>()(
         ranSig: null,
         ranInput: null,
         welcomed: initialWelcomed(),
-        exportOptions: { variant: 'key', includeCode: false },
+        exportOptions: { variant: 'key', includeCode: false, packStudyBlanks: false },
+        printJob: 'table',
         hoverStep: null,
         selectedStep: null,
         watchErrors: {},
@@ -486,6 +492,8 @@ export const useStore = create<AppState>()(
         setDisplayStyle: (displayStyle) => set({ displayStyle }),
         setHoverStep: (hoverStep) => set({ hoverStep }),
         setExportOptions: (patch) => set((s) => ({ exportOptions: { ...s.exportOptions, ...patch } })),
+        // never a pack during a challenge: its second part is the mark scheme
+        setPrintJob: (printJob) => set((s) => ({ printJob: s.challenge ? 'table' : printJob })),
         selectStep: (i) => set((s) => ({ selectedStep: s.selectedStep === i ? null : i })),
 
         // ── column manager ──

@@ -7,6 +7,7 @@ import { ShareButton } from './ShareButton'
 import { ChallengeLinkButton } from './ChallengeLinkButton'
 import { Button } from '../ui/Button'
 import { ToolHeader } from '../ui/ToolHeader'
+import { ProjectorToggle } from '../ui/ProjectorToggle'
 
 export function Toolbar() {
   const { language, run, cancel, running, runnerStatus, loadPreset } = useStore()
@@ -48,6 +49,7 @@ Cancel
       </label>
 
       <StudyToggle />
+      <ProjectorToggle />
 
       <div className="ml-auto flex flex-wrap items-center gap-3">
         <RuntimeStatusBadge />

@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import { flushSync } from 'react-dom'
+import type { TraceResult } from '../../core/types'
 import { useStore } from '../../store'
 import { ExportTable } from './ExportTable'
+import { PrintPack } from './PrintPack'
 import { useExportData } from './useExportData'
 
 function PrintContent() {
@@ -10,11 +12,15 @@ function PrintContent() {
   const inChallenge = useStore((s) => s.challenge !== null)
   if (inChallenge) return <p>Printing is off during a challenge.</p>
   if (!result || result.steps.length === 0) return null
-  return <PrintTable />
+  return <PrintResult result={result} />
 }
 
-function PrintTable() {
-  const result = useStore((s) => s.result)!
+function PrintResult({ result }: { result: TraceResult }) {
+  const pack = useStore((s) => s.printJob === 'pack')
+  return pack ? <PrintPack result={result} /> : <PrintTable result={result} />
+}
+
+function PrintTable({ result }: { result: TraceResult }) {
   const { table } = useExportData(result)
   return <ExportTable model={table} fit />
 }
@@ -29,7 +35,10 @@ export function PrintRegion() {
   useEffect(() => {
     // flushSync: the DOM must be ready before the browser takes its print snapshot
     const before = () => flushSync(() => setPrinting(true))
-    const after = () => setPrinting(false)
+    const after = () => {
+      setPrinting(false)
+      useStore.getState().setPrintJob('table') // Ctrl/⌘+P afterwards prints the ordinary table again
+    }
     window.addEventListener('beforeprint', before)
     window.addEventListener('afterprint', after)
     return () => {

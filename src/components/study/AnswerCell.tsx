@@ -73,7 +73,7 @@ export function AnswerCell({ cellKey, colId, label, answer, grade, revealed, tru
           autoComplete="off"
           autoCapitalize="off"
           spellCheck={false}
-          className={`min-w-0 flex-1 rounded border px-1.5 py-0.5 font-mono text-sm ${grade ? TONE[grade.state] : NEUTRAL}`}
+          className={`min-w-0 flex-1 rounded border px-1.5 py-0.5 font-mono text-sm projector:text-[1.18rem] ${grade ? TONE[grade.state] : NEUTRAL}`}
         />
         <button
           type="button"
@@ -105,7 +105,7 @@ export function AnswerCell({ cellKey, colId, label, answer, grade, revealed, tru
         )}
       </div>
       {(grade || hint) && (
-        <span id={msgId} className="text-[11px] leading-tight font-sans">
+        <span id={msgId} className="text-[11px] leading-tight font-sans projector:text-sm">
           {grade && (
             <span className="font-semibold">
               <span aria-hidden="true">{ICON[grade.state]} </span>

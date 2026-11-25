@@ -10,7 +10,7 @@ const linkClass = ({ isActive }: { isActive: boolean }) =>
 /** Sticky top nav + routed page. The shell is the viewport; each page fills the space under the nav. */
 export function AppShell() {
   return (
-    <div className="flex h-dvh flex-col bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+    <div className="flex h-dvh flex-col bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100 print:block print:h-auto print:bg-white! print:text-black!">
       <a
         href="#main"
         className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:rounded focus:bg-white focus:px-3 focus:py-1.5 focus:text-sm focus:text-slate-900 focus:outline-2 focus:outline-emerald-700 dark:focus:bg-slate-900 dark:focus:text-slate-100"
@@ -41,7 +41,7 @@ export function AppShell() {
           <ThemeToggle />
         </div>
       </nav>
-      <div id="main" tabIndex={-1} className="flex min-h-0 flex-1 flex-col outline-none">
+      <div id="main" tabIndex={-1} className="flex min-h-0 flex-1 flex-col outline-none print:block">
         <Outlet />
       </div>
     </div>

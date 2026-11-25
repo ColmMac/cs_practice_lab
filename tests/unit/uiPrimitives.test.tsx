@@ -14,8 +14,9 @@ describe('design tokens', () => {
     expect(BUTTON_CLASSES.danger).toContain('bg-red-600 px-3 py-1.5')
     expect(BUTTON_CLASSES.toolbar).toContain('rounded border border-slate-300 px-2 py-1 text-sm hover:bg-slate-200')
     expect(BUTTON_CLASSES.small).toContain('px-2 py-0.5 text-xs font-medium')
-    expect(TH).toBe('border border-slate-300 px-3 py-1.5 text-left font-semibold dark:border-slate-700')
-    expect(TD).toBe('border border-slate-300 px-3 py-1 font-mono dark:border-slate-700')
+    const projector = 'projector:px-4 projector:py-2 projector:text-[1.18rem]'
+    expect(TH).toBe(`border border-slate-300 px-3 py-1.5 text-left font-semibold dark:border-slate-700 ${projector}`)
+    expect(TD).toBe(`border border-slate-300 px-3 py-1 font-mono dark:border-slate-700 ${projector}`)
     expect(POPOVER_PANEL).toContain('absolute right-0 z-30 mt-1 w-80 rounded border border-slate-300 bg-white p-3')
   })
 

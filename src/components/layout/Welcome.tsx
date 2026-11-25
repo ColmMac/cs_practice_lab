@@ -8,7 +8,7 @@ export function Welcome() {
   return (
     <section
       aria-label="Welcome"
-      className="mb-3 flex flex-wrap items-start gap-3 rounded border border-emerald-700/40 bg-emerald-50 p-3 text-sm text-emerald-950 dark:bg-emerald-950/40 dark:text-emerald-100"
+      className="mb-3 flex flex-wrap items-start gap-3 rounded border border-emerald-700/40 bg-emerald-50 p-3 text-sm text-emerald-950 dark:bg-emerald-950/40 dark:text-emerald-100 projector:hidden"
     >
       <p className="min-w-0 flex-1">
         <strong>Welcome.</strong> This is a ready-made example. Change the code and press <strong>Run</strong>, pick another example from the

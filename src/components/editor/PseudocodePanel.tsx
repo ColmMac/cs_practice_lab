@@ -48,7 +48,7 @@ export function PseudocodePanel() {
   }
 
   return (
-    <Panel className="shrink-0">
+    <Panel className="shrink-0 projector:hidden">
       <h2 className="text-sm font-semibold">
         <button
           type="button"

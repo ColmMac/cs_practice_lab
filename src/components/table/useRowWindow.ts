@@ -1,9 +1,11 @@
 import { useVirtualizer } from '@tanstack/react-virtual'
-import { useLayoutEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useState } from 'react'
+import { useProjector } from '../ui/projector'
 
 /** Tables up to this many rows are rendered in full; longer ones are windowed. */
 export const VIRTUALISE_ABOVE = 300
 const ROW_ESTIMATE = 33
+const PROJECTOR_ROW_ESTIMATE = 45
 const OVERSCAN = 15
 
 /** Layout numbers for rendering. Kept apart from the ref callbacks so reading them during render is plainly safe. */
@@ -31,6 +33,7 @@ export interface RowWindowRefs {
 export function useRowWindow(count: number, enabled: boolean): { view: RowWindowView; refs: RowWindowRefs } {
   const [body, setBody] = useState<HTMLTableSectionElement | null>(null)
   const [margin, setMargin] = useState(0)
+  const projector = useProjector((s) => s.on)
   const scrollEl = enabled ? (body?.closest<HTMLElement>('[data-scroll-parent]') ?? null) : null
 
   // Re-measure after EVERY render: anything above the table (a banner, the study toolbar) moves it. This cannot
@@ -47,10 +50,13 @@ export function useRowWindow(count: number, enabled: boolean): { view: RowWindow
   const virtualizer = useVirtualizer({
     count: scrollEl ? count : 0,
     getScrollElement: () => scrollEl,
-    estimateSize: () => ROW_ESTIMATE,
+    estimateSize: () => (projector ? PROJECTOR_ROW_ESTIMATE : ROW_ESTIMATE),
     overscan: OVERSCAN,
     scrollMargin: margin,
   })
+
+  // Projector mode changes every row's height: forget the old measurements (rows on screen report their new size).
+  useEffect(() => virtualizer.measure(), [virtualizer, projector])
 
   const refs: RowWindowRefs = { body: setBody, row: virtualizer.measureElement }
   if (!scrollEl) return { view: { active: false, indices: null, padTop: 0, padBottom: 0 }, refs }

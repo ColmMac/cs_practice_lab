@@ -18,6 +18,8 @@ export interface TableModel {
   code?: string
   /** Language id for fenced code blocks. */
   codeLanguage?: string
+  /** Program inputs, shown under the program on a printed worksheet. */
+  inputs?: string[]
 }
 
 export interface BuildOptions {
@@ -27,6 +29,10 @@ export interface BuildOptions {
   includeCode?: boolean
   code?: string
   codeLanguage?: string
+  /** Blank EVERY cell, line numbers included (the printed exam grid). */
+  blankAll?: boolean
+  /** Empty rows added after the last one. */
+  extraRows?: number
 }
 
 export function buildTableModel(columns: ColumnDef[], rows: TraceRow[], opts: BuildOptions): TableModel {
@@ -35,11 +41,51 @@ export function buildTableModel(columns: ColumnDef[], rows: TraceRow[], opts: Bu
     title: worksheet ? 'Trace table (worksheet)' : 'Trace table',
     variant: opts.variant,
     columns: columns.map((c) => ({ id: c.id, header: columnLabel(c) })),
-    rows: rows.map((row) => {
-      const step = row.stepIndices[0]!
-      return columns.map((c) => (worksheet && opts.masked?.has(cellKey(step, c.id)) ? '' : (row.cells[c.id]?.display ?? '')))
-    }),
+    rows: [
+      ...rows.map((row) => {
+        const step = row.stepIndices[0]!
+        return columns.map((c) =>
+          opts.blankAll || (worksheet && opts.masked?.has(cellKey(step, c.id))) ? '' : (row.cells[c.id]?.display ?? ''),
+        )
+      }),
+      ...Array.from({ length: opts.extraRows ?? 0 }, () => columns.map(() => '')),
+    ],
     ...(opts.includeCode && opts.code ? { code: opts.code.replace(/\s+$/, ''), codeLanguage: opts.codeLanguage } : {}),
+  }
+}
+
+/** Spare rows on the student's grid, so its length doesn't give the number of rows away exactly. */
+export const PACK_SPARE_ROWS = 2
+
+export interface PackOptions {
+  /** The study mask, used only when `useStudyBlanks` is set. */
+  masked: ReadonlySet<string>
+  /** Leave the unmasked cells filled in. Ignored when the mask is empty: that would print the answers. */
+  useStudyBlanks: boolean
+  code: string
+  codeLanguage?: string
+  inputs?: string[]
+}
+
+export interface PrintPackModel {
+  worksheet: TableModel
+  key: TableModel
+}
+
+/** The two parts of "Print worksheet + answer key": the student's grid (with the program) and the mark scheme. */
+export function buildPrintPack(columns: ColumnDef[], rows: TraceRow[], opts: PackOptions): PrintPackModel {
+  const worksheet = buildTableModel(columns, rows, {
+    variant: 'worksheet',
+    masked: opts.masked,
+    blankAll: !(opts.useStudyBlanks && opts.masked.size > 0),
+    extraRows: PACK_SPARE_ROWS,
+    includeCode: true,
+    code: opts.code,
+    codeLanguage: opts.codeLanguage,
+  })
+  return {
+    worksheet: opts.inputs?.length ? { ...worksheet, inputs: opts.inputs } : worksheet,
+    key: { ...buildTableModel(columns, rows, { variant: 'key' }), title: 'Mark scheme' },
   }
 }
 

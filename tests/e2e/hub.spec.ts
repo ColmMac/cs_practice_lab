@@ -59,3 +59,44 @@ test.describe('phone width (375 px)', () => {
     })
   }
 })
+
+test.describe('the trace page in projector mode', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem('tts:projector', '1'))
+  })
+
+  /** A table with a selected row on screen: the largest text, the highlight and the bar all at once. */
+  async function openWithTable(page: Page) {
+    await page.goto('/trace-table')
+    await expect(page.locator('html')).toHaveClass(/\bprojector\b/)
+    const rows = page.getByRole('table', { name: 'Trace table' }).locator('tbody tr')
+    await expect(rows.first()).toBeVisible({ timeout: 80_000 })
+    await rows.nth(1).click()
+  }
+
+  test.describe('at phone width (375 px)', () => {
+    test.use({ viewport: { width: 375, height: 800 } })
+
+    test('the toggle is on screen and nothing scrolls the page sideways', async ({ page }) => {
+      await openWithTable(page)
+      const box = await page.getByRole('button', { name: /projector/i }).boundingBox()
+      expect(box!.x).toBeGreaterThanOrEqual(0)
+      expect(box!.x + box!.width).toBeLessThanOrEqual(375)
+      expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0)
+      // `main` is the scroll box on narrow screens: it must not scroll sideways either
+      expect(await page.locator('main').evaluate((el) => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(0)
+    })
+  })
+
+  test.describe('axe', () => {
+    test.use({ bypassCSP: true })
+
+    for (const theme of ['light', 'dark'] as const) {
+      test(`no violations in ${theme} mode`, async ({ page }) => {
+        await page.addInitScript((t) => localStorage.setItem('tts:theme', t), theme)
+        await openWithTable(page)
+        expect(await axeViolations(page), theme).toEqual([])
+      })
+    }
+  })
+})

@@ -21,6 +21,11 @@ function ExportMenuFor({ result }: { result: TraceResult }) {
   const { exportOptions, setExportOptions } = useStore()
   const ranInput = useStore((s) => s.ranInput)
   const { table, maskedCount, options } = useExportData(result)
+  const setPrintJob = useStore((s) => s.setPrintJob)
+  const printPack = () => {
+    setPrintJob('pack')
+    window.print()
+  }
   const baseName = exportBaseName(table.variant)
   const json = () =>
     toJson({
@@ -71,12 +76,35 @@ function ExportMenuFor({ result }: { result: TraceResult }) {
         </li>
       )}
       trailing={() => (
-        <li className={EXPORT_ROW}>
-          <span>Paper / PDF</span>
-          <Button variant="small" onClick={() => window.print()}>
-            Print…
-          </Button>
-        </li>
+        <>
+          <li className={EXPORT_ROW}>
+            <span>Paper / PDF</span>
+            <Button variant="small" onClick={() => window.print()}>
+              Print…
+            </Button>
+          </li>
+          <li className="border-t border-slate-200 pt-2 dark:border-slate-700">
+            <Button variant="small" onClick={printPack}>
+              Print worksheet + answer key
+            </Button>
+            <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
+              The program with a blank grid, then the mark scheme on a new page.
+            </p>
+            <label className="mt-1 flex items-center gap-2 text-xs">
+              <input
+                type="checkbox"
+                checked={exportOptions.packStudyBlanks}
+                onChange={(e) => setExportOptions({ packStudyBlanks: e.target.checked })}
+              />
+              Use the Study mode blanks on the worksheet
+            </label>
+            {exportOptions.packStudyBlanks && maskedCount === 0 && (
+              <p className="mt-1 text-xs text-amber-800 dark:text-amber-300">
+                Study mode hides nothing yet, so the whole grid will be blank.
+              </p>
+            )}
+          </li>
+        </>
       )}
     />
   )

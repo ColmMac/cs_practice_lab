@@ -28,6 +28,14 @@ export function ExportTable({ model, fit = false }: Props) {
           {model.code}
         </pre>
       )}
+      {model.inputs && (
+        <div style={{ margin: '0 0 12px' }}>
+          <p style={{ margin: '0 0 4px', fontFamily: 'system-ui, sans-serif' }}>Program inputs, in order:</p>
+          <pre style={{ margin: 0, padding: 8, border: '1px solid #bbb', fontSize: 13, whiteSpace: 'pre-wrap' }}>
+            {model.inputs.join('\n')}
+          </pre>
+        </div>
+      )}
       <table style={{ borderCollapse: 'collapse', width: fit ? '100%' : undefined }}>
         <thead>
           <tr>

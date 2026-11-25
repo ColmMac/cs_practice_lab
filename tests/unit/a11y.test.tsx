@@ -26,7 +26,7 @@ const RULES = { 'color-contrast': { enabled: false }, 'document-title': { enable
 const CLEAN = {
   result: null, ranSig: null, ranInput: null, running: false, hoverStep: null, selectedStep: null, watchErrors: {},
   shared: null, sharedLinkInvalid: false, study: null, studySessions: {}, studyOrder: [], welcomed: false,
-  exportOptions: { variant: 'key' as const, includeCode: false },
+  exportOptions: { variant: 'key' as const, includeCode: false, packStudyBlanks: false },
 }
 
 function mount(result: TraceResult = traces.digitSum, workspace: Partial<ReturnType<typeof defaultWorkspace>> = {}) {

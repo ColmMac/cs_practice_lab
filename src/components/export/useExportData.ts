@@ -2,14 +2,18 @@ import { useMemo } from 'react'
 import type { RowOptions } from '../../core/derive/rows'
 import { buildTableModel, type TableModel } from '../../core/export/tableModel'
 import { maskableCells, selectMasks } from '../../core/study/mask'
-import type { TraceResult } from '../../core/types'
+import type { ColumnDef, TraceResult, TraceRow } from '../../core/types'
 import { useStore } from '../../store'
 import { useTableData } from '../table/useTableData'
 
 export interface ExportData {
   table: TableModel
-  /** How many cells the worksheet blanks (the study mask). */
+  /** The cells the worksheet blanks (the study mask), and how many there are. */
+  masked: ReadonlySet<string>
   maskedCount: number
+  /** The rows and columns as shown. */
+  columns: ColumnDef[]
+  rows: TraceRow[]
   /** Granularity / display style of the table being exported. */
   options: RowOptions
 }
@@ -34,5 +38,5 @@ export function useExportData(result: TraceResult): ExportData {
     () => buildTableModel(columns, rows, { variant, masked, includeCode, code: ranCode, codeLanguage: result.language }),
     [columns, rows, variant, masked, includeCode, ranCode, result.language],
   )
-  return { table, maskedCount: masked.size, options }
+  return { table, masked, maskedCount: masked.size, columns, rows, options }
 }

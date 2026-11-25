@@ -12,6 +12,9 @@ import { answerGridKeyDown } from '../study/useAnswerGrid'
 import { useRowWindow, VIRTUALISE_ABOVE } from './useRowWindow'
 import { useTableData } from './useTableData'
 
+/** From the back of a room a tint is not enough: the selected row also gets the editor's 4 px bar. */
+const PROJECTOR_SELECTED_BAR =
+  'projector:[&>td:first-child]:shadow-[inset_4px_0_0_var(--color-amber-700)] dark:projector:[&>td:first-child]:shadow-[inset_4px_0_0_var(--color-amber-500)]'
 
 export function TraceTable({ result, stale }: { result: TraceResult; stale: boolean }) {
   const { selectedStep, hoverStep, setHoverStep, selectStep } = useStore()
@@ -142,7 +145,7 @@ export function TraceTable({ result, stale }: { result: TraceResult; stale: bool
                 }}
                 className={`cursor-pointer focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-emerald-700 ${
                   selected
-                    ? 'bg-yellow-200 dark:bg-yellow-900/50'
+                    ? `bg-yellow-200 dark:bg-yellow-900/50 ${PROJECTOR_SELECTED_BAR}`
                     : hovered
                       ? 'bg-yellow-100 dark:bg-yellow-900/25'
                       : index % 2 === 0
@@ -159,7 +162,7 @@ export function TraceTable({ result, stale }: { result: TraceResult; stale: bool
                     <td
                       key={c.id}
                       title={cell?.note}
-                      className={`${td} ${cell?.written ? 'font-bold' : 'text-slate-600 dark:text-slate-400'} ${c.id === OUTPUT_COL ? 'whitespace-pre' : ''}`}
+                      className={`${td} ${cell?.written ? 'font-bold' : 'text-slate-600 dark:text-slate-400 projector:text-slate-800 dark:projector:text-slate-200'} ${c.id === OUTPUT_COL ? 'whitespace-pre' : ''}`}
                       style={c.id === LINE_COL ? { paddingLeft: 12 + row.depth * 14 } : undefined}
                     >
                       {question && study ? (
