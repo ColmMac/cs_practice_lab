@@ -109,33 +109,33 @@ Gate: the full E2E suite still passes (stop any `vite preview` on :4173 first). 
 ## P4. Trust pages, per-route SEO and structured data
 
 **Pages**
-- [ ] `/about` (`src/app/AboutPage.tsx`): mission (free, no-login practice for exam-style CS skills), who it's for (UK GCSE, SQA National 5/Higher, A-Level, university CS1), what each tool does in one line, how it works (runs in the browser, nothing uploaded), contact `contact@cspracticelab.com`, and the source on GitHub. Plain, factual, no marketing adjectives.
-- [ ] `/privacy` (`src/app/PrivacyPage.tsx`), describing **only what runs** (F17):
+- [x] `/about` (`src/app/AboutPage.tsx`): mission (free, no-login practice for exam-style CS skills), who it's for (UK GCSE, SQA National 5/Higher, A-Level, university CS1), what each tool does in one line, how it works (runs in the browser, nothing uploaded), contact `contact@cspracticelab.com`, and the source on GitHub. Plain, factual, no marketing adjectives.
+- [x] `/privacy` (`src/app/PrivacyPage.tsx`), describing **only what runs** (F17):
   - no accounts. `localStorage` keys and what they hold, how to clear them (the mastery "Reset" button and browser settings)
   - jsDelivr serves the Python runtime and receives the visitor's IP. Cloudflare hosts the site and keeps standard request logs
   - Google AdSense: cookies and identifiers, Google as an independent controller, a link to Google's "How Google uses information from sites that use our services", and opting out via **Google Ads Settings** and `youradchoices`/`youronlinechoices`
   - UK GDPR / EEA: lawful bases, consent through the CMP, and a **"Manage cookie choices"** button (it calls the CMP's revocation entry point, `googlefc.showRevocationMessage()`, when it's loaded, and is otherwise hidden), the child-audience stance from P0, rights, and the ICO complaint route
   - contact, and a "last updated" date
-- [ ] Add both pages to `routes.tsx` (lazy, using the shared Suspense fallback from P11) and to `SITE_PATHS`. Make the non-tool routes separate from `TOOLS` (for example `INFO_PAGES`) so the nav stays four tools.
+- [x] Add both pages to `routes.tsx` (lazy, using the shared Suspense fallback from P11) and to `SITE_PATHS`. Make the non-tool routes separate from `TOOLS` (for example `INFO_PAGES`) so the nav stays four tools.
 
 **Head tags per route**
-- [ ] `PageMeta` renders: unique `<title>` (`"<Page> · CS Practice Lab"`, home just "CS Practice Lab"), description, `link rel=canonical` = `SITE_URL + path` (no query, no trailing slash except `/`), `og:type`, `og:url` (= canonical), `og:title`, `og:description`, `og:site_name`, `og:image` (absolute), `twitter:card=summary_large_image`. The 404 page stays `noindex` with no canonical.
-- [ ] JSON-LD (React 19 hoists `<script type="application/ld+json">`. Check it lands in `<head>`. If it doesn't, render it in-body, which Google accepts):
+- [x] `PageMeta` renders: unique `<title>` (`"<Page> · CS Practice Lab"`, home just "CS Practice Lab"), description, `link rel=canonical` = `SITE_URL + path` (no query, no trailing slash except `/`), `og:type`, `og:url` (= canonical), `og:title`, `og:description`, `og:site_name`, `og:image` (absolute), `twitter:card=summary_large_image`. The 404 page stays `noindex` with no canonical.
+- [x] JSON-LD (React 19 hoists `<script type="application/ld+json">`. Check it lands in `<head>`. If it doesn't, render it in-body, which Google accepts):
   - every page: a `WebSite` with `@id: SITE_URL + '/#website'`, `name: SITE_NAME`, `url: SITE_URL + '/'`
   - each tool page: a `WebApplication` (`@id: canonical + '#app'`, `name`, `url`, `applicationCategory: EducationalApplication`, `operatingSystem: Any`, `isAccessibleForFree: true`, `offers` price 0 GBP, `isPartOf` → the website `@id`)
   - each tool page with an FAQ block (P9): `FAQPage` whose questions and answers are **generated from the same data** the visible FAQ renders, so they can't drift
-- [ ] **The CSP and JSON-LD:** `type="application/ld+json"` is a data block, not script execution, so `script-src` doesn't block it. Verify there are no CSP console errors under `npm run preview`.
+- [x] **The CSP and JSON-LD:** `type="application/ld+json"` is a data block, not script execution, so `script-src` doesn't block it. Verify there are no CSP console errors under `npm run preview`.
 
 **Static per-route HTML (F9)**
-- [ ] Extend the `seoFiles` plugin. After the bundle is written, clone the built `index.html` into `dist/<route>.html` for every `SITE_PATHS` entry except `/` (and patch `index.html` itself for `/`), with that route's title, description, canonical, OG tags, JSON-LD and a `<noscript>` summary of the page's guide text. Build the strings from `tools.ts` and `site.ts` so the static and runtime heads are identical. Keep `data-default` handling: `main.tsx` must remove **every** static tag that React re-renders (description, canonical, OG and JSON-LD all get `data-default`), so there are never duplicates.
-- [ ] Cloudflare Pages serves `/trace-table` from `trace-table.html` (pretty URLs) and redirects `/trace-table.html` → `/trace-table`. **Verify on a preview deployment** that there is no trailing-slash redirect, so the URL matches the canonical. `vite preview` may not map extensionless paths to `.html`. If it doesn't, add a tiny preview-only middleware in `vite.config.ts` so E2E sees what production serves.
-- [ ] Unit-test the shell generator: each route gets exactly one canonical, its own title, and valid JSON (`JSON.parse` of each ld+json block).
+- [x] Extend the `seoFiles` plugin. After the bundle is written, clone the built `index.html` into `dist/<route>.html` for every `SITE_PATHS` entry except `/` (and patch `index.html` itself for `/`), with that route's title, description, canonical, OG tags, JSON-LD and a `<noscript>` summary of the page's guide text. Build the strings from `tools.ts` and `site.ts` so the static and runtime heads are identical. Keep `data-default` handling: `main.tsx` must remove **every** static tag that React re-renders (description, canonical, OG and JSON-LD all get `data-default`), so there are never duplicates.
+- [x] Cloudflare Pages serves `/trace-table` from `trace-table.html` (pretty URLs) and redirects `/trace-table.html` → `/trace-table`. **Verify on a preview deployment** that there is no trailing-slash redirect, so the URL matches the canonical. `vite preview` may not map extensionless paths to `.html`. If it doesn't, add a tiny preview-only middleware in `vite.config.ts` so E2E sees what production serves.
+- [x] Unit-test the shell generator: each route gets exactly one canonical, its own title, and valid JSON (`JSON.parse` of each ld+json block).
 
 **sitemap and robots (F5)**
-- [ ] The generator uses `SITE_URL` (default origin), so the sitemap is **always** emitted. It includes `/about` and `/privacy`, plus `<lastmod>` (build date). Remove the "not generated" warning branch and its test expectation.
-- [ ] `robots.txt`: `User-agent: *`, `Allow: /`, `Sitemap: https://cspracticelab.com/sitemap.xml`.
+- [x] The generator uses `SITE_URL` (default origin), so the sitemap is **always** emitted. It includes `/about` and `/privacy`, plus `<lastmod>` (build date). Remove the "not generated" warning branch and its test expectation.
+- [x] `robots.txt`: `User-agent: *`, `Allow: /`, `Sitemap: https://cspracticelab.com/sitemap.xml`.
 
-Gate: unit and E2E green. `curl` the built files (`dist/sitemap.xml`, `dist/robots.txt`, `dist/trace-table.html`) and read them.
+Gate: unit and E2E green. `curl` the built files (`dist/sitemap.xml`, `dist/robots.txt`, `dist/trace-table.html`) and read them. *2026-11-25: green. 1188 unit tests, typecheck and lint, plus the targeted E2E specs (`seo`, `trust-pages`, `layout`, `design`, `shell`: 85 tests, axe on `/about` and `/privacy` in light and dark included). The full E2E suite was not run. The built files were read. Notes: `vite preview` already serves each shell at its extensionless path, so no middleware was needed. The Cloudflare preview-deployment check (no trailing-slash redirect) is **not done**: nothing is deployed yet, so it moved to P13. React 19 does not hoist JSON-LD, so at runtime those blocks are in the body; the static shells have them in `<head>`. Tool-page `noscript` text is the name, description and blurb until P9 adds the guides. `FAQPage` is built from `PageMeta`’s `faq` prop, which no page passes until P9 (P9 must also pass the same data to the shell). The privacy page says adverts are off unless the build has a valid `VITE_ADSENSE_CLIENT`.*
 
 ---
 
@@ -291,7 +291,7 @@ Gate: `npm run test:e2e` green on both projects.
 - [ ] `npm run typecheck` · `npm run lint` · `npm test` · `npm run test:py` (3.12, 3.13, 3.14) · `npm run test:e2e`, all green. Record the counts in `CLAUDE.md` Status.
 - [ ] Golden files reviewed **by hand**: `tests/fixtures/export/*` (brand change F15), `tests/fixtures/presets/*` if any preset changed.
 - [ ] axe on the real page (browser pane), light and dark, for all seven routes plus Study mode on each tool.
-- [ ] Cloudflare Pages preview deployment with `VITE_SITE_URL` set and the ad env vars **unset**: open each route, then view the source to check the canonical, JSON-LD and noscript text. Check `/sitemap.xml`, `/robots.txt` and `/ads.txt`, the `_redirects` log line (P5), the response headers (`curl -I`), and that Pyodide loads with no CSP errors.
+- [ ] Cloudflare Pages preview deployment with `VITE_SITE_URL` set and the ad env vars **unset**: open each route, then view the source to check the canonical, JSON-LD and noscript text. Check that each route is served with **no trailing-slash redirect** and that `/trace-table.html` redirects to `/trace-table` (from P4). Check `/sitemap.xml`, `/robots.txt` and `/ads.txt`, the `_redirects` log line (P5), the response headers (`curl -I`), and that Pyodide loads with no CSP errors.
 - [ ] Optional: Google's Rich Results Test and the Schema.org validator on two routes. Lighthouse (SEO and best practices) on `/` and `/trace-table`.
 - [ ] Production deploy, then add the domain in Search Console and submit the sitemap.
 - [ ] Apply to AdSense, which needs the site live with P4 and P9 content. On approval: set `VITE_ADSENSE_CLIENT` and `VITE_ADSENSE_SLOT` in Pages → Settings → Environment variables (Production), put the real line in `public/ads.txt`, redeploy, and recheck the CSP with live ads (P5).

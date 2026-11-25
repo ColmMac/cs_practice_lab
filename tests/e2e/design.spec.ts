@@ -7,7 +7,7 @@ test.beforeEach(async ({ page }) => {
 /** Glyphs that were button decoration. The state and verdict marks (✓ ≈ ✗ ⇄ ◆ ★ …) are meaning, and stay. */
 const DECORATION = /[\u{1F000}-\u{1FAFF}⇪⇩☀☾✕▾▸◀]/u
 
-const ROUTES = ['/', '/trace-table', '/truth-tables', '/number-systems', '/sorting-visualizer'] as const
+const ROUTES = ['/', '/trace-table', '/truth-tables', '/number-systems', '/sorting-visualizer', '/about', '/privacy'] as const
 
 async function ready(page: Page, path: string) {
   await page.goto(path)

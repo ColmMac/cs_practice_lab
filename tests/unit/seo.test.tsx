@@ -3,7 +3,7 @@ import { resolve } from 'node:path'
 import { render } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { PageMeta } from '../../src/app/PageMeta'
-import { SITE_PATHS, TOOLS } from '../../src/app/tools'
+import { INFO_PAGES, SITE_PATHS, TOOLS } from '../../src/app/tools'
 import { normaliseOrigin, resolveSiteUrl, SITE_DESCRIPTION, SITE_NAME } from '../../src/config/site'
 
 const canonical = () => document.head.querySelector('link[rel="canonical"]')?.getAttribute('href')
@@ -26,9 +26,10 @@ describe('seo', () => {
     expect(resolveSiteUrl('https://example.com/')).toBe('https://example.com')
   })
 
-  it('the sitemap covers the home page and the four tools, each tool with a description', () => {
-    expect(SITE_PATHS).toEqual(['/', '/trace-table', '/truth-tables', '/number-systems', '/sorting-visualizer'])
-    for (const t of TOOLS) expect(t.description.length).toBeGreaterThan(40)
+  it('the sitemap covers the home page, the four tools and the two info pages, each with a description', () => {
+    expect(SITE_PATHS).toEqual(['/', '/trace-table', '/truth-tables', '/number-systems', '/sorting-visualizer', '/about', '/privacy'])
+    expect(TOOLS).toHaveLength(4) // the info pages stay out of the nav and the home directory
+    for (const p of [...TOOLS, ...INFO_PAGES]) expect(p.description.length).toBeGreaterThan(40)
   })
 
   it('index.html repeats the site name and description from site.ts', () => {
@@ -68,13 +69,30 @@ describe('seo', () => {
     view.unmount()
   })
 
-  it('a noindex page has no canonical', () => {
+  it('PageMeta gives a tool page its social tags and structured data', () => {
+    const view = render(
+      <MemoryRouter initialEntries={['/truth-tables']}>
+        <PageMeta title="Truth tables" description="d" />
+      </MemoryRouter>,
+    )
+    const og = (name: string) => document.head.querySelector(`meta[property="og:${name}"]`)?.getAttribute('content')
+    expect(og('url')).toBe('https://cspracticelab.com/truth-tables')
+    expect(og('title')).toBe('Truth tables · CS Practice Lab')
+    expect(og('image')).toBe('https://cspracticelab.com/og-image.png')
+    expect(document.head.querySelector('meta[name="twitter:card"]')?.getAttribute('content')).toBe('summary_large_image')
+    const blocks = [...document.querySelectorAll('script[type="application/ld+json"]')].map((s) => JSON.parse(s.textContent!))
+    expect(blocks.map((b) => b['@type'])).toEqual(['WebSite', 'WebApplication'])
+    view.unmount()
+  })
+
+  it('a noindex page has no canonical, social tags or structured data', () => {
     const view = render(
       <MemoryRouter initialEntries={['/nope']}>
         <PageMeta title="Page not found" description="d" noindex />
       </MemoryRouter>,
     )
     expect(canonical()).toBeUndefined()
+    expect(document.querySelector('meta[property^="og:"], script[type="application/ld+json"]')).toBeNull()
     view.unmount()
   })
 })

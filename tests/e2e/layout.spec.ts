@@ -5,7 +5,7 @@ test.beforeEach(async ({ page }) => {
 })
 
 const TOOL_ROUTES = ['/trace-table', '/truth-tables', '/number-systems', '/sorting-visualizer'] as const
-const ALL_ROUTES = ['/', ...TOOL_ROUTES, '/no-such-page'] as const
+const ALL_ROUTES = ['/', ...TOOL_ROUTES, '/about', '/privacy', '/no-such-page'] as const
 
 const footer = (page: Page) => page.getByRole('contentinfo')
 const nav = (page: Page) => page.getByRole('navigation', { name: 'Tools' })

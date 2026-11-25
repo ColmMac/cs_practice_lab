@@ -15,6 +15,15 @@ const NumberSystemsPage = lazy(() =>
   import('../components/numbers/NumberSystemsPage').then((m) => ({ default: m.NumberSystemsPage })),
 )
 
+const AboutPage = lazy(() => import('./AboutPage').then((m) => ({ default: m.AboutPage })))
+
+const PrivacyPage = lazy(() => import('./PrivacyPage').then((m) => ({ default: m.PrivacyPage })))
+
+const loading = (
+  <p role="status" className="p-4 text-sm">
+    Loading…
+  </p>
+)
 
 export function AppRoutes() {
   return (
@@ -24,7 +33,7 @@ export function AppRoutes() {
         <Route
           path="trace-table"
           element={
-            <Suspense fallback={<p role="status" className="p-4 text-sm">Loading…</p>}>
+            <Suspense fallback={loading}>
               <TraceTablePage />
             </Suspense>
           }
@@ -32,7 +41,7 @@ export function AppRoutes() {
         <Route
           path="truth-tables"
           element={
-            <Suspense fallback={<p role="status" className="p-4 text-sm">Loading…</p>}>
+            <Suspense fallback={loading}>
               <TruthTablePage />
             </Suspense>
           }
@@ -40,7 +49,7 @@ export function AppRoutes() {
         <Route
           path="number-systems"
           element={
-            <Suspense fallback={<p role="status" className="p-4 text-sm">Loading…</p>}>
+            <Suspense fallback={loading}>
               <NumberSystemsPage />
             </Suspense>
           }
@@ -48,8 +57,24 @@ export function AppRoutes() {
         <Route
           path="sorting-visualizer"
           element={
-            <Suspense fallback={<p role="status" className="p-4 text-sm">Loading…</p>}>
+            <Suspense fallback={loading}>
               <SortingPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="about"
+          element={
+            <Suspense fallback={loading}>
+              <AboutPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="privacy"
+          element={
+            <Suspense fallback={loading}>
+              <PrivacyPage />
             </Suspense>
           }
         />

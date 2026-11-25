@@ -34,9 +34,27 @@ export const TOOLS: readonly ToolInfo[] = [
   },
 ]
 
-/** Every indexable route, the home page first. sitemap.xml is generated from this. */
-export const SITE_PATHS: readonly string[] = ['/', ...TOOLS.map((t) => t.path)]
+/** Pages that aren't tools. The footer links to them; they stay out of the nav and the home directory. */
+export const INFO_PAGES: readonly Pick<ToolInfo, 'path' | 'name' | 'description'>[] = [
+  {
+    path: '/about',
+    name: 'About',
+    description: 'What CS Practice Lab is, who it is for, what each tool does, how it works in your browser, and how to get in touch.',
+  },
+  {
+    path: '/privacy',
+    name: 'Privacy',
+    description: 'What CS Practice Lab saves in your browser, which services see your IP address, how adverts and cookies work, and your rights.',
+  },
+]
+
+/** Every indexable route, the home page first. sitemap.xml and the static HTML for each route come from this. */
+export const SITE_PATHS: readonly string[] = ['/', ...[...TOOLS, ...INFO_PAGES].map((p) => p.path)]
 
 export function toolDescription(path: string): string {
   return TOOLS.find((t) => t.path === path)?.description ?? ''
+}
+
+export function infoPage(path: '/about' | '/privacy') {
+  return INFO_PAGES.find((p) => p.path === path)!
 }

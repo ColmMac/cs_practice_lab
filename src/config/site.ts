@@ -18,6 +18,11 @@ export function resolveSiteUrl(raw: string | undefined): string {
 // config code passes what `loadEnv` returned to `resolveSiteUrl` itself.
 export const SITE_URL = resolveSiteUrl(import.meta.env?.VITE_SITE_URL)
 
+/** A well-formed AdSense publisher ID. Anything else (including nothing) means this build has no adverts. */
+export function isAdsenseClient(raw: string | undefined): boolean {
+  return /^ca-pub-\d{16}$/.test(raw ?? '')
+}
+
 export const SITE_NAME = 'CS Practice Lab'
 
 export const SITE_DESCRIPTION =

@@ -3,8 +3,9 @@ import { readFileSync } from 'node:fs'
 import { defineConfig, loadEnv, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
+import { renderShell, shellFileName, shellPages } from './src/app/staticShell.ts'
 import { SITE_PATHS } from './src/app/tools.ts'
-import { normaliseOrigin } from './src/config/site.ts'
+import { isAdsenseClient, resolveSiteUrl } from './src/config/site.ts'
 
 /**
  * The production headers live in ONE place: public/_headers, the file Netlify and Cloudflare Pages serve. The
@@ -30,42 +31,55 @@ const siteHeaders = readSiteHeaders()
 const devHeaders = Object.fromEntries(Object.entries(siteHeaders).filter(([name]) => name !== 'Content-Security-Policy'))
 
 /**
- * robots.txt and sitemap.xml, built from the route table (src/app/tools.ts). Absolute URLs need the production
- * origin: with VITE_SITE_URL unset the sitemap is skipped (with a warning) and robots.txt omits its Sitemap line.
+ * The files crawlers read, all built from the route table (src/app/tools.ts): robots.txt, sitemap.xml and one HTML
+ * shell per route with that route's own <head> (src/app/staticShell.ts). Runs after Vite has written the script and
+ * style tags into index.html, so every shell has them.
  */
-function seoFiles(origin: string): Plugin {
+function seoFiles(siteUrl: string, adsEnabled: boolean): Plugin {
   return {
     name: 'seo-files',
     apply: 'build',
-    generateBundle() {
-      const site = normaliseOrigin(origin)
-      const robots = ['User-agent: *', 'Allow: /', ...(site ? ['', 'Sitemap: ' + site + '/sitemap.xml'] : [])]
-      this.emitFile({ type: 'asset', fileName: 'robots.txt', source: robots.join('\n') + '\n' })
-      if (!site) {
-        this.warn('VITE_SITE_URL is not set: sitemap.xml was not generated.')
-        return
-      }
-      const urls = SITE_PATHS.map((p) => '  <url><loc>' + site + p + '</loc></url>')
-      const xml = [
-        '<?xml version="1.0" encoding="UTF-8"?>',
-        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
-        ...urls,
-        '</urlset>',
-      ]
-      this.emitFile({ type: 'asset', fileName: 'sitemap.xml', source: xml.join('\n') + '\n' })
+    generateBundle: {
+      order: 'post',
+      handler(_options, bundle) {
+        const robots = ['User-agent: *', 'Allow: /', '', 'Sitemap: ' + siteUrl + '/sitemap.xml']
+        this.emitFile({ type: 'asset', fileName: 'robots.txt', source: robots.join('\n') + '\n' })
+
+        const lastmod = new Date().toISOString().slice(0, 10)
+        const urls = SITE_PATHS.map((p) => '  <url><loc>' + siteUrl + p + '</loc><lastmod>' + lastmod + '</lastmod></url>')
+        const xml = [
+          '<?xml version="1.0" encoding="UTF-8"?>',
+          '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+          ...urls,
+          '</urlset>',
+        ]
+        this.emitFile({ type: 'asset', fileName: 'sitemap.xml', source: xml.join('\n') + '\n' })
+
+        const index = bundle['index.html']
+        if (index?.type !== 'asset') throw new Error('seo-files: the build has no index.html')
+        const template = String(index.source)
+        for (const page of shellPages(adsEnabled)) {
+          const source = renderShell(template, page, siteUrl)
+          if (page.path === '/') index.source = source
+          else this.emitFile({ type: 'asset', fileName: shellFileName(page.path), source })
+        }
+      },
     },
   }
 }
 
-export default defineConfig(({ mode }) => ({
-  plugins: [react(), tailwindcss(), seoFiles(loadEnv(mode, process.cwd(), 'VITE_').VITE_SITE_URL ?? '')],
-  worker: { format: 'es' },
-  server: { headers: devHeaders },
-  preview: { headers: siteHeaders },
-  test: {
-    environment: 'jsdom',
-    globals: true,
-    setupFiles: ['tests/unit/setup.ts'],
-    include: ['tests/unit/**/*.test.{ts,tsx}', 'src/**/*.test.{ts,tsx}'],
-  },
-}))
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), 'VITE_')
+  return {
+    plugins: [react(), tailwindcss(), seoFiles(resolveSiteUrl(env.VITE_SITE_URL), isAdsenseClient(env.VITE_ADSENSE_CLIENT))],
+    worker: { format: 'es' },
+    server: { headers: devHeaders },
+    preview: { headers: siteHeaders },
+    test: {
+      environment: 'jsdom',
+      globals: true,
+      setupFiles: ['tests/unit/setup.ts'],
+      include: ['tests/unit/**/*.test.{ts,tsx}', 'src/**/*.test.{ts,tsx}'],
+    },
+  }
+})

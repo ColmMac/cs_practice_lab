@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('tts:welcomed', '1'))
@@ -10,7 +10,103 @@ const ROUTES = [
   ['/truth-tables', 'Truth tables · CS Practice Lab', /truth tables/i],
   ['/number-systems', 'Number systems · CS Practice Lab', /two’s complement/],
   ['/sorting-visualizer', 'Sorting & searching · CS Practice Lab', /binary search/],
+  ['/about', 'About · CS Practice Lab', /who it is for/],
+  ['/privacy', 'Privacy · CS Practice Lab', /saves in your browser/],
 ] as const
+
+const ORIGIN = 'https://cspracticelab.com'
+const TOOL_PATHS: readonly string[] = ['/trace-table', '/truth-tables', '/number-systems', '/sorting-visualizer']
+
+/** Everything in the document that describes it to a crawler, with how many of each there are. */
+const headOf = (page: Page) =>
+  page.evaluate(() => {
+    const all = (selector: string, attr: string) =>
+      [...document.querySelectorAll(selector)].map((el) => el.getAttribute(attr))
+    return {
+      canonical: all('link[rel="canonical"]', 'href'),
+      description: all('meta[name="description"]', 'content'),
+      ogUrl: all('meta[property="og:url"]', 'content'),
+      ogTitle: all('meta[property="og:title"]', 'content'),
+      ogImage: all('meta[property="og:image"]', 'content'),
+      card: all('meta[name="twitter:card"]', 'content'),
+      leftovers: document.querySelectorAll('[data-default]').length,
+      jsonLd: [...document.querySelectorAll('script[type="application/ld+json"]')].map(
+        (s) => JSON.parse(s.textContent!) as Record<string, unknown>,
+      ),
+    }
+  })
+
+for (const [path, title] of ROUTES) {
+  test(`${path}: after JavaScript there is exactly one of each head tag`, async ({ page }) => {
+    await page.goto(path)
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+    await expect(page).toHaveTitle(title)
+    const head = await headOf(page)
+    const url = `${ORIGIN}${path}`
+    expect(head.canonical).toEqual([url])
+    expect(head.ogUrl).toEqual([url])
+    expect(head.ogTitle).toEqual([title])
+    expect(head.ogImage).toEqual([`${ORIGIN}/og-image.png`])
+    expect(head.card).toEqual(['summary_large_image'])
+    expect(head.description).toHaveLength(1)
+    expect(head.leftovers).toBe(0)
+    expect(head.jsonLd.map((b) => b['@type'])).toEqual(TOOL_PATHS.includes(path) ? ['WebSite', 'WebApplication'] : ['WebSite'])
+    for (const block of head.jsonLd) {
+      expect(String(block.url).startsWith(ORIGIN)).toBe(true)
+      expect(String(block['@id']).startsWith(ORIGIN)).toBe(true)
+    }
+  })
+
+  test(`${path}: the HTML as served, before any JavaScript, is already this page’s`, async ({ page, request }) => {
+    const response = await request.get(path, { maxRedirects: 0 })
+    expect(response.status()).toBe(200)
+    const served = await response.text()
+    await page.goto(path)
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+    const runtime = await headOf(page)
+
+    const raw = await page.evaluate((html) => {
+      const doc = new DOMParser().parseFromString(html, 'text/html')
+      const all = (selector: string, attr: string) => [...doc.head.querySelectorAll(selector)].map((el) => el.getAttribute(attr))
+      return {
+        title: doc.title,
+        canonical: all('link[rel="canonical"]', 'href'),
+        description: all('meta[name="description"]', 'content'),
+        jsonLd: [...doc.head.querySelectorAll('script[type="application/ld+json"]')].map(
+          (s) => JSON.parse(s.textContent!) as Record<string, unknown>,
+        ),
+        noscript: /<noscript>\s*<h1>[^<]+<\/h1>/.test(html),
+      }
+    }, served)
+    expect(raw).toEqual({
+      title,
+      canonical: runtime.canonical,
+      description: runtime.description,
+      jsonLd: runtime.jsonLd,
+      noscript: true,
+    })
+  })
+}
+
+test('sitemap.xml lists all seven routes on the production origin', async ({ request }) => {
+  const response = await request.get('/sitemap.xml')
+  // a missing file would fall through to index.html with a 200, so the type is what counts
+  expect(response.headers()['content-type']).toMatch(/xml/)
+  const xml = await response.text()
+  expect([...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1])).toEqual(ROUTES.map(([path]) => `${ORIGIN}${path}`))
+  expect(xml.match(/<lastmod>\d{4}-\d{2}-\d{2}<\/lastmod>/g)).toHaveLength(ROUTES.length)
+})
+
+test.describe('without JavaScript', () => {
+  test.use({ javaScriptEnabled: false })
+
+  test('the privacy page still has its text and links', async ({ page }) => {
+    await page.goto('/privacy')
+    await expect(page.getByRole('heading', { level: 1, name: 'Privacy' })).toBeVisible()
+    await expect(page.getByRole('heading', { level: 2, name: 'Adverts (Google AdSense)' })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'About', exact: true })).toHaveAttribute('href', '/about')
+  })
+})
 
 for (const [path, title, description] of ROUTES) {
   test(`${path} has its own title and description`, async ({ page }) => {
@@ -38,10 +134,10 @@ test('index.html carries a default title and description for crawlers without JS
   expect(html).toMatch(/<meta\s+data-default\s+name="description"\s+content="[^"]{40,}"/)
 })
 
-test('robots.txt allows crawling', async ({ request }) => {
+test('robots.txt allows crawling and names the sitemap', async ({ request }) => {
   const robots = await request.get('/robots.txt')
-  expect(robots.ok()).toBe(true)
-  expect(await robots.text()).toMatch(/User-agent: \*\s+Allow: \//)
+  expect(robots.headers()['content-type']).toMatch(/^text\/plain/)
+  expect(await robots.text()).toBe('User-agent: *\nAllow: /\n\nSitemap: https://cspracticelab.com/sitemap.xml\n')
 })
 
 // The E2E build has no VITE_SITE_URL, so these are the defaults from src/config/site.ts.
@@ -49,6 +145,7 @@ test('every route has a canonical link on the production origin, and the 404 has
   const canonical = page.locator('head link[rel="canonical"]')
   for (const [path] of ROUTES) {
     await page.goto(path)
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
     await expect(canonical).toHaveCount(1)
     await expect(canonical).toHaveAttribute('href', `https://cspracticelab.com${path}`)
   }
@@ -62,6 +159,7 @@ test('every route has a canonical link on the production origin, and the 404 has
   await page.goto('/nope')
   await expect(page.locator('head meta[name="robots"]')).toHaveAttribute('content', 'noindex')
   await expect(canonical).toHaveCount(0)
+  await expect(page.locator('meta[property^="og:"], script[type="application/ld+json"]')).toHaveCount(0)
 })
 
 test('the head basics: British English, theme colours and real icon files', async ({ page, request }) => {
