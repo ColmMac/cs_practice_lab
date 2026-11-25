@@ -30,6 +30,7 @@ for (const path of ALL_ROUTES) {
     await expect(f.getByRole('link', { name: 'Privacy' })).toHaveAttribute('href', '/privacy')
     await expect(f.getByRole('link', { name: 'Contact' })).toHaveAttribute('href', 'mailto:contact@cspracticelab.com')
     await expect(f.getByRole('link', { name: 'GitHub' })).toHaveAttribute('href', 'https://github.com/ColmMac/cs_practice_lab')
+    await expect(f.getByRole('link', { name: 'Buy me a coffee' })).toHaveAttribute('href', 'https://buymeacoffee.com/cs_practice_lab')
   })
 }
 

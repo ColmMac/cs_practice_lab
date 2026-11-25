@@ -35,4 +35,6 @@ export const SITE_DESCRIPTION =
 
 export const CONTACT_EMAIL = 'contact@cspracticelab.com'
 
+export const SUPPORT_URL = 'https://buymeacoffee.com/cs_practice_lab'
+
 export const REPO_URL = 'https://github.com/ColmMac/cs_practice_lab'

@@ -5,7 +5,7 @@
  * The privacy text describes only what actually runs. A new storage key, a new third-party request or new URL
  * state changes this file in the same commit (a unit test checks the storage keys).
  */
-import { CONTACT_EMAIL, REPO_URL, SITE_NAME } from '../../config/site.ts'
+import { CONTACT_EMAIL, REPO_URL, SITE_NAME, SUPPORT_URL } from '../../config/site.ts'
 import { TOOLS } from '../tools.ts'
 
 export type Inline = string | { text: string; href: string }
@@ -56,6 +56,18 @@ export const ABOUT: InfoDoc = {
             'The tools run in your browser. Python programs are run on your own device by Pyodide, a version of Python that your browser downloads from the jsDelivr network. The code you type and your answers are not uploaded to us. Your work and progress are saved in your browser. The ',
             { text: 'privacy page', href: '/privacy' },
             ' lists what is saved and which other services are involved.',
+          ],
+        },
+      ],
+    },
+    {
+      heading: 'Support the site',
+      blocks: [
+        {
+          p: [
+            'If the tools have helped you revise or teach, you can ',
+            { text: 'support the site on Buy Me a Coffee', href: SUPPORT_URL },
+            '. It is completely optional.',
           ],
         },
       ],

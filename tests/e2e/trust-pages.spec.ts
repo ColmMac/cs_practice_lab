@@ -26,6 +26,7 @@ test('/about says what the site is, links every tool and gives the contact addre
     'Who it’s for',
     'The tools',
     'How it works',
+    'Support the site',
     'Contact',
     'Source code',
   ])
