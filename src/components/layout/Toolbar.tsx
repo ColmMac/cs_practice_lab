@@ -4,11 +4,13 @@ import { RuntimeStatusBadge } from './RuntimeStatusBadge'
 import { ExportMenu } from '../export/ExportMenu'
 import { StudyToggle } from '../study/StudyToggle'
 import { ShareButton } from './ShareButton'
+import { ChallengeLinkButton } from './ChallengeLinkButton'
 import { Button } from '../ui/Button'
 import { ToolHeader } from '../ui/ToolHeader'
 
 export function Toolbar() {
   const { language, run, cancel, running, runnerStatus, loadPreset } = useStore()
+  const inChallenge = useStore((s) => s.challenge !== null)
   const presets = getLanguage(language).presets
   const notReady = runnerStatus.state !== 'ready' && runnerStatus.state !== 'running'
 
@@ -19,7 +21,12 @@ export function Toolbar() {
 Cancel
         </Button>
       ) : (
-        <Button variant="primary" onClick={() => void run()} disabled={notReady} title="Run (Ctrl/⌘ + Enter)">
+        <Button
+          variant="primary"
+          onClick={() => void run()}
+          disabled={notReady || inChallenge}
+          title={inChallenge ? 'Run is off during a challenge: use Start challenge or End challenge' : 'Run (Ctrl/⌘ + Enter)'}
+        >
 ▶ Run
         </Button>
       )}
@@ -42,9 +49,10 @@ Cancel
 
       <StudyToggle />
 
-      <div className="ml-auto flex items-center gap-3">
+      <div className="ml-auto flex flex-wrap items-center gap-3">
         <RuntimeStatusBadge />
         <ExportMenu />
+        <ChallengeLinkButton />
         <ShareButton />
       </div>
     </ToolHeader>

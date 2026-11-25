@@ -6,6 +6,9 @@ import { useExportData } from './useExportData'
 
 function PrintContent() {
   const result = useStore((s) => s.result)
+  // checked here too, not just on the menu: Ctrl/⌘+P never goes through it
+  const inChallenge = useStore((s) => s.challenge !== null)
+  if (inChallenge) return <p>Printing is off during a challenge.</p>
   if (!result || result.steps.length === 0) return null
   return <PrintTable />
 }

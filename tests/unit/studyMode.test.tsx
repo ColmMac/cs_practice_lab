@@ -534,10 +534,10 @@ describe('Study Mode: teacher share links carry the mask settings', () => {
   it('a link with study settings opens with them ready for the next session', async () => {
     const ws = {
       ...defaultWorkspace('print(1)\n'),
-      studyConfig: { maskMode: 'random' as const, percent: 30, columns: [], outputOnly: false, closeCredit: 0 as const },
+      studyConfig: { maskMode: 'random' as const, percent: 30, columns: [], cells: [], outputOnly: false, closeCredit: 0 as const },
       studySeed: 424242,
     }
-    expect(decodeShare(encodeShare(ws))).toMatchObject({ studyConfig: ws.studyConfig, studySeed: 424242 })
+    expect(decodeShare(encodeShare(ws))?.workspace).toMatchObject({ studyConfig: ws.studyConfig, studySeed: 424242 })
 
     history.replaceState(null, '', `/#s=${encodeShare(ws)}`)
     mount(traces.digitSum, { code: 'mine = 1\n' })
@@ -547,7 +547,7 @@ describe('Study Mode: teacher share links carry the mask settings', () => {
 
   it('starting a session uses the workspace settings and records the seed', async () => {
     mount(traces.digitSum, {
-      studyConfig: { maskMode: 'columns', percent: 50, columns: ['<module>:total'], outputOnly: false, closeCredit: 0.5 },
+      studyConfig: { maskMode: 'columns', percent: 50, columns: ['<module>:total'], cells: [], outputOnly: false, closeCredit: 0.5 },
       studySeed: 99,
     })
     await startStudy(userEvent.setup())

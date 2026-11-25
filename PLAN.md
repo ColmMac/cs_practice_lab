@@ -1502,7 +1502,7 @@ Every ticket ends with the §16.2 definition of done: typecheck, lint, `npm test
     - The home page network log still shows no Pyodide.
     - Axe light + dark.
 
-- [ ] **Ticket 4 (C4): Student challenge links and the chosen-cells mask**
+- [x] **Ticket 4 (C4): Student challenge links and the chosen-cells mask**
   - Files: `core/share/urlState.ts`, `core/study/{types,session,mask}.ts`, `store/index.ts` (E, `studyStateFor`, `studyOnRun`, atomic set in `run()`), `ChallengePanel.tsx`, `ChallengeLinkButton.tsx`, `SharedBanner.tsx`, `StudyToolbar.tsx` (`cells` mode authoring: each unmasked question gets a "Blank this" toggle, each masked one a "Show" toggle, both `aria-pressed`), `AnswerCell.tsx` (locked reveal), `ExportMenu.tsx`, `PrintRegion.tsx`, `App.tsx`, `HomePage.tsx` (legacy `/#s=` forward already covers it; add a test).
   - Edge cases (tampering and robustness):
     - `mode` not exactly `'quiz'` → plain shared workspace.
@@ -1628,6 +1628,17 @@ Every ticket ends with the §16.2 definition of done: typecheck, lint, `npm test
 - **Contract addition:** `PseudoLine.note`, for the OCR for-each marker. Comments and blank lines are dropped (`ast` does not keep them); the panel says so.
 - **Existing layout bug, found by the phone-width E2E:** below `lg`, the code column overflowed its grid row, so the table covered the Inputs and Watches controls even without this panel. `main` now scrolls on narrow screens, and the code column scrolls itself on wide ones.
 - Tests: `test_pseudocode.py` (146, passing with the rest on 3.12, 3.13 and 3.14), `tests/unit/pseudocode.test.tsx` (13), `tests/e2e/pseudocode.spec.ts` (6, with axe light + dark and 375 px). The existing home-page E2E still shows no Pyodide on `/`. Full suite 1016 unit, 117 E2E.
+
+#### Implementation notes: C4
+
+- `core/share/urlState.ts` (`encodeShare(ws, quiz?)`, `decodeShare` now returns `DecodedShare`, `buildChallengeUrl`), `maskMode: 'cells'`, `components/layout/ChallengePanel.tsx` and `ChallengeLinkButton.tsx`. All challenge locks are enforced in the store as well as hidden in the UI.
+- **Atomic start:** `run()` applies the result and the study session in one `set()` (`afterRun`, using `studyStateFor`). `App` shows `ChallengePanel` for every state except active-with-a-session. The jsdom and E2E tests watch the DOM for an unmasked table; the E2E also checks that the watcher does fire once the visitor's own open table returns.
+- **Additions to the design:** during a challenge `run()` is a no-op except from Start (a re-run of edited code would have ended the session and drawn an open table), so Run and Ctrl/⌘+Enter are off. The "code has changed" banner offers **End the challenge**. Loading an example leaves the challenge. The link popover says how many cells are hidden, and refuses a payload over `MAX_SHARE_PAYLOAD` (the decoder would reject it).
+- **Stricter than §17.3:** a table is reproduced only if the status is `ok` and both the step count and the `executionKey` match. Changing a trace limit in a later version will therefore send old challenge links to "Show the table anyway".
+- Saved answers (and reveals) are restored into a challenge only if they were made with the same mask and seed.
+- **Names:** the store action is `challengeLink()` (the button does the copying, as `ShareButton` does), not `copyChallengeLink()`. `printJob` belongs to C5 and was not added. `studyOnRun` is in place for C6.
+- **Existing bugs fixed:** `discardShared` did not bump `runToken` or cancel, so a run of shared code that was still going could land on the restored workspace (now tested). The shared banner kept saying "Nothing has been run" after the visitor had pressed Run.
+- Tests: `tests/unit/challengeUrl.test.ts`, `challengeMode.test.tsx`, `tests/e2e/challenge.spec.ts` (7, with axe light + dark and 375 px). C4 did not need splitting.
 
 ### 17.7 Ticket order
 

@@ -8,10 +8,11 @@ Everything runs in your browser. Your code is executed by [Pyodide](https://pyod
 
 - **Trace tables** from real execution: Compact (a row only when something changes) or Every line (including `if`/`while`/`for` tests with ✓/✗ outcomes); values shown only where they change ("exam blanks") or carried forward. Recursion shows call depth, call rows and return values.
 - **Watch expressions** (`arr[i]`, `len(items)`, `i < n`) as extra columns. They are read-only by construction: a watch can't change your program (`arr.pop()` is refused with an explanation).
-- **Study mode**: hide every written cell, a random share, or chosen columns. Answers are graded like an exam marker would: quote style, spacing and dict/set order don't matter; `3` for `3.0`, `true` for `True`, a list written as a tuple are "almost". Hints give the *shape* of an answer, never the answer. A wrong answer offers **Why?** (Alt+W): the working for that line without the answer; after Reveal it states the result too. Fully usable by keyboard.
+- **Study mode**: hide every written cell, a random share, chosen columns, or cells you pick one by one. Answers are graded like an exam marker would: quote style, spacing and dict/set order don't matter; `3` for `3.0`, `true` for `True`, a list written as a tuple are "almost". Hints give the *shape* of an answer, never the answer. A wrong answer offers **Why?** (Alt+W): the working for that line without the answer; after Reveal it states the result too. Fully usable by keyboard.
 - **Exam pseudocode**: read the program in AQA, OCR or SQA style, with the line behind the selected row highlighted. It parses the code without running it. Python with no exam equivalent is left as written and marked, and comments are left out.
 - **Export**: Markdown, CSV, LaTeX (table or full document), JSON (the whole trace), PNG, and print / PDF, each as an **answer key** or a **worksheet** with the study cells left blank.
 - **Share links** carry your code, inputs, watches, column choices and study settings in the URL hash. A shared program is shown for review and **never runs until you press Run**.
+- **Student challenge links** open a table in Study mode with your choice of cells hidden. Nothing runs until the student presses **Start challenge**, and the unmasked table is never drawn on the way. Reveal unlocks after the first check, and exports and printing are off. This is classroom practice, **not** a secure test: the program is in the link.
 - Your workspace and in-progress study sessions are remembered in your browser (`localStorage`).
 
 ## Run it

@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import { CONDITION_COL, resolveColumns, watchColumnId } from '../core/derive/columns'
 import type { RunnerStatus, TraceRunner } from '../core/runner'
-import { buildShareUrl, decodeShare, parseShareHash } from '../core/share/urlState'
+import { buildChallengeUrl, buildShareUrl, decodeShare, parseShareHash, type ChallengeSpec, type ShareUrl } from '../core/share/urlState'
 import { gradeAnswer, type GradingLanguage } from '../core/study/grade'
 import { buildStudyModel, type StudyView } from '../core/study/model'
 import { rememberSession, sanitizeStudyConfig, MAX_ANSWER_LENGTH, type StudySessionData } from '../core/study/session'
@@ -27,6 +27,36 @@ export interface StudyState extends StudyView {
   graded: Record<string, Grade> | null
   /** Answers were restored from a saved session. */
   resumed: boolean
+}
+
+/** A challenge opened from a student link (not persisted: a reload reopens it from the link). */
+export interface ChallengeState {
+  /** review: nothing has run · starting: running · active: masked table · unreproducible: a different table. */
+  stage: 'review' | 'starting' | 'active' | 'unreproducible'
+  spec: ChallengeSpec
+  /** Reveal stays locked until the first Check answers. */
+  checkedOnce: boolean
+  /** The link's mask settings hid nothing in this table, so every cell is hidden instead. */
+  hidNothing: boolean
+}
+
+export interface ChallengeLink extends ShareUrl {
+  unreadable: boolean
+  /** How many cells a student will be asked for, out of how many questions the table has. */
+  hidden: number
+  total: number
+}
+
+/** Why a student link can't be made right now, or null if it can. A challenge needs a complete, current run. */
+export function challengeLinkBlocker(
+  s: Workspace & { result: TraceResult | null; ranSig: string | null; running: boolean; challenge: ChallengeState | null },
+): string | null {
+  if (s.challenge) return 'Not available during a challenge'
+  if (!s.result || s.result.steps.length === 0) return 'Run a program that produces a table first'
+  if (s.running || s.ranSig !== runSignature(s)) return 'Run the current program first'
+  if (s.result.status !== 'ok') return 'The program must run to the end without errors'
+  if (!getLanguage(s.result.language).parseAnswer) return 'Study mode isn’t available for this language yet'
+  return null
 }
 
 interface AppState extends PersistedState {
@@ -56,8 +86,11 @@ interface AppState extends PersistedState {
    * Set while a shared workspace is loaded but not yet kept: `backup` is the user's own workspace, which
    * stays what gets persisted until they choose. `invalid` flags an unusable #s= link.
    */
-  shared: { backup: Workspace } | null
+  shared: { backup: Workspace; brokenChallenge?: true } | null
   sharedLinkInvalid: boolean
+  challenge: ChallengeState | null
+  /** Start this study session in the SAME update that delivers the next result, so no unmasked table renders. */
+  studyOnRun: { config: StudyConfig; seed: number } | null
 
   init(): void
   /** Try loading Python again after it failed (offline, blocked CDN…). */
@@ -104,6 +137,8 @@ interface AppState extends PersistedState {
   toggleHint(key: string): void
   /** Open or close the explanation of a cell graded incorrect. */
   toggleWhy(key: string): void
+  /** Hand-pick a cell to hide or show (the `cells` mask mode). */
+  toggleCellMask(key: string): void
   resetAnswers(): void
   checkAnswers(): void
   selectStepExclusive(i: number): void
@@ -114,6 +149,16 @@ interface AppState extends PersistedState {
   keepShared(): void
   discardShared(): void
   dismissInvalidLink(): void
+
+  // student challenges
+  /** A student link for the table as it is now, or null while challengeLinkBlocker says no. */
+  challengeLink(): ChallengeLink | null
+  /** The one click that runs a challenge's code. */
+  startChallenge(): void
+  /** After a table that didn't match: leave the challenge and study whatever this device produced. */
+  showChallengeTable(): void
+  /** Leave the challenge and bring back the visitor's own workspace. */
+  endChallenge(): void
 }
 
 /** One entry per input() call; a single trailing newline is not an extra (empty) input. */
@@ -183,6 +228,93 @@ function withoutKey(graded: Record<string, Grade> | null, key: string): Record<s
   return copy
 }
 
+/** A new study session for `result`, frozen to the workspace's current view. `saved` resumes earlier answers. */
+function studyStateFor(
+  result: TraceResult,
+  workspace: Workspace,
+  config: StudyConfig,
+  seed: number,
+  saved?: StudySessionData,
+): StudyState {
+  const { visible } = resolveColumns(result, {
+    showEphemeral: workspace.showEphemeral,
+    showCondition: workspace.showCondition,
+    watches: workspace.watches,
+    hidden: workspace.hiddenColumns,
+    order: workspace.columnOrder,
+  })
+  return {
+    executionKey: result.executionKey,
+    columns: visible,
+    granularity: workspace.granularity,
+    display: workspace.displayStyle,
+    config,
+    seed,
+    answers: saved?.answers ?? {},
+    revealed: Object.fromEntries((saved?.revealed ?? []).map((k) => [k, true as const])),
+    hints: {},
+    why: {},
+    graded: null,
+    resumed: !!saved && (Object.keys(saved.answers).length > 0 || saved.revealed.length > 0),
+  }
+}
+
+/** The state update that puts a study session on screen and remembers it by executionKey. */
+function sessionPatch(s: Pick<PersistedState, 'studySessions' | 'studyOrder'>, study: StudyState) {
+  const data: StudySessionData = {
+    config: study.config,
+    seed: study.seed,
+    answers: study.answers,
+    revealed: Object.keys(study.revealed),
+  }
+  return { study, ...rememberSession(s.studySessions, s.studyOrder, study.executionKey, data) }
+}
+
+/**
+ * The session for a challenge that has just run. Earlier answers come back only if they belong to the same mask
+ * (a reload mid-challenge). A link that hides nothing in this table hides everything instead.
+ */
+function challengeSession(
+  s: Workspace & Pick<PersistedState, 'studySessions'>,
+  result: TraceResult,
+  request: { config: StudyConfig; seed: number },
+): { study: StudyState; hidNothing: boolean } {
+  const draft = studyStateFor(result, s, request.config, request.seed)
+  const model = buildStudyModel(result, draft, getLanguage(result.language).formatValue)
+  const hidNothing = model.cells.length > 0 && model.masked.length === 0
+  const config: StudyConfig = hidNothing ? { ...request.config, maskMode: 'all', outputOnly: false } : request.config
+  const saved = s.studySessions[result.executionKey]
+  const sameMask = !!saved && saved.seed === request.seed && JSON.stringify(saved.config) === JSON.stringify(config)
+  return { study: studyStateFor(result, s, config, request.seed, sameMask ? saved : undefined), hidNothing }
+}
+
+/** What a finished run does to the study session, the challenge and any queued request to start studying. */
+function afterRun(s: AppState, result: TraceResult): Partial<AppState> {
+  const request = s.studyOnRun
+  const studyable = result.steps.length > 0 && !!getLanguage(result.language).parseAnswer
+  if (s.challenge) {
+    const { spec } = s.challenge
+    const reproduced = result.status === 'ok' && result.steps.length === spec.steps && result.executionKey === spec.executionKey
+    if (!request || !studyable || !reproduced) {
+      return { study: null, studyOnRun: null, challenge: { ...s.challenge, stage: 'unreproducible' } }
+    }
+    const { study, hidNothing } = challengeSession(s, result, request)
+    return { ...sessionPatch(s, study), studyOnRun: null, challenge: { ...s.challenge, stage: 'active', hidNothing } }
+  }
+  if (request && studyable) {
+    return { ...sessionPatch(s, studyStateFor(result, s, request.config, request.seed)), studyOnRun: null }
+  }
+  // a session belongs to one exact program run; a different one ends it
+  return { study: s.study && s.study.executionKey === result.executionKey ? s.study : null, studyOnRun: null }
+}
+
+/** A run that was stopped or never happened: a starting challenge goes back to waiting for Start. */
+const abandonedRun = (s: AppState): Partial<AppState> => ({
+  running: false,
+  studyOnRun: null,
+  challenge: s.challenge?.stage === 'starting' ? { ...s.challenge, stage: 'review' } : s.challenge,
+})
+
 let watchCounter = 0
 const newWatchId = (taken: Set<string>) => {
   let id: string
@@ -212,14 +344,7 @@ export const useStore = create<AppState>()(
 
       /** Apply a new study state and remember the session (answers, mask settings) by executionKey, in one update. */
       const commitStudy = (study: StudyState, extra: Partial<AppState> = {}) => {
-        const { studySessions, studyOrder } = get()
-        const data: StudySessionData = {
-          config: study.config,
-          seed: study.seed,
-          answers: study.answers,
-          revealed: Object.keys(study.revealed),
-        }
-        set({ ...extra, study, ...rememberSession(studySessions, studyOrder, study.executionKey, data) })
+        set({ ...extra, ...sessionPatch(get(), study) })
       }
 
       return {
@@ -237,6 +362,8 @@ export const useStore = create<AppState>()(
         watchErrors: {},
         shared: null,
         sharedLinkInvalid: false,
+        challenge: null,
+        studyOnRun: null,
         study: null,
         studySessions: {},
         studyOrder: [],
@@ -300,6 +427,8 @@ export const useStore = create<AppState>()(
             columnOrder: [],
             watchErrors: {},
             study: null,
+            challenge: null,
+            studyOnRun: null,
           })
           if (watches.length) watches.forEach((w) => void get().validateWatch(w.id))
           // Built-in examples are safe to run, and a student who picks one expects to see its table.
@@ -308,8 +437,9 @@ export const useStore = create<AppState>()(
         },
 
         async run() {
-          const { language, code, stdinText, running, watches, showCallables } = get()
-          if (running) return
+          const { language, code, stdinText, running, watches, showCallables, challenge } = get()
+          // during a challenge only Start runs the code: any other run could swap the masked table for an open one
+          if (running || (challenge && challenge.stage !== 'starting')) return
           const token = ++runToken
           const runner = getRunner(language)
           const options: TraceOptions = {
@@ -331,20 +461,19 @@ export const useStore = create<AppState>()(
                 running: false,
                 hoverStep: null,
                 selectedStep: null,
-                // a session belongs to one exact program run; a different one ends it
-                study: s.study && s.study.executionKey === result.executionKey ? s.study : null,
+                ...afterRun(s, result),
               }))
             }
           } catch {
             // the runtime itself is broken; runnerStatus already says so
-            if (token === runToken) set({ running: false })
+            if (token === runToken) set(abandonedRun)
           }
         },
 
         cancel() {
           runToken++
           getRunner(get().language).cancel()
-          set({ running: false })
+          set(abandonedRun)
         },
 
         async answerInput(text) {
@@ -426,49 +555,33 @@ export const useStore = create<AppState>()(
         startStudy() {
           const s = get()
           const r = s.result
-          if (s.study || !r || r.steps.length === 0 || s.running || s.ranSig !== runSignature(s)) return
+          if (s.challenge || s.study || !r || r.steps.length === 0 || s.running || s.ranSig !== runSignature(s)) return
           if (!getLanguage(r.language).parseAnswer) return
-          const { visible } = resolveColumns(r, {
-            showEphemeral: s.showEphemeral,
-            showCondition: s.showCondition,
-            watches: s.watches,
-            hidden: s.hiddenColumns,
-            order: s.columnOrder,
-          })
           const saved = s.studySessions[r.executionKey]
           const config = saved?.config ?? s.studyConfig
           const seed = saved?.seed || s.studySeed || newSeed()
-          commitStudy(
-            {
-              executionKey: r.executionKey,
-              columns: visible,
-              granularity: s.granularity,
-              display: s.displayStyle,
-              config,
-              seed,
-              answers: saved?.answers ?? {},
-              revealed: Object.fromEntries((saved?.revealed ?? []).map((k) => [k, true as const])),
-              hints: {},
-              why: {},
-              graded: null,
-              resumed: !!saved && (Object.keys(saved.answers).length > 0 || saved.revealed.length > 0),
-            },
-            { studyConfig: config, studySeed: seed, hoverStep: null, selectedStep: null },
-          )
+          commitStudy(studyStateFor(r, s, config, seed, saved), {
+            studyConfig: config,
+            studySeed: seed,
+            hoverStep: null,
+            selectedStep: null,
+          })
         },
 
-        exitStudy: () => set({ study: null, hoverStep: null }),
+        exitStudy() {
+          if (!get().challenge) set({ study: null, hoverStep: null })
+        },
 
         setStudyConfig(patch) {
           const st = get().study
-          if (!st) return
+          if (!st || get().challenge) return
           const config = sanitizeStudyConfig({ ...st.config, ...patch }, st.config)
           commitStudy({ ...st, config, graded: null, hints: {}, why: {} }, { studyConfig: config })
         },
 
         reshuffleStudy() {
           const st = get().study
-          if (!st) return
+          if (!st || get().challenge) return
           const seed = newSeed()
           commitStudy({ ...st, seed, answers: {}, revealed: {}, hints: {}, why: {}, graded: null, resumed: false }, { studySeed: seed })
         },
@@ -485,8 +598,8 @@ export const useStore = create<AppState>()(
         },
 
         revealCell(key) {
-          const st = get().study
-          if (!st) return
+          const { study: st, challenge } = get()
+          if (!st || (challenge && !challenge.checkedOnce)) return
           commitStudy({ ...st, revealed: { ...st.revealed, [key]: true }, graded: withoutKey(st.graded, key) })
         },
 
@@ -503,6 +616,16 @@ export const useStore = create<AppState>()(
           const st = get().study
           if (!st || st.graded?.[key]?.state !== 'incorrect') return
           set({ study: { ...st, why: st.why[key] ? without(st.why, key) : { ...st.why, [key]: true } } })
+        },
+
+        toggleCellMask(key) {
+          const { study: st, result: r, challenge } = get()
+          if (!st || !r || challenge || st.config.maskMode !== 'cells') return
+          // keys left over from another program are dropped, so they don't use up the limit
+          const here = new Set(buildStudyModel(r, st, getLanguage(r.language).formatValue).cells.map((c) => c.key))
+          if (!here.has(key)) return
+          const cells = st.config.cells.filter((k) => here.has(k))
+          get().setStudyConfig({ cells: cells.includes(key) ? cells.filter((k) => k !== key) : [...cells, key] })
         },
 
         resetAnswers() {
@@ -522,7 +645,8 @@ export const useStore = create<AppState>()(
           for (const cell of buildStudyModel(r, st, lang.formatValue).masked) {
             if (!st.revealed[cell.key]) graded[cell.key] = gradeAnswer(st.answers[cell.key] ?? '', cell.truth, grader)
           }
-          set({ study: { ...st, graded } })
+          const { challenge } = get()
+          set({ study: { ...st, graded }, challenge: challenge && { ...challenge, checkedOnce: true } })
         },
 
         selectStepExclusive: (i) => set({ selectedStep: i }),
@@ -537,8 +661,8 @@ export const useStore = create<AppState>()(
         openSharedFromHash() {
           const payload = parseShareHash(location.hash)
           if (!payload) return
-          const ws = decodeShare(payload)
-          if (!ws) {
+          const decoded = decodeShare(payload)
+          if (!decoded) {
             set({ sharedLinkInvalid: true })
             clearShareHash()
             return
@@ -548,9 +672,12 @@ export const useStore = create<AppState>()(
           clearTimeout(rerunTimer)
           runToken++ // a run for the previous code must not land on the new workspace
           if (get().running) getRunner(get().language).cancel()
+          const { workspace, mode, challenge: spec } = decoded
           set({
-            ...ws,
-            shared: { backup },
+            ...workspace,
+            shared: mode === 'quiz' && !spec ? { backup, brokenChallenge: true } : { backup },
+            challenge: spec ? { stage: 'review', spec, checkedOnce: false, hidNothing: false } : null,
+            studyOnRun: null,
             running: false,
             result: null,
             ranSig: null,
@@ -563,6 +690,7 @@ export const useStore = create<AppState>()(
         },
         shareLink: () => buildShareUrl(location.href, workspaceOf(get())),
         keepShared() {
+          if (get().challenge) return
           set({ shared: null })
           clearShareHash()
         },
@@ -570,11 +698,72 @@ export const useStore = create<AppState>()(
           const backup = get().shared?.backup
           if (!backup) return
           clearTimeout(rerunTimer)
-          set({ ...backup, shared: null, result: null, ranSig: null, ranInput: null, watchErrors: {}, study: null })
+          runToken++ // a run for the shared code must not land on the restored workspace
+          if (get().running) getRunner(get().language).cancel()
+          set({
+            ...backup,
+            shared: null,
+            challenge: null,
+            studyOnRun: null,
+            running: false,
+            result: null,
+            ranSig: null,
+            ranInput: null,
+            watchErrors: {},
+            hoverStep: null,
+            selectedStep: null,
+            study: null,
+          })
           clearShareHash()
           if (backup.code.trim() !== '') void get().run() // it is the visitor's own code: bring their table back
         },
         dismissInvalidLink: () => set({ sharedLinkInvalid: false }),
+
+        // ── student challenges ──
+        challengeLink() {
+          const s = get()
+          const r = s.result
+          if (!r || challengeLinkBlocker(s)) return null
+          // the mask on screen if a session is running, otherwise the saved settings
+          const config = s.study?.config ?? s.studyConfig
+          // choose the seed BEFORE encoding, so every student gets the same random mask
+          const seed = s.study?.seed || s.studySeed || newSeed()
+          if (!s.study && seed !== s.studySeed) set({ studySeed: seed }) // copying again gives the same link
+          const view = s.study ?? studyStateFor(r, s, config, seed)
+          const model = buildStudyModel(r, view, getLanguage(r.language).formatValue)
+          const link = buildChallengeUrl(
+            location.href,
+            { ...workspaceOf(s), studyConfig: config, studySeed: seed },
+            { steps: r.steps.length, executionKey: r.executionKey },
+          )
+          return { ...link, hidden: model.masked.length, total: model.cells.length }
+        },
+
+        startChallenge() {
+          const s = get()
+          if (s.challenge?.stage !== 'review' || s.running) return
+          set({
+            challenge: { ...s.challenge, stage: 'starting' },
+            studyOnRun: { config: s.studyConfig, seed: s.studySeed || newSeed() },
+          })
+          void get().run()
+        },
+
+        showChallengeTable() {
+          const s = get()
+          if (s.challenge?.stage !== 'unreproducible') return
+          const r = s.result
+          if (!r || r.steps.length === 0 || !getLanguage(r.language).parseAnswer) {
+            set({ challenge: null })
+            return
+          }
+          // one update: the table must not appear unmasked on the way out of the challenge
+          commitStudy(studyStateFor(r, s, s.studyConfig, s.studySeed || newSeed()), { challenge: null })
+        },
+
+        endChallenge() {
+          if (get().challenge) get().discardShared()
+        },
       }
     },
     {

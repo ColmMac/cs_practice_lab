@@ -8,10 +8,11 @@ export function StudyToggle() {
   const hasRows = useStore((s) => (s.result?.steps.length ?? 0) > 0)
   const stale = useStore((s) => s.result !== null && s.ranSig !== runSignature(s))
   const running = useStore((s) => s.running)
+  const inChallenge = useStore((s) => s.challenge !== null)
   const supported = useStore((s) => (s.result ? !!getLanguage(s.result.language).parseAnswer : true))
 
   const on = study !== null
-  const blocked = !on && (!hasRows || stale || running || !supported)
+  const blocked = inChallenge || (!on && (!hasRows || stale || running || !supported))
 
   const toggle = () => {
     if (on) return exitStudy()
@@ -33,7 +34,7 @@ export function StudyToggle() {
       aria-pressed={on}
       onClick={toggle}
       disabled={blocked}
-      title={on ? 'Leave study mode' : why}
+      title={inChallenge ? 'A challenge is on: use End challenge to leave it' : on ? 'Leave study mode' : why}
       className={`rounded border px-3 py-1.5 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700 disabled:cursor-not-allowed disabled:opacity-50 ${
         on
           ? 'border-emerald-700 bg-emerald-700 text-white hover:bg-emerald-800'

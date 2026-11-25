@@ -7,7 +7,8 @@ export const CHECK_ID = 'study-check'
 
 export interface AnswerKeyActions {
   onHint: (key: string) => void
-  onReveal: (key: string) => void
+  /** Left out while revealing is locked: Alt+R then does nothing. */
+  onReveal?: (key: string) => void
   /** "Why was this wrong?"; grids without explanations leave it out. */
   onWhy?: (key: string) => void
 }
@@ -33,6 +34,7 @@ export function answerGridKeyDown({ onHint, onReveal, onWhy }: AnswerKeyActions)
       onWhy(key)
     } else if (e.altKey && e.key.toLowerCase() === 'r') {
       e.preventDefault()
+      if (!onReveal) return
       const next = nextStudyInput(grid, input, 1)
       onReveal(key) // this box turns into plain text, so move on first
       if (!focusInput(next)) focusInput(document.getElementById(CHECK_ID))

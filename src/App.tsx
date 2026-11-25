@@ -12,11 +12,12 @@ import { StudyToolbar } from './components/study/StudyToolbar'
 import { TableControls } from './components/table/TableControls'
 import { TraceTable } from './components/table/TraceTable'
 import { SharedBanner } from './components/layout/SharedBanner'
+import { ChallengePanel } from './components/layout/ChallengePanel'
 import { WatchPanel } from './components/editor/WatchPanel'
 import { runSignature, useStore } from './store'
 
 export function App() {
-  const { init, result, ranSig, study, exitStudy, shared } = useStore()
+  const { init, result, ranSig, study, exitStudy, shared, challenge, endChallenge } = useStore()
   const signature = useStore((s) => runSignature(s))
   useEffect(() => init(), [init])
 
@@ -40,6 +41,8 @@ export function App() {
   }, [])
 
   const stale = result !== null && ranSig !== signature
+  // A challenge shows its table only once it is masked; every other state shows the panel instead.
+  const gated = challenge !== null && !(challenge.stage === 'active' && study)
 
   return (
     <>
@@ -58,7 +61,9 @@ export function App() {
         </section>
 
         <section className="min-h-0 overflow-auto" aria-label="Trace" data-scroll-parent>
-          {result === null ? (
+          {gated ? (
+            <ChallengePanel />
+          ) : result === null ? (
             <EmptyState />
           ) : (
             <>
@@ -69,9 +74,14 @@ export function App() {
               )}
               {stale && study && (
                 <p role="alert" className="mb-2 flex flex-wrap items-center gap-2 text-xs text-amber-900 dark:text-amber-200">
-                  The code has changed since this study session began, so the answers below belong to the old program.
-                  <button type="button" onClick={exitStudy} className="rounded border border-amber-700 px-2 py-0.5 font-medium">
-                    End the session
+                  The code has changed since this {challenge ? 'challenge' : 'study session'} began, so the answers below belong to the old
+                  program.
+                  <button
+                    type="button"
+                    onClick={challenge ? endChallenge : exitStudy}
+                    className="rounded border border-amber-700 px-2 py-0.5 font-medium"
+                  >
+                    {challenge ? 'End the challenge' : 'End the session'}
                   </button>
                 </p>
               )}

@@ -45,6 +45,11 @@ export function selectMasks(cells: MaskableCell[], config: StudyConfig, seed: nu
       const chosen = new Set(config.columns)
       return new Set(cells.filter((c) => chosen.has(c.colId)).map((c) => c.key))
     }
+    case 'cells': {
+      // only keys that are questions in THIS table: a stale or forged key masks nothing
+      const chosen = new Set(config.cells)
+      return new Set(cells.filter((c) => chosen.has(c.key)).map((c) => c.key))
+    }
     case 'random': {
       const percent = Math.min(100, Math.max(0, Math.round(config.percent)))
       if (cells.length === 0 || percent === 0) return new Set()

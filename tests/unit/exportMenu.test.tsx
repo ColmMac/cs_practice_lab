@@ -249,7 +249,7 @@ describe('Export menu: answer key vs worksheet', () => {
   it('uses the study mask: blank only the chosen columns', async () => {
     const user = userEvent.setup()
     const files = captureDownloads()
-    mount(traces.digitSum, { studyConfig: { maskMode: 'columns', percent: 50, columns: ['<module>:total'], outputOnly: false, closeCredit: 0.5 } })
+    mount(traces.digitSum, { studyConfig: { maskMode: 'columns', percent: 50, columns: ['<module>:total'], cells: [], outputOnly: false, closeCredit: 0.5 } })
     const dlg = await openMenu(user)
     await user.click(within(dlg).getByRole('radio', { name: 'Worksheet' }))
     expect(within(dlg).getByText('Blanks 5 cells (the Study mode mask).')).toBeInTheDocument()
@@ -261,7 +261,7 @@ describe('Export menu: answer key vs worksheet', () => {
 
   it('says when nothing is masked', async () => {
     const user = userEvent.setup()
-    mount(traces.digitSum, { studyConfig: { maskMode: 'columns', percent: 50, columns: [], outputOnly: false, closeCredit: 0.5 } })
+    mount(traces.digitSum, { studyConfig: { maskMode: 'columns', percent: 50, columns: [], cells: [], outputOnly: false, closeCredit: 0.5 } })
     const dlg = await openMenu(user)
     await user.click(within(dlg).getByRole('radio', { name: 'Worksheet' }))
     expect(within(dlg).getByText(/nothing is blanked yet/i)).toBeInTheDocument()

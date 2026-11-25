@@ -1,4 +1,4 @@
-import { DEFAULT_STUDY_CONFIG, type MaskMode, type StudyConfig } from './types'
+import { DEFAULT_STUDY_CONFIG, MAX_MASK_CELLS, type MaskMode, type StudyConfig } from './types'
 
 /** What is remembered about a study session (per program run, keyed by `executionKey`). */
 export interface StudySessionData {
@@ -14,7 +14,7 @@ export const MAX_STUDY_SESSIONS = 5
 export const MAX_ANSWER_LENGTH = 500
 export const MAX_ANSWERS = 2000
 
-const MASK_MODES: readonly MaskMode[] = ['all', 'random', 'columns']
+const MASK_MODES: readonly MaskMode[] = ['all', 'random', 'columns', 'cells']
 const KEY_ID = /^[A-Za-z0-9_-]{1,64}$/
 const CELL_KEY = /^\d{1,9}:\S{1,200}$/
 
@@ -30,10 +30,14 @@ export function sanitizeStudyConfig(v: unknown, fallback: StudyConfig = DEFAULT_
   const columns = Array.isArray(o.columns)
     ? [...new Set(o.columns.filter((c): c is string => typeof c === 'string' && c.length > 0 && c.length <= 200))].slice(0, 300)
     : fallback.columns
+  const cells = Array.isArray(o.cells)
+    ? [...new Set(o.cells.filter((k): k is string => typeof k === 'string' && CELL_KEY.test(k)))].slice(0, MAX_MASK_CELLS)
+    : fallback.cells
   return {
     maskMode: MASK_MODES.includes(o.maskMode as MaskMode) ? (o.maskMode as MaskMode) : fallback.maskMode,
     percent: typeof o.percent === 'number' && Number.isFinite(o.percent) ? Math.min(100, Math.max(0, Math.round(o.percent))) : fallback.percent,
     columns,
+    cells,
     outputOnly: typeof o.outputOnly === 'boolean' ? o.outputOnly : fallback.outputOnly,
     closeCredit: o.closeCredit === 0 || o.closeCredit === 0.5 ? o.closeCredit : fallback.closeCredit,
   }

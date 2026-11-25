@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { columnLabel, CONDITION_COL, LINE_COL, OUTPUT_COL } from '../../core/derive/columns'
 import { explainCell, maskedValueGuard, type ExplainContext } from '../../core/explain/stepExplainer'
 import { hintFor } from '../../core/study/hint'
-import { cellKey } from '../../core/study/types'
+import { cellKey, MAX_MASK_CELLS } from '../../core/study/types'
 import type { TraceResult } from '../../core/types'
 import { getLanguage } from '../../languages/registry'
 import { useStore } from '../../store'
@@ -15,7 +15,10 @@ import { useTableData } from './useTableData'
 
 export function TraceTable({ result, stale }: { result: TraceResult; stale: boolean }) {
   const { selectedStep, hoverStep, setHoverStep, selectStep } = useStore()
-  const { setAnswer, revealCell, toggleHint, toggleWhy, selectStepExclusive } = useStore()
+  const { setAnswer, revealCell, toggleHint, toggleWhy, selectStepExclusive, toggleCellMask } = useStore()
+  const revealLocked = useStore((s) => s.challenge !== null && !s.challenge.checkedOnce)
+  // hand-picking cells is the author's job: never offered to a student taking a challenge
+  const inChallenge = useStore((s) => s.challenge !== null)
   const study = useStore((s) => s.study)
   // In a study session the table is FROZEN: useTableData returns the columns/modes captured when it began.
   const { columns, rows, model } = useTableData(result)
@@ -44,7 +47,10 @@ export function TraceTable({ result, stale }: { result: TraceResult; stale: bool
     ) : null
 
   /** Enter / ↓ next, Shift+Enter / ↑ previous, Alt+H hint, Alt+R reveal, Alt+W why. */
-  const onStudyKey = answerGridKeyDown({ onHint: toggleHint, onReveal: revealCell, onWhy: toggleWhy })
+  const onStudyKey = answerGridKeyDown({ onHint: toggleHint, onReveal: revealLocked ? undefined : revealCell, onWhy: toggleWhy })
+
+  const picking = !!study && !inChallenge && study.config.maskMode === 'cells' && !study.config.outputOnly
+  const picksFull = picking && study.config.cells.length >= MAX_MASK_CELLS
 
   // built only while an explanation is open
   const explain: ExplainContext | null =
@@ -148,6 +154,7 @@ export function TraceTable({ result, stale }: { result: TraceResult; stale: bool
                   const cell = row.cells[c.id]
                   const key = cellKey(step, c.id)
                   const question = study && model?.maskedKeys.has(key) ? questions.get(key) : undefined
+                  const label = `Row ${row.rowIndex + 1} (line ${row.lineNumber}), ${columnLabel(c)}`
                   return (
                     <td
                       key={c.id}
@@ -159,14 +166,14 @@ export function TraceTable({ result, stale }: { result: TraceResult; stale: bool
                         <AnswerCell
                           cellKey={key}
                           colId={c.id}
-                          label={`Row ${row.rowIndex + 1} (line ${row.lineNumber}), ${columnLabel(c)}`}
+                          label={label}
                           answer={study.answers[key] ?? ''}
                           grade={study.graded?.[key]}
                           revealed={!!study.revealed[key]}
                           truthText={cell?.display ?? ''}
                           hint={study.hints[key] ? hintFor(question.truth) : null}
                           onAnswer={(text) => setAnswer(key, text)}
-                          onReveal={() => revealCell(key)}
+                          onReveal={revealLocked ? undefined : () => revealCell(key)}
                           onHint={() => toggleHint(key)}
                           onFocusCell={() => selectStepExclusive(step)}
                           onWhy={() => toggleWhy(key)}
@@ -174,6 +181,22 @@ export function TraceTable({ result, stale }: { result: TraceResult; stale: bool
                         />
                       ) : (
                         cell?.display
+                      )}
+                      {picking && questions.has(key) && (
+                        <button
+                          type="button"
+                          aria-pressed={!!question}
+                          aria-label={`${question ? 'Show' : 'Blank this'}: ${label}`}
+                          disabled={!question && picksFull}
+                          title={!question && picksFull ? `At most ${MAX_MASK_CELLS} cells can be picked` : undefined}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            toggleCellMask(key)
+                          }}
+                          className={`${question ? 'mt-1' : 'ml-2'} block whitespace-nowrap rounded border border-slate-300 px-1 font-sans text-[11px] font-normal text-slate-700 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-emerald-700 disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800`}
+                        >
+                          {question ? 'Show' : 'Blank this'}
+                        </button>
                       )}
                       {c.id === LINE_COL && showChip && row.branch !== undefined && (
                         <span

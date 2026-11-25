@@ -11,6 +11,8 @@ import { useExportData } from './useExportData'
 /** Copy / download the visible table as Markdown, CSV, LaTeX, JSON or PNG, or print it. Needs a table to exist. */
 export function ExportMenu() {
   const result = useStore((s) => s.result)
+  const inChallenge = useStore((s) => s.challenge !== null)
+  if (inChallenge) return <ExportUnavailable reason="Exports are off during a challenge" />
   if (!result || result.steps.length === 0) return <ExportUnavailable reason="Run a program that produces a table first" />
   return <ExportMenuFor result={result} />
 }

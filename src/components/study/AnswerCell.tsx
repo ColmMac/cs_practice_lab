@@ -14,7 +14,8 @@ interface Props {
   truthText: string
   hint: string | null
   onAnswer: (text: string) => void
-  onReveal: () => void
+  /** Left out while revealing is locked (a challenge before its first check): no Reveal button. */
+  onReveal?: () => void
   onHint: () => void
   onFocusCell?: () => void
   /** Offers "Why?" on a cell graded incorrect; tools without explanations leave it out. */
@@ -68,7 +69,7 @@ export function AnswerCell({ cellKey, colId, label, answer, grade, revealed, tru
           aria-label={label}
           aria-invalid={grade?.state === 'incorrect' ? true : undefined}
           aria-describedby={described}
-          aria-keyshortcuts={onWhy ? 'Alt+H Alt+R Alt+W' : 'Alt+H Alt+R'}
+          aria-keyshortcuts={['Alt+H', onReveal && 'Alt+R', onWhy && 'Alt+W'].filter(Boolean).join(' ')}
           autoComplete="off"
           autoCapitalize="off"
           spellCheck={false}
@@ -87,19 +88,21 @@ export function AnswerCell({ cellKey, colId, label, answer, grade, revealed, tru
         >
           ?
         </button>
-        <button
-          type="button"
-          tabIndex={-1}
-          className={iconBtn}
-          aria-label={`Reveal ${label}`}
-          title="Reveal the answer (Alt+R); it won’t count towards your score"
-          onClick={(e) => {
-            e.stopPropagation()
-            onReveal()
-          }}
-        >
-          👁
-        </button>
+        {onReveal && (
+          <button
+            type="button"
+            tabIndex={-1}
+            className={iconBtn}
+            aria-label={`Reveal ${label}`}
+            title="Reveal the answer (Alt+R); it won’t count towards your score"
+            onClick={(e) => {
+              e.stopPropagation()
+              onReveal()
+            }}
+          >
+            👁
+          </button>
+        )}
       </div>
       {(grade || hint) && (
         <span id={msgId} className="text-[11px] leading-tight font-sans">

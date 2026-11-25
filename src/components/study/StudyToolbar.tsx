@@ -14,7 +14,8 @@ const btn =
 /** Controls for a study session: what to hide, Check answers, and the score. */
 export function StudyToolbar({ result }: { result: TraceResult }) {
   const study = useStore((s) => s.study)
-  const { setStudyConfig, checkAnswers, resetAnswers, reshuffleStudy, exitStudy } = useStore()
+  const { setStudyConfig, checkAnswers, resetAnswers, reshuffleStudy, exitStudy, endChallenge } = useStore()
+  const challenge = useStore((s) => s.challenge)
   const model = useStudyModel(result)
 
   const askable = useMemo(() => {
@@ -36,16 +37,22 @@ export function StudyToolbar({ result }: { result: TraceResult }) {
   return (
     <section aria-label="Study mode" className="mb-3 rounded border border-emerald-700/40 bg-emerald-50/60 p-3 text-sm dark:bg-emerald-950/30">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <h2 className="font-semibold">Study mode</h2>
+        <h2 className="font-semibold">{challenge ? 'Student challenge' : 'Study mode'}</h2>
         <p className="text-xs text-slate-700 dark:text-slate-300" role="status">
           {model.masked.length === 0
             ? 'Nothing is hidden: choose what to mask.'
             : `${model.masked.length} of ${model.cells.length} cells to fill in${revealed ? ` (${revealed} revealed)` : ''}`}
         </p>
-        <button type="button" className={`${btn} ml-auto`} onClick={exitStudy}>
-          Exit study mode
+        <button type="button" className={`${btn} ml-auto`} onClick={challenge ? endChallenge : exitStudy}>
+          {challenge ? 'End challenge' : 'Exit study mode'}
         </button>
       </div>
+
+      {challenge?.hidNothing && (
+        <p className="mt-2 text-xs text-amber-900 dark:text-amber-200">
+          This challenge hides nothing in this table, so every cell is hidden instead.
+        </p>
+      )}
 
       {study.resumed && (
         <p className="mt-2 text-xs text-sky-900 dark:text-sky-200">
@@ -53,6 +60,8 @@ export function StudyToolbar({ result }: { result: TraceResult }) {
         </p>
       )}
 
+      {/* a challenge's mask and marking are the author's: no controls for them */}
+      {!challenge && (
       <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2">
         <Segmented<MaskMode>
           label="Hide"
@@ -62,6 +71,7 @@ export function StudyToolbar({ result }: { result: TraceResult }) {
             { value: 'all', label: 'All cells', hint: 'Every value the program writes' },
             { value: 'random', label: 'Random', hint: 'A random share of them' },
             { value: 'columns', label: 'Some columns', hint: 'Only the columns you choose' },
+            { value: 'cells', label: 'Chosen cells', hint: 'Pick each cell yourself' },
           ]}
         />
         {config.maskMode === 'random' && (
@@ -95,8 +105,15 @@ export function StudyToolbar({ result }: { result: TraceResult }) {
           “Almost” earns half marks
         </label>
       </div>
+      )}
 
-      {config.maskMode === 'columns' && !config.outputOnly && (
+      {!challenge && config.maskMode === 'cells' && !config.outputOnly && (
+        <p className="mt-2 text-xs text-slate-700 dark:text-slate-300">
+          Use <strong>Blank this</strong> in the table to hide a cell, and <strong>Show</strong> to put it back.
+        </p>
+      )}
+
+      {!challenge && config.maskMode === 'columns' && !config.outputOnly && (
         <fieldset className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs">
           <legend className="sr-only">Columns to hide</legend>
           {askable.map((c) => (
@@ -129,7 +146,14 @@ export function StudyToolbar({ result }: { result: TraceResult }) {
         </button>
         <p className="text-[11px] text-slate-600 dark:text-slate-400">
           <kbd>Enter</kbd> / <kbd>↓</kbd> next · <kbd>Shift+Enter</kbd> / <kbd>↑</kbd> previous · <kbd>Tab</kbd> across · <kbd>Alt+H</kbd> hint ·{' '}
-          <kbd>Alt+R</kbd> reveal · <kbd>Alt+W</kbd> why (wrong answers) · output lines: write <code>\n</code> between them
+          {challenge && !challenge.checkedOnce ? (
+            'Reveal unlocks after Check answers'
+          ) : (
+            <>
+              <kbd>Alt+R</kbd> reveal
+            </>
+          )}{' '}
+          · <kbd>Alt+W</kbd> why (wrong answers) · output lines: write <code>\n</code> between them
         </p>
       </div>
 

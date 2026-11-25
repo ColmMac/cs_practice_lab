@@ -23,7 +23,7 @@ const data = (answers: Record<string, string> = {}, extra: Partial<StudySessionD
 
 describe('sanitizeStudyConfig', () => {
   it('keeps a valid config', () => {
-    const c = { maskMode: 'random', percent: 30, columns: ['a', 'b'], outputOnly: true, closeCredit: 0 } as const
+    const c = { maskMode: 'random', percent: 30, columns: ['a', 'b'], cells: ['1:a'], outputOnly: true, closeCredit: 0 } as const
     expect(sanitizeStudyConfig(c)).toEqual(c)
   })
 
@@ -165,7 +165,7 @@ describe('study settings in the workspace (persisted and shared)', () => {
 
   it('sanitizeWorkspace repairs bad study settings and keeps good ones', () => {
     const base = defaultWorkspace('x')
-    const good = { maskMode: 'columns', percent: 10, columns: ['<module>:x'], outputOnly: false, closeCredit: 0 }
+    const good = { maskMode: 'columns', percent: 10, columns: ['<module>:x'], cells: ['1:a'], outputOnly: false, closeCredit: 0 }
     expect(sanitizeWorkspace({ studyConfig: good, studySeed: 99 }, base)).toMatchObject({ studyConfig: good, studySeed: 99 })
     expect(sanitizeWorkspace({ studyConfig: 'junk', studySeed: -5 }, base)).toMatchObject({ studyConfig: base.studyConfig, studySeed: 0 })
   })

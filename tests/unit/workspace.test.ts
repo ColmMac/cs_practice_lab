@@ -27,7 +27,7 @@ const full: Workspace = {
     { id: 'w1', expr: 'n * 2', scope: { kind: 'function', name: 'f' }, enabled: true },
     { id: 'w2', expr: 'x', label: 'the x', scope: { kind: 'module' }, enabled: false },
   ],
-  studyConfig: { maskMode: 'random', percent: 40, columns: ['f:n'], outputOnly: true, closeCredit: 0 },
+  studyConfig: { maskMode: 'random', percent: 40, columns: ['f:n'], cells: ['3:f:n'], outputOnly: true, closeCredit: 0 },
   studySeed: 123456789,
 }
 
@@ -103,7 +103,7 @@ describe('sanitizeWorkspace', () => {
 
 describe('share links', () => {
   it('round-trips everything', () => {
-    expect(decodeShare(encodeShare(full))).toEqual(full)
+    expect(decodeShare(encodeShare(full))).toEqual({ workspace: full, mode: 'workspace' })
   })
 
   it('produces URL-safe payloads, and compresses realistic programs', () => {
@@ -163,7 +163,7 @@ describe('share links', () => {
     })
 
     it('sanitises the fields of an otherwise valid payload', () => {
-      const out = decodeShare(enc({ v: 1, code: 'x = 1', granularity: 'weird', watches: [{ id: 1, expr: 2 }], language: 'cobol' }))
+      const out = decodeShare(enc({ v: 1, code: 'x = 1', granularity: 'weird', watches: [{ id: 1, expr: 2 }], language: 'cobol' }))?.workspace
       expect(out).toMatchObject({ code: 'x = 1', granularity: 'compact', language: 'python', watches: [] })
     })
 
