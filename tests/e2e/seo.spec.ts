@@ -36,7 +36,17 @@ const headOf = (page: Page) =>
     }
   })
 
-for (const [path, title] of ROUTES) {
+test('every route has a title of its own', () => {
+  expect(new Set(ROUTES.map(([, title]) => title)).size).toBe(ROUTES.length)
+})
+
+/** The questions and answers a visitor can read in the guide's FAQ. */
+const visibleFaq = (page: Page) =>
+  page
+    .getByRole('heading', { level: 4 })
+    .evaluateAll((hs) => hs.map((h) => [h.textContent!, h.nextElementSibling!.textContent!]))
+
+for (const [path, title, description] of ROUTES) {
   test(`${path}: after JavaScript there is exactly one of each head tag`, async ({ page }) => {
     await page.goto(path)
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
@@ -48,7 +58,7 @@ for (const [path, title] of ROUTES) {
     expect(head.ogTitle).toEqual([title])
     expect(head.ogImage).toEqual([`${ORIGIN}/og-image.png`])
     expect(head.card).toEqual(['summary_large_image'])
-    expect(head.description).toHaveLength(1)
+    expect(head.description).toEqual([expect.stringMatching(description)])
     expect(head.leftovers).toBe(0)
     expect(head.jsonLd.map((b) => b['@type'])).toEqual(
       TOOL_PATHS.includes(path) ? ['WebSite', 'WebApplication', 'FAQPage'] : ['WebSite'],
@@ -56,6 +66,14 @@ for (const [path, title] of ROUTES) {
     for (const block of head.jsonLd) {
       if (block['@type'] !== 'FAQPage') expect(String(block.url).startsWith(ORIGIN)).toBe(true)
       expect(String(block['@id']).startsWith(ORIGIN)).toBe(true)
+    }
+    const faq = head.jsonLd.find((b) => b['@type'] === 'FAQPage') as
+      | { mainEntity: { name: string; acceptedAnswer: { text: string } }[] }
+      | undefined
+    if (faq) {
+      const visible = await visibleFaq(page)
+      expect(visible.length).toBeGreaterThanOrEqual(3)
+      expect(faq.mainEntity.map((q) => [q.name, q.acceptedAnswer.text])).toEqual(visible)
     }
   })
 
@@ -99,6 +117,19 @@ test('sitemap.xml lists all seven routes on the production origin', async ({ req
   expect(xml.match(/<lastmod>\d{4}-\d{2}-\d{2}<\/lastmod>/g)).toHaveLength(ROUTES.length)
 })
 
+// A missing file would fall through the SPA rule as index.html with a 200, so the type is what counts.
+test('robots.txt allows crawling and names the sitemap', async ({ request }) => {
+  const robots = await request.get('/robots.txt')
+  expect(robots.headers()['content-type']).toMatch(/^text\/plain/)
+  expect(await robots.text()).toBe('User-agent: *\nAllow: /\n\nSitemap: https://cspracticelab.com/sitemap.xml\n')
+})
+
+test('ads.txt is a text file, still holding the template line', async ({ request }) => {
+  const ads = await request.get('/ads.txt')
+  expect(ads.headers()['content-type']).toMatch(/^text\/plain/)
+  expect(await ads.text()).toContain('# google.com, pub-XXXXXXXXXXXXXXXX, DIRECT, f08c47fec0942fa0')
+})
+
 test.describe('without JavaScript', () => {
   test.use({ javaScriptEnabled: false })
 
@@ -109,15 +140,6 @@ test.describe('without JavaScript', () => {
     await expect(page.getByRole('link', { name: 'About', exact: true })).toHaveAttribute('href', '/about')
   })
 })
-
-for (const [path, title, description] of ROUTES) {
-  test(`${path} has its own title and description`, async ({ page }) => {
-    await page.goto(path)
-    await expect(page).toHaveTitle(title)
-    await expect(page.locator('head meta[name="description"]')).toHaveCount(1)
-    await expect(page.locator('head meta[name="description"]')).toHaveAttribute('content', description)
-  })
-}
 
 test('the title and description follow client-side navigation, and the 404 is noindex', async ({ page }) => {
   await page.goto('/')
@@ -136,21 +158,9 @@ test('index.html carries a default title and description for crawlers without JS
   expect(html).toMatch(/<meta\s+data-default\s+name="description"\s+content="[^"]{40,}"/)
 })
 
-test('robots.txt allows crawling and names the sitemap', async ({ request }) => {
-  const robots = await request.get('/robots.txt')
-  expect(robots.headers()['content-type']).toMatch(/^text\/plain/)
-  expect(await robots.text()).toBe('User-agent: *\nAllow: /\n\nSitemap: https://cspracticelab.com/sitemap.xml\n')
-})
-
 // The E2E build has no VITE_SITE_URL, so these are the defaults from src/config/site.ts.
-test('every route has a canonical link on the production origin, and the 404 has none', async ({ page }) => {
+test('the canonical drops queries and trailing slashes and follows navigation; the 404 has none', async ({ page }) => {
   const canonical = page.locator('head link[rel="canonical"]')
-  for (const [path] of ROUTES) {
-    await page.goto(path)
-    await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
-    await expect(canonical).toHaveCount(1)
-    await expect(canonical).toHaveAttribute('href', `https://cspracticelab.com${path}`)
-  }
   await page.goto('/truth-tables/?x=1')
   await expect(canonical).toHaveAttribute('href', 'https://cspracticelab.com/truth-tables')
   await page.getByRole('navigation', { name: 'Tools' }).getByRole('link', { name: 'Number systems' }).click()

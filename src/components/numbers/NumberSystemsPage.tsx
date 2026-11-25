@@ -1,9 +1,10 @@
-import { useLayoutEffect, useState } from 'react'
+import { useState } from 'react'
 import { useSearchParams } from 'react-router'
 import { findGuide } from '../../app/guides'
 import { PageMeta } from '../../app/PageMeta'
 import { ToolGuide } from '../../app/ToolGuide'
 import { toolDescription } from '../../app/tools'
+import { useUrlMirror } from '../../app/useUrlMirror'
 import { numberUrlParams, parseNumberUrl, toBinary, type Mode, type Topic, type Width } from '../../core/numbers'
 import { newSeed } from '../../core/study/rng'
 import { AdSlot } from '../ui/AdSlot'
@@ -47,7 +48,7 @@ function Explain({ note }: { note: Note }) {
 }
 
 export function NumberSystemsPage() {
-  const [params, setParams] = useSearchParams()
+  const [params] = useSearchParams()
   // Read the link once; after that the page owns the state and writes it back to the URL.
   const [start] = useState(() => parseNumberUrl(params))
   const s = useBitSandbox({ width: start.width, bits: start.bits })
@@ -59,10 +60,7 @@ export function NumberSystemsPage() {
   // no worked answers under practice questions
   const guide = mode === 'practice' ? null : findGuide('/number-systems')!
 
-  // A LAYOUT effect: a passive one can still be pending when the next nav link is clicked, and then overwrites it.
-  useLayoutEffect(() => {
-    setParams(numberUrlParams({ mode, width: s.width, bits: s.bits, topic, seed }), { replace: true })
-  }, [mode, s.width, s.bits, topic, seed, setParams])
+  useUrlMirror(numberUrlParams({ mode, width: s.width, bits: s.bits, topic, seed }))
   return (
     <>
       <PageMeta title="Number systems" description={toolDescription('/number-systems')} faq={guide?.faq} />

@@ -7,7 +7,8 @@ function describe(s: RunnerStatus): { text: string; tone: BadgeTone } {
     case 'uninitialised':
       return { text: 'Python not started', tone: 'neutral' }
     case 'loading':
-      return { text: `${s.message} (first visit downloads ~10 MB)`, tone: 'warn' }
+      // short on purpose: a long line rewraps the toolbar and moves the page. EmptyState says what is downloading.
+      return { text: 'Loading Python…', tone: 'warn' }
     case 'ready':
       return { text: 'Python ready', tone: 'ok' }
     case 'running':

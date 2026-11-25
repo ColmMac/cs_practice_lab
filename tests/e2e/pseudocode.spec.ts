@@ -112,7 +112,7 @@ test('on a phone-width screen the open panel causes no sideways scrolling', asyn
   // the table starts below the whole code column instead of lying on top of it
   const code = (await page.getByRole('region', { name: 'Code' }).boundingBox())!
   const watches = (await page.getByRole('button', { name: '+ Add watch' }).boundingBox())!
-  const trace = (await page.getByRole('region', { name: 'Trace' }).boundingBox())!
+  const trace = (await page.getByRole('region', { name: 'Trace', exact: true }).boundingBox())!
   expect(watches.y + watches.height).toBeLessThanOrEqual(trace.y)
   expect(code.y + code.height).toBeLessThanOrEqual(trace.y)
   await page.getByRole('button', { name: '+ Add watch' }).click() // nothing intercepts it

@@ -1,9 +1,10 @@
-import { useLayoutEffect, useState } from 'react'
+import { useState } from 'react'
 import { useSearchParams } from 'react-router'
 import { findGuide } from '../../app/guides'
 import { PageMeta } from '../../app/PageMeta'
 import { ToolGuide } from '../../app/ToolGuide'
 import { toolDescription } from '../../app/tools'
+import { useUrlMirror } from '../../app/useUrlMirror'
 import {
   ALGORITHM_INFO,
   LIST_PRESETS,
@@ -36,21 +37,14 @@ const fieldClass =
 const okBorder = 'border-slate-300 dark:border-slate-700'
 
 export function SortingPage() {
-  const [params, setParams] = useSearchParams()
+  const [params] = useSearchParams()
   // Read the link once; after that the page owns the state and writes it back to the URL.
   const [start] = useState(() => parseSortingUrl(params))
   const s = useSorting(start)
   const ads = useAdsAllowed(s.quizOn)
   // no worked passes under the quiz
   const guide = s.quizOn ? null : findGuide('/sorting-visualizer')!
-  // A LAYOUT effect: a passive one can still be pending when the next nav link is clicked, and then overwrites it.
-  useLayoutEffect(() => {
-    setParams(
-      sortingUrlParams({ algo: s.algo, data: s.data, target: s.target, search: s.search, quiz: s.quizOn }),
-      { replace: true },
-    )
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- s.data/s.target are fresh arrays/values per parse; key on their text
-  }, [s.algo, s.data?.join(','), s.target, s.search, s.quizOn, setParams])
+  useUrlMirror(sortingUrlParams({ algo: s.algo, data: s.data, target: s.target, search: s.search, quiz: s.quizOn }))
   const count = s.frame.cards.length
   const unsorted = s.algo === 'binary' && s.listError?.startsWith('Binary search needs')
 

@@ -27,5 +27,5 @@ test('the shared primitives keep the trace page styling', async ({ page }) => {
   const run = page.getByRole('button', { name: /Run/ }).first()
   await expect(run).toHaveClass(/bg-accent-fill/)
   await expect(page.getByRole('heading', { level: 1, name: 'CS Practice Lab' })).toBeVisible()
-  await expect(page.getByRole('status').filter({ hasText: 'Python ready' })).toHaveClass(/rounded px-2 py-1 text-xs font-medium tabular-nums bg-ok-soft/, { timeout: 80_000 })
+  await expect(page.getByRole('status').filter({ hasText: /^Python ready$/ })).toHaveClass(/rounded px-2 py-1 text-xs font-medium tabular-nums bg-ok-soft/, { timeout: 80_000 })
 })

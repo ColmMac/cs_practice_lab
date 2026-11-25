@@ -48,7 +48,20 @@ test('practise the next preset from the home page, master it, and be offered the
   await expect(page.getByText('1/6 mastered')).toBeVisible()
   await expect(cta(page)).toHaveText('Practice next: Bubble sort')
 
+  // a round of the other tools, and back
+  const nav = page.getByRole('navigation', { name: 'Tools' })
+  for (const name of ['Truth tables', 'Number systems', 'Sorting & searching', 'Trace tables']) {
+    await nav.getByRole('link', { name }).click()
+    await expect(nav.getByRole('link', { name })).toHaveAttribute('aria-current', 'page')
+    await expect(page.getByRole('contentinfo')).toBeVisible()
+    await expect(page.getByText('Loading…', { exact: true })).toHaveCount(0)
+  }
+  await goHome(page)
+  const badge = page.getByRole('list', { name: 'Tools' }).getByText('1/6 mastered')
+  await expect(badge).toBeVisible()
+
   await page.reload()
+  await expect(badge).toBeVisible()
   await expect(page.getByText('1/6 trace presets mastered')).toBeVisible()
 })
 

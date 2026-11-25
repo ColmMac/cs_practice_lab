@@ -1,4 +1,5 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test } from '@playwright/test'
+import { watchForProblems } from './pageProblems'
 
 /**
  * The hosting config as `vite preview` serves it: the `/*` headers from public/_headers on the production build.
@@ -6,23 +7,6 @@ import { expect, test, type Page } from '@playwright/test'
  */
 
 const ROUTES = ['/', '/trace-table', '/truth-tables', '/number-systems', '/sorting-visualizer', '/about', '/privacy']
-
-/** Console errors and CSP violations, collected from the moment the page starts loading. */
-async function watchForProblems(page: Page): Promise<string[]> {
-  const problems: string[] = []
-  page.on('console', (m) => m.type() === 'error' && problems.push(m.text()))
-  page.on('pageerror', (e) => problems.push(e.message))
-  await page.exposeFunction('reportViolation', (v: string) => problems.push(v))
-  await page.addInitScript(() => {
-    localStorage.setItem('tts:welcomed', '1')
-    document.addEventListener('securitypolicyviolation', (e) => {
-      void (window as unknown as { reportViolation: (v: string) => void }).reportViolation(
-        `CSP ${e.violatedDirective} ${e.blockedURI}`,
-      )
-    })
-  })
-  return problems
-}
 
 test('pages are served with the ad-compatible security headers', async ({ request }) => {
   for (const path of ROUTES) {
@@ -36,43 +20,6 @@ test('pages are served with the ad-compatible security headers', async ({ reques
   }
 })
 
-// A missing file would fall through to the SPA rule and come back as index.html with a 200: check the type.
-for (const [file, type] of [
-  ['/robots.txt', /^text\/plain/],
-  ['/ads.txt', /^text\/plain/],
-  ['/sitemap.xml', /^(application|text)\/xml/],
-] as const) {
-  test(`${file} is a real file, not the SPA fallback`, async ({ request }) => {
-    const response = await request.get(file)
-    expect(response.status()).toBe(200)
-    expect(response.headers()['content-type']).toMatch(type)
-    expect(await response.text()).not.toContain('<!doctype html>')
-  })
-}
-
-test('ads.txt is still the template', async ({ request }) => {
-  const text = await (await request.get('/ads.txt')).text()
-  expect(text).toContain('# google.com, pub-XXXXXXXXXXXXXXXX, DIRECT, f08c47fec0942fa0')
-})
-
-for (const path of ROUTES) {
-  test(`${path}: no console errors or CSP violations, and nothing is requested from Google`, async ({ page }) => {
-    const problems = await watchForProblems(page)
-    const google: string[] = []
-    page.on('request', (r) => {
-      if (/google|doubleclick|adtrafficquality/.test(new URL(r.url()).hostname)) google.push(r.url())
-    })
-    await page.goto(path)
-    await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
-    if (path === '/trace-table') {
-      await expect(page.getByRole('status').filter({ hasText: 'Python ready' })).toBeVisible({ timeout: 80_000 })
-    }
-    await page.waitForLoadState('networkidle')
-    expect(problems).toEqual([])
-    expect(google).toEqual([])
-  })
-}
-
 test('an unknown path still reaches the app’s own 404', async ({ page }) => {
   await page.goto('/no/such/page')
   await expect(page).toHaveTitle('Page not found · CS Practice Lab')
@@ -82,7 +29,7 @@ test('an unknown path still reaches the app’s own 404', async ({ page }) => {
 test('Python runs without cross-origin isolation, and a runaway program is still stopped', async ({ page }) => {
   const problems = await watchForProblems(page)
   await page.goto('/trace-table')
-  const ready = page.getByRole('status').filter({ hasText: 'Python ready' })
+  const ready = page.getByRole('status').filter({ hasText: /^Python ready$/ })
   await expect(ready).toBeVisible({ timeout: 80_000 })
   expect(await page.evaluate(() => window.crossOriginIsolated)).toBe(false)
 

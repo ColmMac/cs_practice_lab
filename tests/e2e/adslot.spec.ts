@@ -1,15 +1,12 @@
-import { spawnSync } from 'node:child_process'
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
-import { tmpdir } from 'node:os'
-import { extname, join } from 'node:path'
 import { expect, test, type Page } from '@playwright/test'
 import { encodeShare } from '../../src/core/share/urlState'
 import { defaultWorkspace } from '../../src/core/workspace'
+import { watchForProblems } from './pageProblems'
 
 /**
- * The ad slot: where it sits, what it never covers and when it is gone. The served build has no AdSense IDs, so it
- * shows the house card. The last group builds again with fake IDs and answers every request itself: no test traffic
- * reaches Google.
+ * The ad slot: where it sits, what it never covers and when it is gone. The default build has no AdSense IDs, so it
+ * shows the house card. The group tagged @ads is the `ads` Playwright project: a second build with fake IDs
+ * (playwright.config.ts), where every outside request is answered or blocked here, so no test traffic reaches Google.
  */
 
 test.beforeEach(async ({ page }) => {
@@ -81,6 +78,31 @@ for (const viewport of VIEWPORTS) {
       })
     }
   })
+}
+
+/** Sums every layout shift from the first frame on. */
+const recordShifts = (page: Page) =>
+  page.addInitScript(() => {
+    const w = window as unknown as { shift: number }
+    w.shift = 0
+    new PerformanceObserver((list) => {
+      for (const entry of list.getEntries() as unknown as { value: number; hadRecentInput: boolean }[]) {
+        if (!entry.hadRecentInput) w.shift += entry.value
+      }
+    }).observe({ type: 'layout-shift', buffered: true })
+  })
+
+for (const viewport of VIEWPORTS) {
+  for (const path of ['/', '/trace-table', '/truth-tables', '/number-systems', '/sorting-visualizer']) {
+    test(`${path} on a ${viewport.name}: the layout holds still for 3 s after load`, async ({ page }) => {
+      await page.setViewportSize({ width: viewport.width, height: viewport.height })
+      await recordShifts(page)
+      await page.goto(path)
+      await page.waitForTimeout(3000)
+      await expect(slot(page)).toHaveCount(1)
+      expect(await page.evaluate(() => (window as unknown as { shift: number }).shift)).toBeLessThan(0.01)
+    })
+  }
 }
 
 test('the trace page puts the slot under the Code column when wide and after the table on a phone', async ({ page }) => {
@@ -162,41 +184,19 @@ test('the slot is gone in a challenge link, in projector mode and in print', asy
   await expect(slot(page)).toBeHidden()
 })
 
-test.describe('built with fake AdSense IDs', () => {
-  const ORIGIN = 'http://ads.test'
-  const TYPES: Record<string, string> = {
-    '.html': 'text/html',
-    '.js': 'text/javascript',
-    '.css': 'text/css',
-    '.svg': 'image/svg+xml',
-  }
-  let dir: string
-
-  test.beforeAll(() => {
-    dir = mkdtempSync(join(tmpdir(), 'adslot-build-'))
-    const built = spawnSync(process.execPath, ['node_modules/vite/bin/vite.js', 'build', '--outDir', dir, '--emptyOutDir'], {
-      env: { ...process.env, VITE_ADSENSE_CLIENT: 'ca-pub-0000000000000000', VITE_ADSENSE_SLOT: '0000000000' },
-      encoding: 'utf8',
-    })
-    expect(built.status, built.stdout + built.stderr).toBe(0)
-  })
-  test.afterAll(() => rmSync(dir, { recursive: true, force: true }))
-
+test.describe('built with fake AdSense IDs', { tag: '@ads' }, () => {
   /** `loader`: the stand-in for Google's script, or null to block it as an ad blocker would. */
-  async function serve(page: Page, loader: string | null) {
-    await page.route('**/*', (route) => {
-      const url = new URL(route.request().url())
-      if (url.origin === ORIGIN) {
-        const name = url.pathname === '/' ? '/index.html' : extname(url.pathname) ? url.pathname : `${url.pathname}.html`
-        const file = join(dir, name)
-        if (!existsSync(file)) return route.fulfill({ status: 404, body: '' })
-        return route.fulfill({ contentType: TYPES[extname(file)] ?? 'application/octet-stream', body: readFileSync(file) })
-      }
-      if (loader !== null && url.pathname.endsWith('/adsbygoogle.js')) {
-        return route.fulfill({ contentType: 'text/javascript', headers: { 'access-control-allow-origin': '*' }, body: loader })
-      }
-      return route.abort()
-    })
+  async function serve(page: Page, baseURL: string, loader: string | null) {
+    await page.route(
+      (url) => url.origin !== new URL(baseURL).origin,
+      (route) => route.abort(),
+    )
+    // registered last, so it wins over the block above
+    await page.route('**/pagead2.googlesyndication.com/**', (route) =>
+      loader === null
+        ? route.abort()
+        : route.fulfill({ contentType: 'text/javascript', headers: { 'access-control-allow-origin': '*' }, body: loader }),
+    )
   }
 
   /** Counts pushes, and a moment later marks the unit the way AdSense does. */
@@ -223,9 +223,10 @@ test.describe('built with fake AdSense IDs', () => {
     below: await page.getByRole('heading', { name: 'Quick starts' }).boundingBox(),
   })
 
-  test('a filled unit stays, with one push per visit', async ({ page }) => {
-    await serve(page, stub('filled'))
-    await page.goto(`${ORIGIN}/`)
+  test('a filled unit stays, with one push per visit', async ({ page, baseURL }) => {
+    const problems = await watchForProblems(page)
+    await serve(page, baseURL!, stub('filled'))
+    await page.goto('/')
     await expect(page.locator('ins.adsbygoogle[data-ad-status="filled"]')).toHaveCount(1)
     await expect(slot(page).getByText('Advertisement')).toBeVisible()
     expect((await slot(page).boundingBox())!.height).toBe(BOX_HEIGHT)
@@ -236,20 +237,23 @@ test.describe('built with fake AdSense IDs', () => {
     await expect.poll(() => pushes(page)).toBe(2)
     await expect(page.locator('ins.adsbygoogle[data-ad-status="filled"]')).toHaveCount(1)
     expect(await page.evaluate(() => (window as unknown as { personalised: number }).personalised)).toBe(0)
+    expect(problems).toEqual([]) // the real CSP lets the loader in
   })
 
   for (const [name, loader] of [
     ['an unfilled unit', stub('unfilled')],
     ['a blocked loader', null],
   ] as const) {
-    test(`${name} swaps to the house card without moving anything`, async ({ page }) => {
-      await serve(page, loader)
-      await page.goto(`${ORIGIN}/`)
+    test(`${name} swaps to the house card without moving anything`, async ({ page, baseURL }) => {
+      await recordShifts(page)
+      await serve(page, baseURL!, loader)
+      await page.goto('/')
       await expect(slot(page)).toBeVisible()
       const before = await positions(page)
       await expect(slot(page).getByTestId('house-card')).toBeVisible({ timeout: 15_000 })
       await expect(page.locator('ins.adsbygoogle')).toHaveCount(0)
       expect(await positions(page)).toEqual(before)
+      expect(await page.evaluate(() => (window as unknown as { shift: number }).shift)).toBeLessThan(0.01)
     })
   }
 })

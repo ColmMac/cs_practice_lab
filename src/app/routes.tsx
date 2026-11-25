@@ -4,13 +4,16 @@ import { AppShell } from './AppShell'
 import { HomePage } from './HomePage'
 import { NotFoundPage } from './pages'
 
-/** A page in its own chunk, with the loading line shown until it arrives. */
+/**
+ * A page in its own chunk, with the loading line shown until it arrives. The line holds a screen's height open, so the
+ * footer isn't painted in view and then pushed out of it (a layout shift).
+ */
 function lazyRoute(load: () => Promise<ComponentType>) {
   const Page = lazy(async () => ({ default: await load() }))
   return (
     <Suspense
       fallback={
-        <p role="status" className="p-4 text-sm">
+        <p role="status" className="min-h-dvh p-4 text-sm">
           Loading…
         </p>
       }

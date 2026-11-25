@@ -1,5 +1,6 @@
-import { useEffect, useLayoutEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router'
+import { useUrlMirror } from '../../app/useUrlMirror'
 import {
   buildTruthTable,
   findLogicPreset,
@@ -54,7 +55,7 @@ export function parseSource(src: string): Parsed {
 
 /** All the Truth Table page state: the expression, its (debounced) parse, the options and the URL. */
 export function useTruthPage() {
-  const [params, setParams] = useSearchParams()
+  const [params] = useSearchParams()
   const [expr, setExpr] = useState(() => initialExpr(params))
   const [debounced, setDebounced] = useState(expr)
   const [notation, setNotation] = useState<TruthNotation>('01')
@@ -67,11 +68,10 @@ export function useTruthPage() {
 
   // Keep the URL and the remembered expression in step with what is on screen.
   const presetId = logicPresets.find((p) => p.source === debounced)?.id
-  // A LAYOUT effect: a passive one can still be pending when the next nav link is clicked, and then overwrites it.
-  useLayoutEffect(() => {
-    setParams(presetId ? { preset: presetId } : debounced.trim() ? { expr: debounced } : {}, { replace: true })
+  useUrlMirror(presetId ? { preset: presetId } : debounced.trim() ? { expr: debounced } : {})
+  useEffect(() => {
     if (debounced.trim()) writeLast(debounced)
-  }, [debounced, presetId, setParams])
+  }, [debounced])
 
   const parsed = useMemo(() => parseSource(debounced), [debounced])
   const table = useMemo(

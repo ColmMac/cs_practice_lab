@@ -1,5 +1,5 @@
 import { expect, test, type Browser, type Page } from '@playwright/test'
-import { decodeShare, encodeShare, parseShareHash } from '../../src/core/share/urlState'
+import { decodeShare, encodeShare, MAX_SHARE_PAYLOAD, parseShareHash } from '../../src/core/share/urlState'
 import { defaultWorkspace } from '../../src/core/workspace'
 
 const OWN_CODE = 'mine = "student-own-code"\nprint(mine)\n'
@@ -148,6 +148,54 @@ test('a tampered payload falls back safely and still does not run', async ({ bro
   await expect(page.getByText('That share link couldn’t be read')).toBeVisible()
   await context.close()
 })
+
+/** A real link, for a program the visitor must never see or run. */
+const FOREIGN = encodeShare(defaultWorkspace('print("foreign-output")\n'))
+/** Valid, but over the size the app will open: seeded noise, which compression can't shrink away. */
+const oversized = () => {
+  let seed = 1
+  const noise = Array.from({ length: 20_000 }, () => String.fromCharCode(33 + ((seed = (seed * 48_271) % 2_147_483_647) % 90)))
+  return encodeShare(defaultWorkspace(`# ${noise.join('')}\nprint("foreign-output")\n`))
+}
+
+const DAMAGED: [string, () => string][] = [
+  ['random characters', () => 'Qm9ndXM7x9Kq2LzPvT4wYhN8sR1dF6gJ3cB5nMaE0uIoXyZ'.repeat(4)],
+  ['a real payload cut in half', () => FOREIGN.slice(0, Math.floor(FOREIGN.length / 2))],
+  ['an oversized payload', oversized],
+  ['characters that are not base64', () => '!!!%%%^^^~~~***((()))'],
+]
+
+for (const [name, payload] of DAMAGED) {
+  test(`a share link of ${name} only raises the alert and leaves the visitor’s work alone`, async ({ browser }) => {
+    if (name === 'an oversized payload') expect(payload().length).toBeGreaterThan(MAX_SHARE_PAYLOAD)
+    const { context, page } = await student(browser)
+    const crashes: string[] = []
+    page.on('pageerror', (e) => crashes.push(e.message))
+    await page.goto(`/trace-table#s=${payload()}`)
+
+    await expect(page.getByRole('alert').filter({ hasText: 'That share link couldn’t be read' })).toBeVisible()
+    await expect(page.getByRole('status').filter({ hasText: /^Python ready$/ })).toBeVisible({ timeout: 80_000 })
+    // once Python is ready the visitor's own table comes back; only then is the button Run again, not Cancel
+    await expect(traceTable(page).getByRole('cell', { name: 'student-own-code' }).first()).toBeVisible()
+    await page.waitForTimeout(1500) // anything else that was going to run would have
+    await expect(page).toHaveURL(/\/trace-table$/)
+    await expect(page.getByRole('region', { name: 'Shared workspace' })).toHaveCount(0)
+    await expect(panel(page)).toHaveCount(0)
+    await expect(page.locator('.cm-content')).toContainText('student-own-code')
+    await expect(page.getByText('foreign-output')).toHaveCount(0)
+    const saved = await page.evaluate(() => (JSON.parse(localStorage.getItem('tts:v1')!) as { state: { code: string } }).state.code)
+    expect(saved).toBe(OWN_CODE)
+
+    // still a working page
+    await page.getByRole('button', { name: 'Dismiss' }).click()
+    await expect(page.getByRole('alert')).toHaveCount(0)
+    await page.locator('.cm-content').fill('total = 40 + 2')
+    await page.getByRole('button', { name: /^Run$/ }).click()
+    await expect(traceTable(page).getByRole('cell', { name: '42' })).toBeVisible()
+    expect(crashes).toEqual([])
+    await context.close()
+  })
+}
 
 test('a legacy /#s= challenge link is forwarded to the trace page and waits for Start', async ({ browser }) => {
   const { context, page } = await student(browser)

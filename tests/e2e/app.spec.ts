@@ -16,7 +16,7 @@ test('loads Python, runs a preset and shows the right table', async ({ page }) =
   page.on('console', (m) => m.type() === 'error' && errors.push(m.text()))
 
   await page.goto('/trace-table')
-  await expect(page.getByRole('status').filter({ hasText: 'Python ready' })).toBeVisible({ timeout: 80_000 })
+  await expect(page.getByRole('status').filter({ hasText: /^Python ready$/ })).toBeVisible({ timeout: 80_000 })
 
   await loadPreset(page, 'Digit sum (while, %, //)')
   const table = page.getByRole('table', { name: 'Trace table' })

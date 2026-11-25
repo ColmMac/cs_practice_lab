@@ -29,7 +29,7 @@ const cells = (table: Locator) =>
   )
 
 for (const [path, title] of GUIDES) {
-  test(`${path}: the guide is below the workspace and its FAQ matches the markup`, async ({ page }) => {
+  test(`${path}: the guide is below the workspace`, async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 800 })
     await page.goto(path)
     const section = guide(page, title)
@@ -38,12 +38,6 @@ for (const [path, title] of GUIDES) {
     const footer = (await page.getByRole('contentinfo').boundingBox())!
     const box = (await section.boundingBox())!
     expect(footer.y).toBeGreaterThanOrEqual(box.y + box.height - 1)
-
-    const questions = await section.getByRole('heading', { level: 4 }).evaluateAll((hs) =>
-      hs.map((h) => [h.textContent!, h.nextElementSibling!.textContent!]),
-    )
-    expect(questions.length).toBeGreaterThanOrEqual(3)
-    await expect.poll(() => faqMarkup(page)).toEqual([questions])
   })
 
   test(`${path}: the served HTML carries the guide for readers without JavaScript`, async ({ page, request }) => {
