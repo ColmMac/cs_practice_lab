@@ -5,10 +5,10 @@ import { Badge, type BadgeTone } from '../ui/Badge'
 function describe(s: RunnerStatus): { text: string; tone: BadgeTone } {
   switch (s.state) {
     case 'uninitialised':
-      return { text: 'Python not started', tone: 'neutral' }
+      return { text: 'Idle', tone: 'neutral' }
     case 'loading':
-      // short on purpose: a long line rewraps the toolbar and moves the page. EmptyState says what is downloading.
-      return { text: 'Loading Python…', tone: 'warn' }
+      // no wider than "Python ready" (see below). EmptyState says what is downloading.
+      return { text: 'Loading…', tone: 'warn' }
     case 'ready':
       return { text: 'Python ready', tone: 'ok' }
     case 'running':
@@ -24,7 +24,15 @@ export function RuntimeStatusBadge() {
   const { text, tone } = describe(status)
   return (
     <Badge tone={tone}>
-      {text}
+      {status.state === 'failed' ? (
+        text
+      ) : (
+        // As wide as "Python ready" in every state: a width that changes can rewrap the toolbar and move the page.
+        // The invisible copy is CSS content, so it is not part of the badge's text.
+        <span className="inline-grid justify-items-center before:invisible before:col-start-1 before:row-start-1 before:content-['Python_ready']">
+          <span className="col-start-1 row-start-1">{text}</span>
+        </span>
+      )}
       {status.state === 'failed' && (
         <button type="button" onClick={() => void retryRuntime()} className="rounded border border-current px-1.5 py-0.5">
           Retry
