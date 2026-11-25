@@ -1670,3 +1670,25 @@ C2 needs C1's `lines`. C4 needs C1 (Condition cells can be masked) and C2 (Why? 
 - Server-side or signed challenge links, and class rosters. These would need a backend, which the brief rules out; the plan says plainly that a client-side challenge can be bypassed.
 - Exam pseudocode → Python (only the reverse direction).
 - Reordering Study Mode navigation to row-major Enter (D12).
+
+---
+
+## 18. Pre-launch polish — decisions and notes (`POLISH_PLAN.md`)
+
+### 18.1 P0 decisions (recorded 2026-11-25, answered by the owner)
+
+None of this is legal advice.
+
+| # | Topic | Decision |
+|---|-------|----------|
+| E1 | **Consent and children** (`POLISH_PLAN.md` F10) | Google's own certified CMP (AdSense → *Privacy & messaging* → European regulations message), and **non-personalised ads only**, because the audience includes GCSE students aged 14–16. The consent message stays even with non-personalised ads. P8 sets this in AdSense, and `/privacy` (P4) states it. |
+| E2 | **Hosting** | Cloudflare Pages with the Git integration, served from the apex `cspracticelab.com`, with `www` redirecting to the apex. **Not set up yet** (see 18.2). |
+| E3 | **Contact mailbox** | `contact@cspracticelab.com`, through Cloudflare Email Routing to a real inbox. It must receive a test message **before** `/about` goes live. **Not set up yet** (see 18.2). |
+| E4 | **Icon library** | Add `lucide-react`: pinned exact version, tree-shaken named imports only. It replaces the inline SVG paths and emoji buttons. The package is installed in P2, not in P0. |
+| E5 | **Where ads never appear** (confirmed by the brief) | Study mode, practice, quiz, challenge, projector and print. P7 specifies how. |
+
+### 18.2 State on 2026-11-25
+
+DNS lookups from the development machine for `cspracticelab.com` (NS, MX, A) and `www.cspracticelab.com` all returned "DNS name does not exist". So the Cloudflare DNS, the `www` redirect and the mailbox are decisions, not verified facts. The owner said the domain is still pending and the mailbox is not set up.
+
+These do not block the code tickets, which use `https://cspracticelab.com` as the default origin. They do block launch, and are tracked as unchecked items at the start of `POLISH_PLAN.md` P13.
