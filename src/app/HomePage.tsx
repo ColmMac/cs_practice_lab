@@ -3,6 +3,7 @@ import { Link, Navigate, useLocation } from 'react-router'
 import { parseShareHash, SHARE_KEY } from '../core/share/urlState'
 import { AdSlot } from '../components/ui/AdSlot'
 import { useAdsAllowed } from '../components/ui/useAdsAllowed'
+import { LINK_CLASSES } from '../components/ui/links'
 import { Badge } from '../components/ui/Badge'
 import { BUTTON_CLASSES } from '../components/ui/Button'
 import { Panel } from '../components/ui/Panel'
@@ -13,8 +14,6 @@ import { SITE_DESCRIPTION, SITE_NAME } from '../config/site'
 import { TOOLS } from './tools'
 import { TRACE_PRESET_IDS, useMastery } from './useMastery'
 import { presetProgress } from '../core/mastery/mastery'
-
-const linkClass = 'text-accent underline focus-visible:outline-2 focus-visible:outline-accent'
 
 /** Extra home-page detail per tool, keyed by route path. Names, summaries and paths come from TOOLS. */
 const CARDS: Record<string, { tags: string[]; Icon: LucideIcon }> = {
@@ -90,7 +89,7 @@ export function HomePage() {
                           ))}
                         </ul>
                       )}
-                      <Link to={t.path} className={`mt-3 inline-block ${linkClass}`}>
+                      <Link to={t.path} className={`mt-3 inline-block ${LINK_CLASSES.inline}`}>
                         Open {t.name}
                       </Link>
                     </div>

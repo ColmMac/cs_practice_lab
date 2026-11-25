@@ -1,17 +1,16 @@
 import { Link } from 'react-router'
+import { LINK_CLASSES } from '../components/ui/links'
 import type { Block, Inline } from './info/content'
-
-export const linkClass = 'text-accent underline focus-visible:outline-2 focus-visible:outline-accent'
 
 export function Text({ parts }: { parts: Inline[] }) {
   return parts.map((part, i) => {
     if (typeof part === 'string') return part
     return part.href.startsWith('/') ? (
-      <Link key={i} to={part.href} className={linkClass}>
+      <Link key={i} to={part.href} className={LINK_CLASSES.inline}>
         {part.text}
       </Link>
     ) : (
-      <a key={i} href={part.href} className={linkClass}>
+      <a key={i} href={part.href} className={LINK_CLASSES.inline}>
         {part.text}
       </a>
     )

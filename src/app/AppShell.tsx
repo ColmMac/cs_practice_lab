@@ -1,15 +1,14 @@
 import { useLayoutEffect } from 'react'
 import { NavLink, Outlet, useLocation, useNavigationType } from 'react-router'
 import { useSizeVariable, type SizeSource } from '../components/table/useSizeVariable'
+import { LINK_CLASSES } from '../components/ui/links'
 import { ThemeToggle } from '../components/ui/ThemeToggle'
 import { SITE_NAME } from '../config/site'
 import { SiteFooter } from './SiteFooter'
 import { TOOLS } from './tools'
 
-const linkClass = ({ isActive }: { isActive: boolean }) =>
-  `rounded px-2 py-1 text-sm font-medium focus-visible:outline-2 focus-visible:outline-accent ${
-    isActive ? 'bg-accent-soft text-on-accent-soft' : 'text-text-muted hover:bg-surface-hover hover:text-text'
-  }`
+const navLinkClass = ({ isActive }: { isActive: boolean }) =>
+  `${LINK_CLASSES.nav} ${isActive ? LINK_CLASSES.navActive : LINK_CLASSES.navIdle}`
 
 /** The nav's height (it wraps on narrow screens). Published on <html>: workspaces and scroll padding subtract it. */
 const NAV_HEIGHT: SizeSource = { variable: '--nav-h', size: (el) => el.offsetHeight, host: () => document.documentElement }
@@ -54,7 +53,7 @@ export function AppShell() {
         <ul className="flex flex-wrap items-center gap-1">
           {TOOLS.map((t) => (
             <li key={t.path}>
-              <NavLink to={t.path} className={linkClass}>
+              <NavLink to={t.path} className={navLinkClass}>
                 {t.name}
               </NavLink>
             </li>

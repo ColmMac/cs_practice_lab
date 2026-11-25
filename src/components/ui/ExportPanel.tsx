@@ -4,9 +4,10 @@ import { CSV_BOM, toCsv } from '../../core/export/csv'
 import { copyText, dataUrlToBlob, downloadBlob, downloadText, MIME } from '../../core/export/download'
 import { toLatex } from '../../core/export/latex'
 import { toMarkdown } from '../../core/export/markdown'
-import type { TableModel } from '../../core/export/tableModel'
+import type { ExportVariant, TableModel } from '../../core/export/tableModel'
 import { Button } from './Button'
 import { Popover } from './Popover'
+import { SegmentedToggle } from './SegmentedToggle'
 import { Download } from 'lucide-react'
 import { ICON_BEFORE } from './icons'
 
@@ -120,6 +121,40 @@ export function ExportPanel({ table, baseName, controls, extras, trailing }: Pro
         {message}
       </p>
     </Popover>
+  )
+}
+
+/** Answer key or worksheet, for tools whose worksheet blanks the Study mode mask. */
+export function ExportVariantPicker({
+  value,
+  onChange,
+  blanked,
+  nothingBlanked,
+}: {
+  value: ExportVariant
+  onChange: (variant: ExportVariant) => void
+  /** How many cells the worksheet blanks. */
+  blanked: number
+  /** What to say when that is none: how to choose some in this tool. */
+  nothingBlanked: string
+}) {
+  return (
+    <>
+      <SegmentedToggle<ExportVariant>
+        label="As"
+        value={value}
+        onChange={onChange}
+        options={[
+          { value: 'key', label: 'Answer key', hint: 'Every value filled in' },
+          { value: 'worksheet', label: 'Worksheet', hint: 'The cells a student fills in are left blank' },
+        ]}
+      />
+      {value === 'worksheet' && (
+        <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
+          {blanked === 0 ? nothingBlanked : `Blanks ${blanked} cell${blanked === 1 ? '' : 's'} (the Study mode mask).`}
+        </p>
+      )}
+    </>
   )
 }
 

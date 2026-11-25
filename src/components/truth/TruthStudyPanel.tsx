@@ -1,5 +1,6 @@
 import type { TruthMask } from '../../core/logic'
 import { Button } from '../ui/Button'
+import { KeyboardLegend } from '../ui/KeyboardLegend'
 import { SegmentedToggle } from '../ui/SegmentedToggle'
 import { ScoreBar } from '../study/ScoreBar'
 import { CHECK_ID } from '../study/useAnswerGrid'
@@ -66,10 +67,7 @@ export function TruthStudyPanel({ study }: { study: TruthStudy }) {
         <Button variant="small" onClick={grid.reset}>
           Reset answers
         </Button>
-        <p className="text-[11px] text-slate-600 dark:text-slate-400">
-          <kbd>Enter</kbd> / <kbd>↓</kbd> next · <kbd>Shift+Enter</kbd> / <kbd>↑</kbd> previous · <kbd>Alt+H</kbd> hint · <kbd>Alt+R</kbd> reveal · answer
-          with 0, 1, T or F. Changing the expression or options ends study mode.
-        </p>
+        <KeyboardLegend> · answer with 0, 1, T or F. Changing the expression or options ends study mode.</KeyboardLegend>
       </div>
 
       {score && <ScoreBar score={score} />}

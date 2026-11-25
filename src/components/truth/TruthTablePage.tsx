@@ -10,16 +10,14 @@ import { Panel } from '../ui/Panel'
 import { SegmentedToggle } from '../ui/SegmentedToggle'
 import { ToolHeader } from '../ui/ToolHeader'
 import { ToolWorkspace } from '../ui/ToolWorkspace'
-import { Button } from '../ui/Button'
 import { ExportUnavailable } from '../ui/ExportPanel'
+import { StudyModeButton } from '../ui/StudyModeButton'
 import { ExpressionInput } from './ExpressionInput'
 import { TruthExport } from './TruthExport'
 import { TruthStudyPanel } from './TruthStudyPanel'
 import { TruthTableView } from './TruthTableView'
 import { useTruthStudy } from './useTruthStudy'
 import { CUSTOM, useTruthPage } from './useTruthPage'
-import { PencilLine } from 'lucide-react'
-import { ICON_BEFORE } from '../ui/icons'
 
 export function TruthTablePage() {
   const s = useTruthPage()
@@ -72,16 +70,12 @@ export function TruthTablePage() {
           ) : (
             <ExportUnavailable reason="Enter a valid expression first" />
           )}
-          <Button
-            aria-pressed={study.active}
+          <StudyModeButton
+            on={study.active}
             disabled={!study.active && !s.table}
             title={study.active ? 'Leave study mode' : 'Hide the answers and fill the truth table in yourself.'}
             onClick={study.active ? study.exit : study.start}
-            className={study.active ? '!border-accent-fill !bg-accent-fill !text-on-accent hover:!bg-accent-fill-hover' : '!border-accent-fill !text-accent'}
-          >
-            <PencilLine aria-hidden="true" className={ICON_BEFORE} />
-            Study mode{study.active ? ': on' : ''}
-          </Button>
+          />
         </ToolHeader>
         <main className="grid flex-1 content-start gap-4 p-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
           <div className="flex flex-col gap-3">

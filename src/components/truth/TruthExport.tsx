@@ -3,8 +3,7 @@ import { buildTruthTableModel, truthBaseName } from '../../core/export/truthMode
 import type { ExportVariant } from '../../core/export/tableModel'
 import { truthMasks, type TruthTable } from '../../core/logic'
 import { newSeed } from '../../core/study/rng'
-import { ExportPanel } from '../ui/ExportPanel'
-import { SegmentedToggle } from '../ui/SegmentedToggle'
+import { ExportPanel, ExportVariantPicker } from '../ui/ExportPanel'
 import type { TruthStudy } from './useTruthStudy'
 
 interface Props {
@@ -36,22 +35,12 @@ export function TruthExport({ table, expression, study }: Props) {
       baseName={truthBaseName(variant)}
       controls={
         <>
-          <SegmentedToggle<ExportVariant>
-            label="As"
+          <ExportVariantPicker
             value={variant}
             onChange={setVariant}
-            options={[
-              { value: 'key', label: 'Answer key', hint: 'Every value filled in' },
-              { value: 'worksheet', label: 'Worksheet', hint: 'The cells a student fills in are left blank' },
-            ]}
+            blanked={masked.size}
+            nothingBlanked="Nothing is blanked: choose what to hide in Study mode."
           />
-          {variant === 'worksheet' && (
-            <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
-              {masked.size === 0
-                ? 'Nothing is blanked: choose what to hide in Study mode.'
-                : `Blanks ${masked.size} cell${masked.size === 1 ? '' : 's'} (the Study mode mask).`}
-            </p>
-          )}
           <label className="mt-2 flex items-center gap-2 text-xs">
             <input type="checkbox" checked={includeCode} onChange={(e) => setIncludeCode(e.target.checked)} />
             Include the expression (Markdown, LaTeX, PNG)

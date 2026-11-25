@@ -3,7 +3,7 @@ import { applyColumnPrefs, deriveColumns } from '../../src/core/derive/columns'
 import { deriveRows, type RowOptions } from '../../src/core/derive/rows'
 import { hintFor } from '../../src/core/study/hint'
 import { maskableCells, selectMasks } from '../../src/core/study/mask'
-import { mulberry32, newSeed, shuffled } from '../../src/core/study/rng'
+import { mulberry32, newSeed, sampleShare, shuffled } from '../../src/core/study/rng'
 import { formatPoints, summarise } from '../../src/core/study/score'
 import { DEFAULT_STUDY_CONFIG, cellKey, type Grade, type StudyConfig, type Truth } from '../../src/core/study/types'
 import type { TraceResult, Value, WatchExpression } from '../../src/core/types'
@@ -45,6 +45,16 @@ describe('mulberry32 / shuffled / newSeed', () => {
     expect([...s1].sort((x, y) => x - y)).toEqual(input)
     expect(s1).toEqual(shuffled(input, mulberry32(9)))
     expect(s1).not.toEqual(input)
+  })
+
+  it('sampleShare takes an exact, repeatable share: the front of the seeded shuffle', () => {
+    const items = Array.from({ length: 20 }, (_, i) => i)
+    expect(sampleShare(items, 25, 9)).toEqual(shuffled(items, mulberry32(9)).slice(0, 5))
+    expect(sampleShare(items, 1, 9)).toHaveLength(1) // at least one when asked for something
+    expect(sampleShare(items, 0, 9)).toEqual([])
+    expect(sampleShare(items, -5, 9)).toEqual([])
+    expect(sampleShare(items, 250, 9)).toHaveLength(20)
+    expect(sampleShare([], 50, 9)).toEqual([])
   })
 
   it('newSeed is a 32-bit unsigned integer', () => {

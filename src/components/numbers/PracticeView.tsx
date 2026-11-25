@@ -1,5 +1,6 @@
 import { explain, TOPICS, type Topic } from '../../core/numbers'
 import { Button } from '../ui/Button'
+import { KeyboardLegend } from '../ui/KeyboardLegend'
 import { Panel } from '../ui/Panel'
 import { AnswerCell } from '../study/AnswerCell'
 import { ScoreBar } from '../study/ScoreBar'
@@ -48,10 +49,7 @@ export function PracticeView({
                 ))}
               </select>
             </label>
-            <p className="text-[11px] text-slate-600 dark:text-slate-400">
-              <kbd>Enter</kbd> / <kbd>↓</kbd> next · <kbd>Shift+Enter</kbd> / <kbd>↑</kbd> previous · <kbd>Alt+H</kbd> hint · <kbd>Alt+R</kbd> reveal ·
-              formatting such as 0b, 0x and spaces is fine.
-            </p>
+            <KeyboardLegend> · formatting such as 0b, 0x and spaces is fine.</KeyboardLegend>
           </div>
           <ol className="flex flex-col gap-4" onKeyDown={grid.onKeyDown}>
             {p.questions.map((q, i) => (

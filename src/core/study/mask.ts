@@ -1,6 +1,6 @@
 import { OUTPUT_COL, LINE_COL, STACK_COL } from '../derive/columns'
 import type { ColumnDef, TraceRow } from '../types'
-import { mulberry32, shuffled } from './rng'
+import { sampleShare } from './rng'
 import { cellKey, type StudyConfig, type Truth } from './types'
 
 export interface MaskableCell {
@@ -50,12 +50,7 @@ export function selectMasks(cells: MaskableCell[], config: StudyConfig, seed: nu
       const chosen = new Set(config.cells)
       return new Set(cells.filter((c) => chosen.has(c.key)).map((c) => c.key))
     }
-    case 'random': {
-      const percent = Math.min(100, Math.max(0, Math.round(config.percent)))
-      if (cells.length === 0 || percent === 0) return new Set()
-      // exact count (not a coin flip per cell), at least one when asked for something
-      const count = Math.max(1, Math.round((cells.length * percent) / 100))
-      return new Set(shuffled(cells, mulberry32(seed)).slice(0, count).map((c) => c.key))
-    }
+    case 'random':
+      return new Set(sampleShare(cells, config.percent, seed).map((c) => c.key))
   }
 }

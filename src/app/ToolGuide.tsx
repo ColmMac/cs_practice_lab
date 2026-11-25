@@ -1,5 +1,6 @@
 import { FAQ_HEADING, guideSections, type Guide, type GuideBlock, type GuideSection } from './guides'
-import { BlockView, Text, linkClass } from './Prose'
+import { LINK_CLASSES } from '../components/ui/links'
+import { BlockView, Text } from './Prose'
 
 const heading = 'text-base font-semibold'
 // a box that can scroll sideways on a phone has to be reachable by keyboard
@@ -47,7 +48,7 @@ function GuideBlockView({ block }: { block: GuideBlock }) {
   if ('example' in block) {
     return (
       <p>
-        <a href={block.example.href} className={linkClass}>
+        <a href={block.example.href} className={LINK_CLASSES.inline}>
           {block.example.text}
         </a>
       </p>

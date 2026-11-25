@@ -31,6 +31,10 @@ Dark mode is the `.dark` class on `<html>` (custom variant in `src/styles/index.
 - `ToolWorkspace` – a tool's header and working area, at least as tall as the screen under the nav (wide screens).
 - `Popover` – trigger render-prop plus a dialog that closes on Escape or an outside click (`usePopover` underneath).
 - `tableStyles` – `TABLE`, `THEAD`, `TH`, `TD` class constants for data tables.
+- `LINK_CLASSES` (`links.ts`) – inline, footer and nav links. Don't copy the strings.
+- `StudyModeButton` – the Study mode switch (outlined off, filled on). The tool supplies the behaviour.
+- `KeyboardLegend` – the answer-box keys under a quiz; tool-specific keys go in `tab` and `children`.
+- `ExportPanel` – every tool's Export popover; `ExportVariantPicker` is its answer key / worksheet choice.
 - `ThemeToggle`, `theme.ts` – shared light/dark store (`tts:theme`).
 
 `tests/unit/uiPrimitives.test.tsx` pins these class strings; change one deliberately or not at all.

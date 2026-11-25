@@ -1,4 +1,4 @@
-import { mulberry32, shuffled } from '../study/rng'
+import { sampleShare } from '../study/rng'
 import type { Grade } from '../study/types'
 import type { TruthNotation, TruthTable } from './table'
 
@@ -42,11 +42,7 @@ export function truthMasks(table: TruthTable, config: TruthStudyConfig, seed: nu
   const group = new Map(table.columns.map((c) => [c.key, c.group]))
   if (config.mask === 'outputs') return new Set(cells.filter((c) => group.get(c.colKey) === 'output').map((c) => c.key))
   if (config.mask === 'intermediates') return new Set(cells.map((c) => c.key))
-
-  const percent = Math.min(100, Math.max(0, Math.round(config.percent)))
-  if (cells.length === 0 || percent === 0) return new Set()
-  const count = Math.max(1, Math.round((cells.length * percent) / 100))
-  return new Set(shuffled(cells, mulberry32(seed)).slice(0, count).map((c) => c.key))
+  return new Set(sampleShare(cells, config.percent, seed).map((c) => c.key))
 }
 
 const TRUE_WORDS = new Set(['1', 't', 'true'])

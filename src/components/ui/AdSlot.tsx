@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties } from 're
 import { Link, useLocation } from 'react-router'
 import { isAdsenseClient, isAdsenseSlot } from '../../config/site'
 import { houseCard } from './houseCards'
+import { LINK_CLASSES } from './links'
 import type { Ads } from './useAdsAllowed'
 import { useMediaQuery, WIDE_SCREEN } from './useMediaQuery'
 
@@ -93,7 +94,7 @@ function HouseAd({ pathname }: { pathname: string }) {
     <p data-testid="house-card" className="flex h-[100px] items-center justify-center px-3 text-center text-sm">
       <span>
         {card.text}{' '}
-        <Link to={card.to} className="text-accent underline focus-visible:outline-2 focus-visible:outline-accent">
+        <Link to={card.to} className={LINK_CLASSES.inline}>
           {card.link}
         </Link>
       </span>

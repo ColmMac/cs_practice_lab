@@ -241,17 +241,17 @@ Gate: content reviewed by the owner. axe passes on the real page in light and da
 
 ## P10. Deduplication, strict types and dead files (F8)
 
-- [ ] **Keyboard legend:** the identical `<kbd>Enter</kbd> / <kbd>↓</kbd> next · …` blocks in `StudyToolbar.tsx`, `TruthStudyPanel.tsx` and `PracticeView.tsx` → one `components/ui/KeyboardLegend.tsx` with per-tool extras (Alt+W only on trace).
-- [ ] **Study toggle:** `TruthTablePage.tsx` re-implements the "Study mode: on" button that `components/study/StudyToggle.tsx` provides. Make one presentational `StudyModeButton` in `components/ui`, used by both.
-- [ ] **Link styles:** `linkClass` is copied in `HomePage.tsx` and `pages.tsx` (and nav variants in `AppShell`). Export `LINK_CLASSES` from `components/ui` (token-based after P2).
-- [ ] **Route fallback:** the `<Suspense fallback={<p role="status">Loading…</p>}>` block is repeated four times (six after P4) in `routes.tsx`. Use one `lazyRoute()` helper.
-- [ ] **Grading and masking:** confirm truth-table study (`core/logic/study.ts`), number practice (`core/numbers/practice.ts`) and sorting quiz (`core/algorithms/quiz.ts`) reuse `core/study` (`compare`, `score`, `mask`, `rng`) rather than re-implementing scoring. Fold any duplicate into `core/study`, keeping language rules out of core (`CLAUDE.md`).
-- [ ] **Mastery storage:** confirm every read and write goes through `store/masteryStorage.ts` (grep `localStorage` outside `store/`, `theme.ts` and `projector.ts`).
-- [ ] **Exports:** confirm `TruthExport`, `HistoryExport` and `ExportMenu` all render through `components/ui/ExportPanel`. Merge any leftover per-tool menu markup.
-- [ ] Remove the `.gitkeep` files in directories that now have files (`src/components/export`, `src/components/study`, `src/core/export`, `src/core/share`, `src/core/study`, `tests/e2e`, `tests/fixtures/presets`). There are no Vite starter files left (`src/assets`, `App.css` and `vite.svg` are already gone, which is verified).
-- [ ] `npx tsc --noEmit` (= `npm run typecheck`) passes with zero errors. ESLint is clean, including the React Compiler rules.
+- [x] **Keyboard legend:** the identical `<kbd>Enter</kbd> / <kbd>↓</kbd> next · …` blocks in `StudyToolbar.tsx`, `TruthStudyPanel.tsx` and `PracticeView.tsx` → one `components/ui/KeyboardLegend.tsx` with per-tool extras (Alt+W only on trace).
+- [x] **Study toggle:** `TruthTablePage.tsx` re-implements the "Study mode: on" button that `components/study/StudyToggle.tsx` provides. Make one presentational `StudyModeButton` in `components/ui`, used by both.
+- [x] **Link styles:** `linkClass` is copied in `HomePage.tsx` and `pages.tsx` (and nav variants in `AppShell`). Export `LINK_CLASSES` from `components/ui` (token-based after P2).
+- [x] **Route fallback:** the `<Suspense fallback={<p role="status">Loading…</p>}>` block is repeated four times (six after P4) in `routes.tsx`. Use one `lazyRoute()` helper.
+- [x] **Grading and masking:** confirm truth-table study (`core/logic/study.ts`), number practice (`core/numbers/practice.ts`) and sorting quiz (`core/algorithms/quiz.ts`) reuse `core/study` (`compare`, `score`, `mask`, `rng`) rather than re-implementing scoring. Fold any duplicate into `core/study`, keeping language rules out of core (`CLAUDE.md`).
+- [x] **Mastery storage:** confirm every read and write goes through `store/masteryStorage.ts` (grep `localStorage` outside `store/`, `theme.ts` and `projector.ts`).
+- [x] **Exports:** confirm `TruthExport`, `HistoryExport` and `ExportMenu` all render through `components/ui/ExportPanel`. Merge any leftover per-tool menu markup.
+- [x] Remove the `.gitkeep` files in directories that now have files (`src/components/export`, `src/components/study`, `src/core/export`, `src/core/share`, `src/core/study`, `tests/e2e`, `tests/fixtures/presets`). There are no Vite starter files left (`src/assets`, `App.css` and `vite.svg` are already gone, which is verified).
+- [x] `npx tsc --noEmit` (= `npm run typecheck`) passes with zero errors. ESLint is clean, including the React Compiler rules.
 
-Gate: `npm test`, `npm run test:py` on **3.12, 3.13 and 3.14**, typecheck, lint.
+Gate: `npm test`, `npm run test:py` on **3.12, 3.13 and 3.14**, typecheck, lint. *2026-11-25: green. 1242 unit tests, 292 tracer tests on each of 3.12, 3.13 and 3.14, typecheck, lint and build, plus the targeted E2E specs (the new `shared-ui.spec.ts`, and `truth-tables`, `number-systems`, `keyboard`, `shell`, `home`, `trust-pages`, `classroom`, `design`, `adslot`, `sorting`). The full E2E suite was not run. Audit results: scoring in the three self-tests already used `core/study` `summarise`, and their graders are domain-specific; the one duplicate, the seeded random share in `truthMasks` and `selectMasks`, is now `sampleShare` in `core/study/rng.ts`. `hub:mastery:v1` is read and written only by `store/masteryStorage.ts` (the other `localStorage` calls hold the welcome flag, pseudocode dialect and last truth expression). All three exports already used `ExportPanel`; the answer key / worksheet picker that two of them copied is now `ExportVariantPicker`. `AdSlot` had a further copy of the link classes. The truth-table Study mode button now takes the trace button’s size and weight. The sorting quiz keeps its own two-key legend (it has one box, so no next or previous).*
 
 ---
 

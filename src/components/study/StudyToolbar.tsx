@@ -6,6 +6,7 @@ import type { MaskMode } from '../../core/study/types'
 import type { TraceResult } from '../../core/types'
 import { useStore } from '../../store'
 import { Segmented } from '../table/Segmented'
+import { KeyboardLegend } from '../ui/KeyboardLegend'
 import { focusInput, studyInputs } from './navigation'
 import { ScoreBar } from './ScoreBar'
 import { CHECK_ID } from './useAnswerGrid'
@@ -159,17 +160,17 @@ export function StudyToolbar({ result }: { result: TraceResult }) {
         <button type="button" className={btn} onClick={resetAnswers}>
           Reset answers
         </button>
-        <p className="text-[11px] text-slate-600 dark:text-slate-400">
-          <kbd>Enter</kbd> / <kbd>↓</kbd> next · <kbd>Shift+Enter</kbd> / <kbd>↑</kbd> previous · <kbd>Tab</kbd> across (after the last box: Check answers) · <kbd>Alt+H</kbd> hint ·{' '}
-          {challenge && !challenge.checkedOnce ? (
-            'Reveal unlocks after Check answers'
-          ) : (
+        <KeyboardLegend
+          tab={
             <>
-              <kbd>Alt+R</kbd> reveal
+              <kbd>Tab</kbd> across (after the last box: Check answers)
             </>
-          )}{' '}
+          }
+          revealLocked={challenge && !challenge.checkedOnce ? 'Reveal unlocks after Check answers' : undefined}
+        >
+          {' '}
           · <kbd>Alt+W</kbd> why (wrong answers) · output lines: write <code>\n</code> between them
-        </p>
+        </KeyboardLegend>
       </div>
 
       {score && <ScoreBar id={SCORE_ID} score={score} />}
