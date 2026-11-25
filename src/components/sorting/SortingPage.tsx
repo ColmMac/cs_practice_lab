@@ -232,11 +232,10 @@ export function SortingPage() {
                   >
                     {s.listError}
                   </p>
-                  {unsorted && (
-                    <div>
-                      <Button onClick={s.sortTheList}>Sort the list</Button>
-                    </div>
-                  )}
+                  <div className="flex flex-wrap gap-2">
+                    <Button onClick={s.randomise}>New random list</Button>
+                    {unsorted && <Button onClick={s.sortTheList}>Sort the list</Button>}
+                  </div>
                 </div>
                 {s.search && (
                   <div className="flex flex-col gap-1">

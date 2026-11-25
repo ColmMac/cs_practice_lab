@@ -1,4 +1,5 @@
 import type { Grade } from '../study/types'
+import { sortedProblem } from './searching'
 import type { Run } from './types'
 
 export type QuizKind = 'list' | 'index'
@@ -90,12 +91,15 @@ export const buildQuiz = (run: Run): QuizQuestion[] => {
   return []
 }
 
-export const quizUnavailable = (run: Run | null): string | null =>
-  !run
-    ? 'Fix the input first.'
-    : run.algo === 'linear'
-      ? 'Linear search just looks at one item after another, so there is nothing to predict. Try binary search or a sort.'
-      : null
+export const quizUnavailable = (run: Run | null): string | null => {
+  if (!run) return 'Fix the input first.'
+  if (run.algo === 'linear')
+    return 'Linear search just looks at one item after another, so there is nothing to predict. Try binary search or a sort.'
+  // every answer would be "the list stays as it is"
+  if (run.algo !== 'binary' && sortedProblem(run.input) === null)
+    return 'This list is already in order, so there is nothing to sort. Press New random list, or choose or type another list.'
+  return null
+}
 
 const sameList = (a: readonly number[], b: readonly number[]): boolean => a.length === b.length && a.every((v, i) => v === b[i])
 

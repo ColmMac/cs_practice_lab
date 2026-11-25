@@ -14,6 +14,18 @@ async function linearSearchStudy(page: Page) {
   await page.getByLabel('Example').selectOption({ label: 'Linear search (while + flag)' })
   await expect(traceTable(page).getByRole('cell', { name: 'True 2' })).toBeVisible({ timeout: 80_000 })
   await studyToggle(page).click()
+  // the leftmost column with a question (`found = True`), though boxes higher up are further right
+  await expect(traceTable(page).locator('input[data-study-col="<module>:found"]')).toBeFocused()
+}
+
+/** Lines 2 and 3 each work out two values, so they have two boxes side by side. */
+const PAIRS = 'a = [3, 4]\nx, y = a[0], a[1]\nx, y = y, x\nprint(x)\n'
+
+async function pairsStudy(page: Page) {
+  await page.addInitScript((code) => localStorage.setItem('tts:v1', JSON.stringify({ state: { code }, version: 1 })), PAIRS)
+  await page.goto('/trace-table')
+  await expect(traceTable(page).getByRole('cell', { name: '[3, 4]' })).toBeVisible({ timeout: 80_000 })
+  await studyToggle(page).click()
   await expect(boxes(page).first()).toBeFocused()
 }
 
@@ -56,19 +68,18 @@ const clearOfHeader = (page: Page) =>
   })
 
 test('Tab moves along a row, Enter moves down a column, and the editor follows', async ({ page }) => {
-  await linearSearchStudy(page)
-  // line 4 sets i, and the preset's watch changes there too: two boxes on one row
-  const row = traceTable(page).locator('tbody tr[data-line="4"] input[data-study-key]')
+  await pairsStudy(page)
+  const row = traceTable(page).locator('tbody tr[data-line="2"] input[data-study-key]')
   await expect(row).toHaveCount(2)
   await row.first().focus()
-  await expect.poll(() => editorSelection(page)).toEqual({ line: '4', visible: true })
+  await expect.poll(() => editorSelection(page)).toEqual({ line: '2', visible: true })
   await page.keyboard.press('Tab')
   await expect(row.nth(1)).toBeFocused()
 
   await row.first().focus()
   await page.keyboard.press('Enter')
   const below = await focused(page)
-  expect(below).toEqual({ line: '9', col: '<module>:i' })
+  expect(below).toEqual({ line: '3', col: '<module>:x' })
   await expect.poll(async () => (await editorSelection(page))?.line).toBe(below.line)
   await page.keyboard.press('Shift+Enter')
   await expect(row.first()).toBeFocused()
@@ -81,12 +92,12 @@ test('Tab from the last box reaches Check answers, which sends focus to the firs
   await expect(checkButton(page)).toBeFocused()
 
   // right, wrong, then everything else blank: the second box is the first wrong one
-  await boxes(page).first().fill('[4, 8, 15, 16, 23, 42]')
+  await boxes(page).first().fill('True')
   await boxes(page).nth(1).fill('99')
   await checkButton(page).focus()
   await page.keyboard.press('Enter')
   await expect(boxes(page).nth(1)).toBeFocused()
-  await expect.poll(async () => (await editorSelection(page))?.line).toBe('2')
+  await expect.poll(async () => (await editorSelection(page))?.line).toBe('9')
 
   // no trap: Shift+Tab from the first box leaves the table backwards
   await boxes(page).first().focus()
@@ -108,7 +119,7 @@ async function longStudy(page: Page, projector: boolean) {
   await page.goto('/trace-table')
   await expect(traceTable(page).getByRole('cell', { name: '58' }).last()).toBeVisible({ timeout: 80_000 })
   await studyToggle(page).click()
-  await expect(boxes(page)).toHaveCount(60)
+  await expect(boxes(page)).toHaveCount(59) // `total = 0` stays filled in
 }
 
 for (const projector of [false, true]) {
@@ -133,7 +144,7 @@ for (const projector of [false, true]) {
     await checkButton(page).evaluate((b) => (b as HTMLButtonElement).click())
     await expect(boxes(page).first()).toBeFocused()
     await expect.poll(() => clearOfHeader(page)).toBe(true)
-    await expect.poll(() => editorSelection(page)).toEqual({ line: '1', visible: true })
+    await expect.poll(() => editorSelection(page)).toEqual({ line: '2', visible: true })
   })
 }
 

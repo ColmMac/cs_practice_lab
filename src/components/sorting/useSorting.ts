@@ -9,6 +9,8 @@ import {
   LIST_PRESETS,
   parseList,
   parseTarget,
+  randomSearchInput,
+  randomSortingList,
   runAlgorithm,
   sortedProblem,
   type AlgorithmId,
@@ -17,6 +19,7 @@ import {
   type Run,
   type SortingUrlState,
 } from '../../core/algorithms'
+import { mulberry32, newSeed } from '../../core/study/rng'
 
 export const SPEEDS = { slow: 1400, normal: 800, fast: 300 } as const
 export type Speed = keyof typeof SPEEDS
@@ -60,6 +63,8 @@ export interface Sorting {
   setSpeed: (s: Speed) => void
   choosePreset: (id: string) => void
   sortTheList: () => void
+  /** A fresh list (and, for searches, a target) that is worth tracing with the chosen algorithm. */
+  randomise: () => void
   step: () => void
   back: () => void
   togglePlay: () => void
@@ -178,6 +183,17 @@ export function useSorting(initial?: Partial<SortingUrlState>): Sorting {
     sortTheList: () => {
       if (!data || !sortedProblem(data)) return
       setTextState([...data].sort((a, b) => a - b).join(', '))
+      restart()
+    },
+    randomise: () => {
+      const rng = mulberry32(newSeed())
+      if (algo === 'linear' || algo === 'binary') {
+        const next = randomSearchInput(algo, rng)
+        setTextState(next.data.join(', '))
+        setTargetTextState(String(next.target))
+      } else {
+        setTextState(randomSortingList(rng).join(', '))
+      }
       restart()
     },
     step: () => {

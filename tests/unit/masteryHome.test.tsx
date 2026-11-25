@@ -38,7 +38,7 @@ const CLEAN = {
 const stored = () => JSON.parse(localStorage.getItem(MASTERY_KEY) ?? 'null') as MasteryFile | null
 const preset = (id: string) => pythonPresets.find((p) => p.id === id)!
 
-/** The digit-sum table has 15 answers; this is what each cell of the fixture really holds. */
+/** The digit-sum table asks 13 answers; this is what each cell of the fixture really holds. */
 const truthOf = (key: string): string => {
   const [step, ...rest] = key.split(':')
   const col = rest.join(':')
@@ -165,7 +165,7 @@ describe('practice links and what counts', () => {
     // a left-over mask that would hide almost nothing
     useStore.setState({ studyConfig: { ...DEFAULT_STUDY_CONFIG, maskMode: 'columns', columns: [], closeCredit: 0 } })
     open('/trace-table?preset=digit-sum&study=1')
-    await waitFor(() => expect(boxes()).toHaveLength(15))
+    await waitFor(() => expect(boxes()).toHaveLength(13))
     expect(useStore.getState().code).toBe(preset('digit-sum').code)
     expect(useStore.getState().study!.config).toMatchObject({ maskMode: 'all', outputOnly: false, closeCredit: 0 })
     expect(useStore.getState().studyOnRun).toBeNull()
@@ -180,18 +180,18 @@ describe('practice links and what counts', () => {
 
     const { seen, observer } = watchForOpenTables()
     open('/trace-table?preset=digit-sum&study=1')
-    await waitFor(() => expect(boxes()).toHaveLength(15))
+    await waitFor(() => expect(boxes()).toHaveLength(13))
     observer.disconnect()
     expect(seen.count).toBe(0)
   })
 
   it('keeps answers already typed for the same program', async () => {
     const first = open('/trace-table?preset=digit-sum&study=1')
-    await waitFor(() => expect(boxes()).toHaveLength(15))
+    await waitFor(() => expect(boxes()).toHaveLength(13))
     answerAll(2)
     first.unmount()
     open('/trace-table?preset=digit-sum&study=1')
-    await waitFor(() => expect(boxes()).toHaveLength(15))
+    await waitFor(() => expect(boxes()).toHaveLength(13))
     expect(boxes().filter((b) => b.value !== '')).toHaveLength(2)
   })
 
@@ -223,13 +223,13 @@ describe('practice links and what counts', () => {
 
   it('a right answer to the whole table masters the preset; checking twice is one attempt', async () => {
     open('/trace-table?preset=digit-sum&study=1')
-    await waitFor(() => expect(boxes()).toHaveLength(15))
+    await waitFor(() => expect(boxes()).toHaveLength(13))
     answerAll()
     check()
     expect(record()).toMatchObject({ attempts: 1, bestPercent: 100, mastered: true })
     act(() => useStore.getState().setAnswer(boxes()[0]!.dataset.studyKey!, 'wrong'))
     check()
-    expect(record()).toMatchObject({ attempts: 1, bestPercent: 100, lastPercent: 93, mastered: true })
+    expect(record()).toMatchObject({ attempts: 1, bestPercent: 100, lastPercent: 92, mastered: true })
     // starting over is a new attempt
     act(() => useStore.getState().resetAnswers())
     check()
@@ -238,9 +238,9 @@ describe('practice links and what counts', () => {
 
   it('does not count a session where more than half the table was revealed', async () => {
     open('/trace-table?preset=digit-sum&study=1')
-    await waitFor(() => expect(boxes()).toHaveLength(15))
+    await waitFor(() => expect(boxes()).toHaveLength(13))
     const keys = boxes().map((b) => b.dataset.studyKey!)
-    act(() => keys.slice(0, 8).forEach((k) => useStore.getState().revealCell(k))) // 7 of 15 left
+    act(() => keys.slice(0, 7).forEach((k) => useStore.getState().revealCell(k))) // 6 of 13 left
     answerAll()
     check()
     expect(stored()).toBeNull()
@@ -248,7 +248,7 @@ describe('practice links and what counts', () => {
 
   it('does not count a mask that asks for less than half the table', async () => {
     open('/trace-table?preset=digit-sum&study=1')
-    await waitFor(() => expect(boxes()).toHaveLength(15))
+    await waitFor(() => expect(boxes()).toHaveLength(13))
     act(() => useStore.getState().setStudyConfig({ outputOnly: true }))
     answerAll()
     check()

@@ -8,10 +8,10 @@ const resetLeaks = (page: Page) => page.evaluate(() => ((window as unknown as { 
 
 /**
  * Linear search, compact, worked by hand, in reading order. The preset's watch `i < len(items)` becomes True when
- * `i` is set on line 4 and never changes again.
- *   line 1 items · 2 target · 3 found · 4 i, watch · 9 i · 9 i · 7 found · 10 output
+ * `i` is set on line 4 and never changes again. The starting values on lines 1 to 4 stay filled in.
+ *   line 4 watch · 9 i · 9 i · 7 found · 10 output
  */
-const ANSWERS = ['[4, 8, 15, 16, 23, 42]', '15', 'False', '0', 'True', '1', '2', 'True', 'True 2']
+const ANSWERS = ['True', '1', '2', 'True', 'True 2']
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
@@ -40,7 +40,7 @@ test('practise the next preset from the home page, master it, and be offered the
 
   for (const [i, answer] of ANSWERS.entries()) await boxes(page).nth(i).fill(answer)
   await page.getByRole('button', { name: 'Check answers' }).click()
-  await expect(page.getByText('Score: 9 / 9 · 100%')).toBeVisible()
+  await expect(page.getByText('Score: 5 / 5 · 100%')).toBeVisible()
   await expect(page.getByRole('region', { name: 'Score' })).toBeFocused()
 
   await goHome(page)

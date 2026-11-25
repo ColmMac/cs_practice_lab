@@ -43,15 +43,54 @@ export const QUESTION_COUNT = 8
 
 const pick = (rng: () => number, min: number, max: number): number => min + Math.floor(rng() * (max - min + 1))
 
-/** A signed pair whose sum does (or does not) overflow, so both answers come up in a session. */
-function overflowPair(rng: () => number, wantOverflow: boolean): [Bits, Bits] {
-  let a = 0
-  let b = 0
-  for (let i = 0; i < 200; i++) {
-    a = pick(rng, -128, 127)
-    b = pick(rng, -128, 127)
-    if ((a + b < -128 || a + b > 127) === wantOverflow) break
+const ones = (bits: Bits): number => bits.filter((b) => b === 1).length
+
+/** At least two 1s and two 0s: rules out 0, 1, single place values (64) and their near-opposites (255). */
+const mixed = (v: number): boolean => {
+  const n = ones(fromUnsigned(v, 8))
+  return n >= 2 && n <= 6
+}
+
+/** The first draw that is accepted. Every rule here accepts a large share of its range, so this ends quickly. */
+function draw<T>(next: () => T, accept: (v: T) => boolean): T {
+  for (let i = 0; i < 1000; i++) {
+    const v = next()
+    if (accept(v)) return v
   }
+  throw new Error('practice: no acceptable question values')
+}
+
+const mixedValue = (rng: () => number, min: number, max: number): number => draw(() => pick(rng, min, max), mixed)
+
+/** Columns that carried (including a carry out of the top). */
+const carryCount = (a: Bits, b: Bits): number => {
+  const r = add(a, b)
+  return ones(r.carries) + r.carryOut
+}
+
+/** Two registers that need at least two carries, with a result that is not 0 or 1. */
+function additionPair(rng: () => number): [Bits, Bits] {
+  return draw(
+    (): [Bits, Bits] => [fromUnsigned(mixedValue(rng, 20, 200), 8), fromUnsigned(mixedValue(rng, 20, 200), 8)],
+    ([a, b]) => carryCount(a, b) >= 2 && toUnsigned(add(a, b).bits) > 1,
+  )
+}
+
+/**
+ * A signed pair whose sum does (or does not) overflow, so both answers come up in a session. At least one value is
+ * always negative or the sum crosses 127: two small positives would read the same as unsigned binary.
+ */
+function overflowPair(rng: () => number, wantOverflow: boolean): [Bits, Bits] {
+  const [a, b] = draw(
+    (): [number, number] => [pick(rng, -128, 127), pick(rng, -128, 127)],
+    ([a, b]) => {
+      const sum = a + b
+      const over = sum < -128 || sum > 127
+      if (over !== wantOverflow || Math.abs(a) < 3 || Math.abs(b) < 3) return false
+      if (!over && a > 0 && b > 0) return false
+      return toUnsigned(add(fromSigned(a, 8), fromSigned(b, 8)).bits) > 1
+    },
+  )
   return [fromSigned(a, 8), fromSigned(b, 8)]
 }
 
@@ -59,33 +98,32 @@ function make(kind: QuestionKind, n: number, rng: () => number): Question {
   const id = `q${n}`
   switch (kind) {
     case 'dec2bin': {
-      const v = pick(rng, 3, 255)
+      const v = mixedValue(rng, 3, 255)
       return { id, kind, answerType: 'bin', prompt: `Convert ${v} to 8-bit binary.`, truth: toBinary(fromUnsigned(v, 8)), bits: fromUnsigned(v, 8) }
     }
     case 'bin2dec': {
-      const bits = fromUnsigned(pick(rng, 3, 255), 8)
+      const bits = fromUnsigned(mixedValue(rng, 3, 255), 8)
       return { id, kind, answerType: 'unsigned', prompt: `Convert ${toBinary(bits)} to denary (unsigned).`, truth: String(toUnsigned(bits)), bits }
     }
     case 'bin2hex': {
-      const bits = fromUnsigned(pick(rng, 16, 255), 8)
+      const bits = fromUnsigned(mixedValue(rng, 16, 255), 8)
       return { id, kind, answerType: 'hex', prompt: `Convert ${toBinary(bits)} to hexadecimal.`, truth: toHex(bits), bits }
     }
     case 'hex2bin': {
-      const bits = fromUnsigned(pick(rng, 16, 255), 8)
+      const bits = fromUnsigned(mixedValue(rng, 16, 255), 8)
       return { id, kind, answerType: 'bin', prompt: `Convert hex ${toHex(bits)} to 8-bit binary.`, truth: toBinary(bits), bits }
     }
     case 'neg2twos': {
-      const v = -pick(rng, 1, 127)
+      const v = -mixedValue(rng, 3, 127)
       const bits = fromSigned(v, 8)
       return { id, kind, answerType: 'bin', prompt: `Write ${v} in 8-bit two’s complement.`, truth: toBinary(bits), bits }
     }
     case 'twos2dec': {
-      const bits = fromUnsigned(pick(rng, 129, 255), 8) // sign bit set, so it is negative
+      const bits = fromUnsigned(mixedValue(rng, 129, 255), 8) // sign bit set, so it is negative
       return { id, kind, answerType: 'signed', prompt: `${toBinary(bits)} is an 8-bit two’s complement number. What is its denary value?`, truth: String(toSigned(bits)), bits }
     }
     case 'add': {
-      const a = fromUnsigned(pick(rng, 20, 200), 8)
-      const b = fromUnsigned(pick(rng, 20, 200), 8)
+      const [a, b] = additionPair(rng)
       const sum = add(a, b)
       return {
         id,

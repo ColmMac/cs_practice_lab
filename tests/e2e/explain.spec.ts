@@ -6,16 +6,14 @@ test.beforeEach(async ({ page }) => {
 
 const traceTable = (page: Page) => page.getByRole('table', { name: 'Trace table' })
 
-/** Linear search in Study mode: `i` is answered right where it is set, and wrong after the first `i = i + 1`. */
+/** Linear search in Study mode: `i = 0` is filled in, and `i` is answered wrong after the first `i = i + 1`. */
 async function oneWrongIncrement(page: Page) {
   await page.goto('/trace-table')
   await page.getByLabel('Example').selectOption({ label: 'Linear search (while + flag)' })
   await expect(traceTable(page).getByRole('cell', { name: 'True 2' })).toBeVisible({ timeout: 80_000 })
   await page.getByRole('button', { name: /study/i }).first().click()
 
-  const start = traceTable(page).locator('tbody tr[data-line="4"] input[data-study-col="<module>:i"]')
   const wrong = traceTable(page).locator('tbody tr[data-line="9"]').first().locator('input[data-study-col="<module>:i"]')
-  await start.fill('0')
   await wrong.fill('7')
   await page.getByRole('button', { name: 'Check answers' }).click()
   return wrong

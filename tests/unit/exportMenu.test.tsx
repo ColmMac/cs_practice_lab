@@ -238,14 +238,14 @@ describe('Export menu: answer key vs worksheet', () => {
     mount()
     const dlg = await openMenu(user)
     await user.click(within(dlg).getByRole('radio', { name: 'Worksheet' }))
-    expect(within(dlg).getByText('Blanks 15 cells (the Study mode mask).')).toBeInTheDocument()
+    expect(within(dlg).getByText('Blanks 13 cells (the Study mode mask).')).toBeInTheDocument()
     await user.click(within(dlg).getByRole('button', { name: 'Download .csv' }))
     expect([...files.keys()]).toEqual(['trace-table-worksheet.csv'])
     const lines = (await textOf(files.get('trace-table-worksheet.csv')!)).trimEnd().split('\r\n')
-    expect(lines[1]).toBe('1,,,,')
+    expect(lines.slice(1, 3)).toEqual(['1,1234,,,', '2,,0,,']) // the starting values are given
     expect(lines.slice(1).map((l) => l.split(',')[0])).toEqual(['1', '2', '4', '5', '6', '4', '5', '6', '4', '5', '6', '4', '5', '6', '7'])
-    expect(lines.slice(1).every((l) => l.split(',').slice(1).every((c) => c === ''))).toBe(true)
-    expect(lines.join('')).not.toMatch(/1234|10/) // no answer leaks into a worksheet
+    expect(lines.slice(3).every((l) => l.split(',').slice(1).every((c) => c === ''))).toBe(true)
+    expect(lines.slice(3).join('')).not.toMatch(/123|10/) // no answer leaks into a worksheet
   })
 
   it('uses the study mask: blank only the chosen columns', async () => {
@@ -254,11 +254,12 @@ describe('Export menu: answer key vs worksheet', () => {
     mount(traces.digitSum, { studyConfig: { maskMode: 'columns', percent: 50, columns: ['<module>:total'], cells: [], outputOnly: false, closeCredit: 0.5 } })
     const dlg = await openMenu(user)
     await user.click(within(dlg).getByRole('radio', { name: 'Worksheet' }))
-    expect(within(dlg).getByText('Blanks 5 cells (the Study mode mask).')).toBeInTheDocument()
+    expect(within(dlg).getByText('Blanks 4 cells (the Study mode mask).')).toBeInTheDocument()
     await user.click(within(dlg).getByRole('button', { name: 'Download .csv' }))
     const lines = (await textOf(files.get('trace-table-worksheet.csv')!)).trimEnd().split('\r\n')
     expect(lines[1]).toBe('1,1234,,,') // n is still shown
-    expect(lines[2]).toBe('2,,,,') // total is blank
+    expect(lines[2]).toBe('2,,0,,') // total starts at a given 0
+    expect(lines[4]).toBe('5,,,,') // and is blank once it has to be worked out
   })
 
   it('says when nothing is masked', async () => {
@@ -281,7 +282,7 @@ describe('Export menu: answer key vs worksheet', () => {
     await user.click(exportButton())
     const dlg = screen.getByRole('dialog', { name: 'Export' })
     await user.click(within(dlg).getByRole('radio', { name: 'Worksheet' }))
-    expect(within(dlg).getByText('Blanks 6 cells (the Study mode mask).')).toBeInTheDocument()
+    expect(within(dlg).getByText('Blanks 5 cells (the Study mode mask).')).toBeInTheDocument()
   })
 
   it('an answer key never blanks anything', async () => {
@@ -334,9 +335,10 @@ describe('Export menu: PNG', () => {
     await user.click(within(dlg).getByRole('radio', { name: 'Worksheet' }))
     await user.click(within(dlg).getByRole('button', { name: 'Download .png' }))
     await waitFor(() => expect(cells.length).toBe(75)) // 15 rows × 5 columns
-    // the mask hides every written cell, printed output included, so only the 15 line numbers remain
-    expect(cells.filter((c) => c !== '')).toHaveLength(15)
-    expect(cells.join('')).not.toMatch(/1234|10/)
+    // the mask hides every worked-out cell, printed output included: 15 line numbers and 2 starting values remain
+    expect(cells.filter((c) => c !== '')).toHaveLength(17)
+    expect(cells.filter((c) => c === '1234')).toHaveLength(1)
+    expect(cells.join('')).not.toMatch(/10/)
   })
 
   it('reports a failure, cleans up, and re-enables the button', async () => {
@@ -397,7 +399,7 @@ describe('Printing', () => {
     const region = screen.getByTestId('print-region')
     expect(within(region).getByRole('heading', { name: 'Trace table (worksheet)' })).toBeInTheDocument()
     expect(region).toHaveTextContent('while n > 0:')
-    expect(within(region).queryByText('1234', { selector: 'td' })).not.toBeInTheDocument()
+    expect(within(region).queryByText('123', { selector: 'td' })).not.toBeInTheDocument()
   })
 
   it('prints nothing when there is no table', () => {

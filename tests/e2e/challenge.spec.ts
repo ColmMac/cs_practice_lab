@@ -40,7 +40,7 @@ async function teacherLink(page: Page): Promise<string> {
   await page.getByRole('checkbox', { name: 'i', exact: true }).check()
   await page.getByRole('button', { name: 'Copy student challenge link' }).click()
   const dialog = page.getByRole('dialog', { name: 'Student challenge link' })
-  await expect(dialog).toContainText('Students fill in 3 of')
+  await expect(dialog).toContainText('Students fill in 2 of')
   return dialog.getByRole('textbox', { name: 'Student challenge link' }).inputValue()
 }
 
@@ -60,9 +60,8 @@ test('a teacher’s link opens for review, starts masked, and ends back at the s
   await expect(traceTable(kid)).toHaveCount(0)
 
   await start(kid).click()
-  await expect(boxes(kid)).toHaveCount(3)
+  await expect(boxes(kid)).toHaveCount(2) // the starting `i = 0` stays filled in
   expect(await boxes(kid).evaluateAll((all) => all.map((b) => (b as HTMLElement).dataset.studyCol))).toEqual([
-    '<module>:i',
     '<module>:i',
     '<module>:i',
   ])
@@ -82,12 +81,11 @@ test('a teacher’s link opens for review, starts masked, and ends back at the s
   })
   expect(printed).toEqual({ text: 'Printing is off during a challenge.', tables: 0 })
 
-  await boxes(kid).nth(0).fill('0')
+  await boxes(kid).nth(0).fill('1')
   await boxes(kid).nth(1).fill('7')
-  await boxes(kid).nth(2).fill('2')
   await kid.getByRole('button', { name: 'Check answers' }).click()
-  await expect(kid.getByText(/Score: 2 \/ 3/)).toBeVisible()
-  await expect(kid.getByRole('button', { name: /^Reveal / })).toHaveCount(3)
+  await expect(kid.getByText(/Score: 1 \/ 2/)).toBeVisible()
+  await expect(kid.getByRole('button', { name: /^Reveal / })).toHaveCount(2)
   expect(await leaks(kid)).toBe(0)
 
   // a reload goes back to review, and Start brings the saved answers back

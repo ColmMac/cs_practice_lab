@@ -16,7 +16,7 @@ interface Progress {
 
 /** The quiz over a run: the current question, the results so far and the score. State restarts when the questions change. */
 export function useQuiz(run: Run | null) {
-  const questions = useMemo(() => (run ? buildQuiz(run) : []), [run])
+  const questions = useMemo(() => (run && !quizUnavailable(run) ? buildQuiz(run) : []), [run])
   const [state, setState] = useState<Progress>({ for: questions, n: 0, graded: {}, revealed: {} })
   const cur: Progress = state.for === questions ? state : { for: questions, n: 0, graded: {}, revealed: {} }
 

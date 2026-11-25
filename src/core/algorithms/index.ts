@@ -37,6 +37,14 @@ export {
   type Parsed,
 } from './input'
 
+export {
+  countInversions,
+  MIN_INVERSIONS,
+  MIN_LINEAR_INDEX,
+  randomSearchInput,
+  randomSortingList,
+  type SearchInput,
+} from './random'
 export { buildQuiz, gradeQuiz, parseAnswerList, quizUnavailable, type QuizKind, type QuizQuestion } from './quiz'
 
 export const isSearch = (algo: AlgorithmId): boolean => algo === 'linear' || algo === 'binary'

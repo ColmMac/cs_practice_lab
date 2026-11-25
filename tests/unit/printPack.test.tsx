@@ -179,7 +179,8 @@ describe('printing the pack from the app', () => {
     expect(within(dialog).queryByText(/whole grid will be blank/)).toBeNull()
     await user.click(within(dialog).getByRole('button', { name: 'Print worksheet + answer key' }))
     expect(section('worksheet')).toHaveTextContent('1234') // n is not masked
-    expect(bodyRows(section('worksheet'))[1]!.textContent).toBe('2') // total is
+    expect(bodyRows(section('worksheet'))[1]!.textContent).toBe('20') // total starts at a given 0
+    expect(bodyRows(section('worksheet'))[3]!.textContent).toBe('5') // and is blank once worked out
   })
 
   it('a challenge refuses the pack: no menu, no job, and the print view holds only a notice', async () => {

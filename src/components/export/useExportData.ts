@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import type { RowOptions } from '../../core/derive/rows'
 import { buildTableModel, type TableModel } from '../../core/export/tableModel'
-import { maskableCells, selectMasks } from '../../core/study/mask'
+import { constantStarts, maskableCells, selectMasks } from '../../core/study/mask'
 import type { ColumnDef, TraceResult, TraceRow } from '../../core/types'
 import { useStore } from '../../store'
 import { useTableData } from '../table/useTableData'
@@ -31,8 +31,8 @@ export function useExportData(result: TraceResult): ExportData {
   const studySeed = useStore((s) => s.studySeed)
 
   const masked = useMemo(
-    () => model?.maskedKeys ?? selectMasks(maskableCells(rows, columns), studyConfig, studySeed),
-    [model, rows, columns, studyConfig, studySeed],
+    () => model?.maskedKeys ?? selectMasks(maskableCells(rows, columns, constantStarts(result)), studyConfig, studySeed),
+    [model, result, rows, columns, studyConfig, studySeed],
   )
   const table = useMemo(
     () => buildTableModel(columns, rows, { variant, masked, includeCode, code: ranCode, codeLanguage: result.language }),

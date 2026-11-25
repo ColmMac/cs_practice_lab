@@ -37,3 +37,10 @@ export function focusInput(el: HTMLElement | null): boolean {
   el.scrollIntoView?.({ block: 'nearest' })
   return true
 }
+
+/** Where a session starts: the top of the leftmost column, so that pressing Enter visits every box. */
+export function firstStudyInput(root: ParentNode): HTMLInputElement | null {
+  const all = studyInputs(root)
+  const leftmost = Math.min(...all.map(columnIndex))
+  return all.find((i) => columnIndex(i) === leftmost) ?? null
+}

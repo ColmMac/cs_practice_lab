@@ -66,7 +66,7 @@ export function StudyToolbar({ result }: { result: TraceResult }) {
 
       {challenge?.hidNothing && (
         <p className="mt-2 text-xs text-amber-900 dark:text-amber-200">
-          This challenge hides nothing in this table, so every cell is hidden instead.
+          This challenge hides nothing in this table, so every worked-out cell is hidden instead.
         </p>
       )}
 
@@ -84,7 +84,7 @@ export function StudyToolbar({ result }: { result: TraceResult }) {
           value={config.maskMode}
           onChange={(maskMode) => setStudyConfig({ maskMode })}
           options={[
-            { value: 'all', label: 'All cells', hint: 'Every value the program writes' },
+            { value: 'all', label: 'All cells', hint: 'Every value the program works out or changes (starting values copied from the code stay filled in)' },
             { value: 'random', label: 'Random', hint: 'A random share of them' },
             { value: 'columns', label: 'Some columns', hint: 'Only the columns you choose' },
             { value: 'cells', label: 'Chosen cells', hint: 'Pick each cell yourself' },

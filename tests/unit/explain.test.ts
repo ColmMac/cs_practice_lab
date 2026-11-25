@@ -206,11 +206,11 @@ const presetNames = Object.keys(wires)
   .map((p) => p.slice(p.lastIndexOf('/') + 1, -'.json'.length))
   .filter((n) => n.startsWith('preset-'))
 
-function studyOf(r: TraceResult) {
+function studyOf(r: TraceResult, config = DEFAULT_STUDY_CONFIG) {
   const columns = applyColumnPrefs(deriveColumns(r, { showCondition: true }), { hidden: DEFAULT_HIDDEN_COLUMNS, order: [] })
   return buildStudyModel(
     r,
-    { columns, granularity: 'compact', display: 'exam', config: DEFAULT_STUDY_CONFIG, seed: 1 },
+    { columns, granularity: 'compact', display: 'exam', config, seed: 1 },
     formatPythonValue,
   )
 }
@@ -221,8 +221,8 @@ describe.each(presetNames)('every maskable cell of %s', (name) => {
   const guarded = ctxOf(r, { isHidden: maskedValueGuard(r, model.maskedKeys, () => false) })
 
   it('Why? never has a result part; Reveal always does', () => {
-    expect(model.masked.length).toBeGreaterThan(0)
-    for (const cell of model.masked) {
+    expect(model.cells.length).toBeGreaterThan(0)
+    for (const cell of model.cells) {
       const step = Number(cell.key.slice(0, cell.key.indexOf(':')))
       for (const ctx of [ctxOf(r), guarded]) {
         const why = explainCell(ctx, step, cell.colId, { withResult: false })
@@ -237,7 +237,9 @@ describe.each(presetNames)('every maskable cell of %s', (name) => {
 
 describe('values from unanswered cells', () => {
   const r = traceOf('preset-linear-search')
-  const model = studyOf(r)
+  // hide both writes of `i` involved: the starting `i = 0` (filled in by default) and the first increment
+  const cells = [`${stepAt(r, 4)}:<module>:i`, `${stepAt(r, 9)}:<module>:i`]
+  const model = studyOf(r, { ...DEFAULT_STUDY_CONFIG, maskMode: 'cells', cells })
   const firstIncrement = stepAt(r, 9)
   const text = (known: (key: string) => boolean) =>
     explanationText(

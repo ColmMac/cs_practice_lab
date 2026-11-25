@@ -1,6 +1,7 @@
 import { getLanguage } from '../../languages/registry'
 import { runSignature, useStore } from '../../store'
 import { StudyModeButton } from '../ui/StudyModeButton'
+import { firstStudyInput } from './navigation'
 
 /** The prominent switch that turns the table into a self-test. */
 export function StudyToggle() {
@@ -19,7 +20,7 @@ export function StudyToggle() {
     if (on) return exitStudy()
     startStudy()
     // Straight to the first answer box, so a keyboard user can start typing without tabbing through the page.
-    requestAnimationFrame(() => document.querySelector<HTMLInputElement>('input[data-study-key]')?.focus())
+    requestAnimationFrame(() => firstStudyInput(document)?.focus())
   }
   const why = !supported
     ? 'Study mode isn’t available for this language yet.'

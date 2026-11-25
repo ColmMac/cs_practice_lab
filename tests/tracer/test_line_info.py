@@ -146,3 +146,17 @@ def test_lines_are_streamed_in_the_first_chunk_only():
     assert "lines" in parts[0] and all("lines" not in p for p in parts[1:])
     assert "lines" not in final
     assert "lines" in json.loads(tracer.run_trace("a = 1\n", "{}"))
+
+
+def test_constant_assignments_are_marked():
+    """``c``: the value can be copied from the code, so Study Mode leaves a variable's first one filled in."""
+    for code in ("x = 0", "x = -1", "x = 'a'", "x = False", "x = None", "x = []", "x = [4, [8, -1]]", "x = (1, 2)",
+                 "x = {}", "x = {'a': 1}", "x: int = 0", "x = y = 0", "x, y = 0, 1", "x = 1; y = 2"):
+        assert info_of(code + "\n").get("c") is True, code
+
+
+def test_computed_or_mutating_lines_are_not_constant():
+    for line in ("x = a", "x = a + 1", "x = 1 + 1", "x = len(a)", "x = [a]", "x = {**a}", "x = [*a]", "x = input()",
+                 "a[0] = 1", "a.v = 1", "a += 1", "x: int", "x = 0; a = a + 1", "x = 0; a.clear()", "if a: x = 0",
+                 "for x in [1, 2]: pass", "x = f'{a}'"):
+        assert "c" not in info_of("a = [1]\n" + line + "\n", 2), line

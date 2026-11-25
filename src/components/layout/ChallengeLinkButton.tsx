@@ -73,7 +73,7 @@ export function ChallengeLinkButton() {
           />
           <p className="mt-2 text-xs text-slate-700 dark:text-slate-300">
             {link.hidden === 0
-              ? `These settings hide nothing in this table, so students would be asked for all ${link.total} cells.`
+              ? `These settings hide nothing in this table, so students would be asked for ${link.fallback} of ${link.total} cells (all but the starting values).`
               : `Students fill in ${link.hidden} of ${link.total} cells.`}{' '}
             To change which, use Study mode, then copy the link again.
           </p>

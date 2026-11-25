@@ -5,6 +5,7 @@ import { isQualifying, matchingItemId } from '../core/mastery/mastery'
 import type { RunnerStatus, TraceRunner } from '../core/runner'
 import { buildChallengeUrl, buildShareUrl, decodeShare, parseShareHash, type ChallengeSpec, type ShareUrl } from '../core/share/urlState'
 import { gradeAnswer, type GradingLanguage } from '../core/study/grade'
+import { selectMasks } from '../core/study/mask'
 import { buildStudyModel, type StudyView } from '../core/study/model'
 import { summarise } from '../core/study/score'
 import { rememberSession, sanitizeStudyConfig, MAX_ANSWER_LENGTH, type StudySessionData } from '../core/study/session'
@@ -52,6 +53,8 @@ export interface ChallengeLink extends ShareUrl {
   /** How many cells a student will be asked for, out of how many questions the table has. */
   hidden: number
   total: number
+  /** What a student is asked when the settings hide nothing: every cell the "All cells" mask would. */
+  fallback: number
 }
 
 /** Why a student link can't be made right now, or null if it can. A challenge needs a complete, current run. */
@@ -692,7 +695,9 @@ export const useStore = create<AppState>()(
           // practice on an unedited built-in counts towards mastery, if enough of the table was really answered
           const itemId = ranInput && r.language === 'python' ? matchingItemId(ranInput, lang.presets) : null
           const score = summarise(model.masked, graded, st.revealed, st.config.closeCredit, (id) => id)
-          const counts = itemId !== null && isQualifying(score.total, model.cells.length)
+          // starting constants are not asked by default, so they don't count against the share answered
+          const askable = model.cells.filter((c) => !c.given).length || model.cells.length
+          const counts = itemId !== null && isQualifying(score.total, askable)
           if (counts) saveAttempt({ tool: 'trace', itemId, percent: score.percent, newSession: !st.counted })
           const { challenge } = get()
           set({
@@ -789,7 +794,8 @@ export const useStore = create<AppState>()(
             { ...workspaceOf(s), studyConfig: config, studySeed: seed },
             { steps: r.steps.length, executionKey: r.executionKey },
           )
-          return { ...link, hidden: model.masked.length, total: model.cells.length }
+          const fallback = selectMasks(model.cells, { ...config, maskMode: 'all', outputOnly: false }, seed).size
+          return { ...link, hidden: model.masked.length, total: model.cells.length, fallback }
         },
 
         startChallenge() {

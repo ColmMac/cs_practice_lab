@@ -48,6 +48,7 @@ export interface WireLineInfo {
   tg?: string[]
   in?: true
   ol?: true // header with its body on the same line
+  c?: true // only assigns written-out constants to plain names
 }
 
 /** Incremental batch streamed while the program runs (only items not sent before). */

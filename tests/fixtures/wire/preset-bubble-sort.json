@@ -780,7 +780,8 @@
     },
     "tg": [
      "nums"
-    ]
+    ],
+    "c": true
    },
    "2": {
     "k": "assign",
@@ -841,7 +842,8 @@
     },
     "tg": [
      "swapped"
-    ]
+    ],
+    "c": true
    },
    "5": {
     "k": "for",
@@ -948,7 +950,8 @@
     },
     "tg": [
      "swapped"
-    ]
+    ],
+    "c": true
    }
   },
   "functions": [],

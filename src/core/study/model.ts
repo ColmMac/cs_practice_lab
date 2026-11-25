@@ -1,6 +1,6 @@
 import type { ColumnDef, TraceResult, TraceRow, Value } from '../types'
 import { deriveRows, type DisplayStyle, type Granularity } from '../derive/rows'
-import { maskableCells, selectMasks, type MaskableCell } from './mask'
+import { constantStarts, maskableCells, selectMasks, type MaskableCell } from './mask'
 import type { StudyConfig } from './types'
 
 /** The frozen view a study session is graded against. */
@@ -24,7 +24,7 @@ export interface StudyModel {
 /** One place that decides what the table, the masks and the answer key are, so the screen and the grader agree. */
 export function buildStudyModel(result: TraceResult, view: StudyView, format: (v: Value) => string): StudyModel {
   const rows = deriveRows(result, view.columns, format, { granularity: view.granularity, display: view.display })
-  const cells = maskableCells(rows, view.columns)
+  const cells = maskableCells(rows, view.columns, constantStarts(result))
   const maskedKeys = selectMasks(cells, view.config, view.seed)
   return { rows, cells, masked: cells.filter((c) => maskedKeys.has(c.key)), maskedKeys }
 }

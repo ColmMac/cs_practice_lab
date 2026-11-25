@@ -393,3 +393,53 @@ test.describe('axe audit on the real page', () => {
     })
   }
 })
+
+test.describe('random lists', () => {
+  const newList = (page: Page) => page.getByRole('button', { name: 'New random list' })
+  const typed = async (page: Page) => (await page.locator('#sort-list').inputValue()).split(', ').map(Number)
+  const inversions = (a: number[]) => a.reduce((n, v, i) => n + a.slice(i + 1).filter((w) => v > w).length, 0)
+
+  test('25 sorting lists in a row are never sorted and always need several swaps', async ({ page }) => {
+    await page.goto('/sorting-visualizer')
+    const seen = new Set<string>()
+    for (let i = 0; i < 25; i++) {
+      const before = await page.locator('#sort-list').inputValue()
+      await newList(page).click()
+      await expect(page.locator('#sort-list')).not.toHaveValue(before)
+      const list = await typed(page)
+      seen.add(list.join())
+      expect(new Set(list).size).toBe(list.length)
+      expect(inversions(list)).toBeGreaterThanOrEqual(3)
+      expect(await values(page)).toEqual(list)
+    }
+    expect(seen.size).toBeGreaterThan(20)
+  })
+
+  for (const [name, minIndex] of [['Linear search', 2], ['Binary search', 1]] as const) {
+    test(`${name}: 20 random targets are never at the start`, async ({ page }) => {
+      await page.goto('/sorting-visualizer')
+      await algo(page, name)
+      for (let i = 0; i < 20; i++) {
+        const before = await page.locator('#sort-list').inputValue()
+        await newList(page).click()
+        await expect(page.locator('#sort-list')).not.toHaveValue(before)
+        const list = await typed(page)
+        const at = list.indexOf(Number(await page.getByLabel(/^Target/).inputValue()))
+        expect(at).toBeGreaterThanOrEqual(minIndex)
+        if (name === 'Binary search') {
+          expect(list.every((v, k) => k === 0 || list[k - 1]! < v)).toBe(true)
+          expect(at).not.toBe(Math.floor((list.length - 1) / 2))
+        }
+        await expect(page.locator('#sort-list-err')).toHaveText('')
+      }
+    })
+  }
+
+  test('an already sorted list has no sorting quiz, and a random list brings one back', async ({ page }) => {
+    await page.goto('/sorting-visualizer?data=1,2,3,4,5&quiz=1')
+    await expect(page.getByText(/already in order, so there is nothing to sort/)).toBeVisible()
+    await expect(page.getByTestId('quiz-prompt')).toHaveCount(0)
+    await newList(page).click()
+    await expect(page.getByTestId('quiz-prompt')).toContainText('after pass 1')
+  })
+})

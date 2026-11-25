@@ -62,7 +62,8 @@ export const LIST_PRESETS: readonly ListPreset[] = [
   { id: 'sorted', label: 'Already sorted: 1, 2, 3, 4, 5', data: [1, 2, 3, 4, 5], target: 5 },
   { id: 'duplicates', label: 'Duplicates: 4, 2, 4, 1, 2', data: [4, 2, 4, 1, 2], target: 1 },
   { id: 'eight', label: 'Eight items: 38, 27, 43, 3, 9, 82, 10, 5', data: [38, 27, 43, 3, 9, 82, 10, 5], target: 82 },
-  { id: 'search', label: 'Sorted for searching: 3, 9, 10, 23, 27, 38, 43, 82', data: [3, 9, 10, 23, 27, 38, 43, 82], target: 23 },
+  // the target is not at the first mid, so a binary search takes more than one probe
+  { id: 'search', label: 'Sorted for searching: 3, 9, 10, 23, 27, 38, 43, 82', data: [3, 9, 10, 23, 27, 38, 43, 82], target: 43 },
 ]
 
 export const findListPreset = (id: string): ListPreset | undefined => LIST_PRESETS.find((p) => p.id === id)

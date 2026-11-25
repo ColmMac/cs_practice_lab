@@ -115,7 +115,7 @@ describe('opening a student link', () => {
     const { runSpy } = await openAndStart()
     expect(runSpy).toHaveBeenCalledTimes(1)
     expect(runSpy.mock.calls[0]![0]).toBe(THEIRS)
-    expect(answerBoxes()).toHaveLength(5)
+    expect(answerBoxes()).toHaveLength(4)
     expect(answerBoxes().every((b) => b.dataset.studyCol === '<module>:total')).toBe(true)
     expect(challenge()).toMatchObject({ stage: 'active', checkedOnce: false, hidNothing: false })
     expect(leaks).toBe(0)
@@ -206,7 +206,7 @@ describe('while the challenge is on', () => {
     })
     expect(useStore.getState().study).toBe(before)
     expect(challenge()?.stage).toBe('active')
-    expect(answerBoxes()).toHaveLength(5)
+    expect(answerBoxes()).toHaveLength(4)
     expect(leaks).toBe(0)
   })
 
@@ -214,7 +214,7 @@ describe('while the challenge is on', () => {
     const { user } = await openAndStart()
     await user.type(answerBoxes()[0]!, '999')
     await user.click(screen.getByRole('button', { name: 'Check answers' }))
-    expect(screen.getAllByRole('button', { name: /^Reveal / })).toHaveLength(5)
+    expect(screen.getAllByRole('button', { name: /^Reveal / })).toHaveLength(4)
     expect(screen.getAllByRole('button', { name: /^Why\?/ }).length).toBeGreaterThan(0)
     await user.click(answerBoxes()[0]!)
     await user.keyboard('{Alt>}r{/Alt}')
@@ -237,7 +237,7 @@ describe('while the challenge is on', () => {
     act(() => void useStore.getState().addWatch('total'))
     await act(() => useStore.getState().run())
     expect(runSpy).toHaveBeenCalledTimes(1)
-    expect(answerBoxes()).toHaveLength(5)
+    expect(answerBoxes()).toHaveLength(4)
     expect(leaks).toBe(0)
     watcher!.disconnect()
     await user.click(screen.getByRole('button', { name: 'End the challenge' }))
@@ -313,7 +313,7 @@ describe('while the challenge is on', () => {
   ])('a mask that hides nothing (%s) hides everything instead, and says so', async (_name, patch) => {
     await openAndStart(challengeHash({ studyConfig: { ...DEFAULT_STUDY_CONFIG, ...patch } }))
     expect(screen.getByText(/This challenge hides nothing/)).toBeInTheDocument()
-    expect(answerBoxes()).toHaveLength(15)
+    expect(answerBoxes()).toHaveLength(13)
     expect(useStore.getState().study!.config.maskMode).toBe('all')
     expect(leaks).toBe(0)
   })
@@ -339,7 +339,7 @@ describe('a table that does not match the link', () => {
     const { user } = await open(challengeHash({}, { ...SPEC, steps: 3 }))
     await user.click(startButton())
     await user.click(await screen.findByRole('button', { name: 'Show the table anyway' }))
-    expect(answerBoxes()).toHaveLength(5)
+    expect(answerBoxes()).toHaveLength(4)
     expect(challenge()).toBeNull()
     expect(screen.getByRole('button', { name: /exit study mode/i })).toBeInTheDocument()
     expect(leaks).toBe(0)
@@ -391,7 +391,7 @@ describe('authoring: hand-picked cells and the link button', () => {
     await user.click(screen.getByRole('button', { name: /copy student challenge link/i }))
     const dialog = screen.getByRole('dialog', { name: 'Student challenge link' })
     expect(await within(dialog).findByText('Challenge link copied to the clipboard.')).toBeInTheDocument()
-    expect(dialog).toHaveTextContent('Students fill in 6 of 15 cells.')
+    expect(dialog).toHaveTextContent('Students fill in 5 of 15 cells.')
     const first = decodeCopied(clipboard.mock.calls[0]![0])
     expect(first).toMatchObject({ mode: 'quiz', challenge: SPEC })
     expect(first.workspace.studySeed).toBeGreaterThan(0)
@@ -402,7 +402,7 @@ describe('authoring: hand-picked cells and the link button', () => {
     await user.click(screen.getByRole('radio', { name: 'Some columns' }))
     await user.click(screen.getByRole('checkbox', { name: 'total' }))
     await user.click(screen.getByRole('button', { name: /copy student challenge link/i }))
-    expect(screen.getByRole('dialog', { name: 'Student challenge link' })).toHaveTextContent('Students fill in 5 of 15 cells.')
+    expect(screen.getByRole('dialog', { name: 'Student challenge link' })).toHaveTextContent('Students fill in 4 of 15 cells.')
     expect(decodeCopied(clipboard.mock.calls.at(-1)![0]).workspace.studyConfig).toMatchObject({
       maskMode: 'columns',
       columns: ['<module>:total'],
@@ -412,7 +412,7 @@ describe('authoring: hand-picked cells and the link button', () => {
   it('warns when the settings would hide nothing', async () => {
     const { user } = await teacher({ studyConfig: { ...DEFAULT_STUDY_CONFIG, maskMode: 'cells' } })
     await user.click(screen.getByRole('button', { name: /copy student challenge link/i }))
-    expect(screen.getByRole('dialog')).toHaveTextContent('students would be asked for all 15 cells')
+    expect(screen.getByRole('dialog')).toHaveTextContent('students would be asked for 13 of 15 cells')
   })
 
   it('is off while the table is out of date', async () => {

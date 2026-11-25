@@ -69,6 +69,8 @@ export interface LineInfo {
   readsInput?: boolean
   /** a header with its body on the same line: its outcome can't be observed */
   oneLine?: boolean
+  /** the line only gives plain names values written out in the code (`total = 0`) */
+  constant?: boolean
 }
 
 export interface TraceStep {

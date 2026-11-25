@@ -36,10 +36,12 @@ const CLEAN = {
   studyOrder: [],
 }
 
-// The compact exam table for digit-sum has exactly these 15 answers, in this order down each column:
-//   n:      1234, 123, 12, 1, 0      total: 0, 4, 7, 9, 10      digit: 4, 3, 2, 1      output: 10
-const N = ['1234', '123', '12', '1', '0']
-const TOTAL = ['0', '4', '7', '9', '10']
+// The compact exam table for digit-sum has 15 written cells. The two starting constants (n = 1234, total = 0)
+// stay filled in, leaving these 13 answers, in this order down each column:
+//   n:      123, 12, 1, 0      total: 4, 7, 9, 10      digit: 4, 3, 2, 1      output: 10
+// In reading order the first boxes are digit 4, total 4, n 123.
+const N = ['123', '12', '1', '0']
+const TOTAL = ['4', '7', '9', '10']
 const DIGIT = ['4', '3', '2', '1']
 const OUTPUT = ['10']
 const EVERYTHING = [...N, ...TOTAL, ...DIGIT, ...OUTPUT]
@@ -100,16 +102,17 @@ afterEach(() => {
 })
 
 describe('Study Mode: turning it on', () => {
-  it('is available once there is a table, and starts the session with every written cell hidden', async () => {
+  it('is available once there is a table, and starts the session with every worked-out cell hidden', async () => {
     mount()
     const user = userEvent.setup()
     await startStudy(user)
     expect(toggle()).toHaveAttribute('aria-pressed', 'true')
-    expect(answerBoxes()).toHaveLength(15)
-    expect(screen.getByText('15 of 15 cells to fill in')).toBeInTheDocument()
-    // Line numbers and everything the program did NOT write stay visible
+    expect(answerBoxes()).toHaveLength(13)
+    expect(screen.getByText('13 of 15 cells to fill in')).toBeInTheDocument()
+    // Line numbers, the starting values written in the code, and everything NOT written stay visible
     const table = screen.getByRole('table', { name: 'Trace table' })
-    expect(within(table).queryByText('1234')).not.toBeInTheDocument()
+    expect(within(table).getByText('1234')).toBeInTheDocument()
+    expect(within(table).queryByText('123')).not.toBeInTheDocument()
     expect(within(table).getAllByRole('row').length).toBe(16)
   })
 
@@ -157,8 +160,8 @@ describe('Study Mode: grading in the UI', () => {
     await startStudy(user)
     await fillAll(user, EVERYTHING)
     await user.click(screen.getByRole('button', { name: /check answers/i }))
-    expect(screen.getByText(/Score: 15 \/ 15 · 100%/)).toBeInTheDocument()
-    expect(verdicts().filter((v) => v.includes('Correct'))).toHaveLength(15)
+    expect(screen.getByText(/Score: 13 \/ 13 · 100%/)).toBeInTheDocument()
+    expect(verdicts().filter((v) => v.includes('Correct'))).toHaveLength(13)
     expect(answerBoxes().every((b) => !b.hasAttribute('aria-invalid'))).toBe(true)
   })
 
@@ -169,20 +172,20 @@ describe('Study Mode: grading in the UI', () => {
     // first three boxes of the n column: right, "right number but a float", nonsense. Everything else blank.
     const nBoxes = answerBoxes().filter((b) => b.dataset.studyCol === '<module>:n')
     await user.click(nBoxes[0]!)
-    await user.paste('1234')
+    await user.paste('123')
     await user.click(nBoxes[1]!)
-    await user.paste('123.0')
+    await user.paste('12.0')
     await user.click(nBoxes[2]!)
     await user.paste('oops')
     await user.click(screen.getByRole('button', { name: /check answers/i }))
 
-    expect(screen.getByText(/Score: 1\.5 \/ 15 · 10%/)).toBeInTheDocument()
+    expect(screen.getByText(/Score: 1\.5 \/ 13 · 12%/)).toBeInTheDocument()
     expect(screen.getByText(/✓ 1 correct/)).toBeInTheDocument()
     expect(screen.getByText(/≈ 1 almost/)).toBeInTheDocument()
-    expect(screen.getByText(/✗ 13 wrong/)).toBeInTheDocument()
+    expect(screen.getByText(/✗ 11 wrong/)).toBeInTheDocument()
     expect(screen.getByText(/Almost — Right number, but it should be an int/)).toBeInTheDocument()
     expect(nBoxes[2]).toHaveAttribute('aria-invalid', 'true')
-    expect(screen.getAllByText(/No answer entered/).length).toBe(12)
+    expect(screen.getAllByText(/No answer entered/).length).toBe(10)
   })
 
   it('"Almost" can be set to earn nothing', async () => {
@@ -191,10 +194,10 @@ describe('Study Mode: grading in the UI', () => {
     await startStudy(user)
     const first = answerBoxes()[0]!
     await user.click(first)
-    await user.paste('1234.0')
+    await user.paste('4.0')
     await user.click(screen.getByLabelText(/“Almost” earns half marks/))
     await user.click(screen.getByRole('button', { name: /check answers/i }))
-    expect(screen.getByText(/Score: 0 \/ 15 · 0%/)).toBeInTheDocument()
+    expect(screen.getByText(/Score: 0 \/ 13 · 0%/)).toBeInTheDocument()
   })
 
   it('spaces around an answer cost nothing (the full grading table is in grading.test.ts)', async () => {
@@ -202,7 +205,7 @@ describe('Study Mode: grading in the UI', () => {
     const user = userEvent.setup()
     await startStudy(user)
     await user.click(answerBoxes()[0]!)
-    await user.paste('   1234   ')
+    await user.paste('   4   ')
     await user.click(screen.getByRole('button', { name: /check answers/i }))
     expect(verdicts()[0]).toContain('Correct')
   })
@@ -213,15 +216,15 @@ describe('Study Mode: grading in the UI', () => {
     await startStudy(user)
     await fillAll(user, EVERYTHING)
     await user.click(screen.getByRole('button', { name: /check answers/i }))
-    expect(screen.getByText(/Score: 15 \/ 15/)).toBeInTheDocument()
+    expect(screen.getByText(/Score: 13 \/ 13/)).toBeInTheDocument()
 
     const first = answerBoxes()[0]!
     await user.type(first, '9')
-    expect(verdicts().filter((v) => v.includes('Correct'))).toHaveLength(14)
+    expect(verdicts().filter((v) => v.includes('Correct'))).toHaveLength(12)
     expect(screen.getByText(/1 answer was changed since you last checked/)).toBeInTheDocument()
-    expect(screen.getByText(/Score: 14 \/ 15 · 93%/)).toBeInTheDocument() // the changed cell is pending, so it earns nothing yet
+    expect(screen.getByText(/Score: 12 \/ 13 · 92%/)).toBeInTheDocument() // the changed cell is pending, so it earns nothing yet
     await user.click(screen.getByRole('button', { name: /check answers/i }))
-    expect(screen.getByText(/Score: 14 \/ 15 · 93%/)).toBeInTheDocument() // '12349' is wrong: 14 correct, 1 wrong
+    expect(screen.getByText(/Score: 12 \/ 13 · 92%/)).toBeInTheDocument() // '49' is wrong: 12 correct, 1 wrong
     expect(screen.queryByText(/was changed since/)).not.toBeInTheDocument()
   })
 
@@ -234,8 +237,8 @@ describe('Study Mode: grading in the UI', () => {
     await user.click(screen.getByText('By column'))
     const section = screen.getByRole('region', { name: 'Score' })
     const row = (name: string) => within(section).getByText(name, { selector: 'td' }).closest('tr')!
-    expect(row('n')).toHaveTextContent('5 / 5')
-    expect(row('total')).toHaveTextContent('5 / 5')
+    expect(row('n')).toHaveTextContent('4 / 4')
+    expect(row('total')).toHaveTextContent('4 / 4')
     expect(row('digit')).toHaveTextContent('4 / 4')
     expect(row('Output')).toHaveTextContent('1 / 1')
   })
@@ -261,7 +264,7 @@ describe('Study Mode: hints and reveal', () => {
     const label = first.getAttribute('aria-label')!
     await user.click(screen.getByRole('button', { name: `Hint for ${label}` }))
     expect(screen.getByText(/Hint: a whole number \(an int\)/)).toBeInTheDocument()
-    expect(screen.queryByText(/1234/)).not.toBeInTheDocument()
+    expect(screen.getByText(/Hint:/).textContent).not.toMatch(/\d/)
     expect(first).toHaveAccessibleDescription(/a whole number/)
     await user.click(screen.getByRole('button', { name: `Hint for ${label}` }))
     expect(screen.queryByText(/Hint:/)).not.toBeInTheDocument()
@@ -281,15 +284,15 @@ describe('Study Mode: hints and reveal', () => {
     mount()
     const user = userEvent.setup()
     await startStudy(user)
-    await user.click(screen.getByRole('button', { name: /Reveal Row 1 \(line 1\), n/ }))
+    await user.click(screen.getByRole('button', { name: /Reveal Row 5 \(line 6\), n/ }))
     const revealed = screen.getByTestId('revealed-cell')
-    expect(revealed).toHaveTextContent('1234')
+    expect(revealed).toHaveTextContent('123')
     expect(revealed).toHaveTextContent('revealed')
-    expect(answerBoxes()).toHaveLength(14)
+    expect(answerBoxes()).toHaveLength(12)
 
     await fillAll(user, EVERYTHING.slice(1))
     await user.click(screen.getByRole('button', { name: /check answers/i }))
-    expect(screen.getByText(/Score: 14 \/ 14 · 100%/)).toBeInTheDocument()
+    expect(screen.getByText(/Score: 12 \/ 12 · 100%/)).toBeInTheDocument()
     expect(screen.getByText(/1 revealed \(not scored\)/)).toBeInTheDocument()
   })
 
@@ -297,10 +300,10 @@ describe('Study Mode: hints and reveal', () => {
     mount()
     const user = userEvent.setup()
     await startStudy(user)
-    await user.click(screen.getByRole('button', { name: /Reveal Row 1 \(line 1\), n/ }))
+    await user.click(screen.getByRole('button', { name: /Reveal Row 5 \(line 6\), n/ }))
     await user.click(screen.getByRole('button', { name: /check answers/i }))
     expect(screen.getByTestId('revealed-cell')).toBeInTheDocument()
-    expect(useStore.getState().study!.graded).not.toHaveProperty('0:<module>:n')
+    expect(useStore.getState().study!.graded).not.toHaveProperty('5:<module>:n')
   })
 })
 
@@ -313,10 +316,10 @@ describe('Study Mode: masking', () => {
     expect(answerBoxes()).toHaveLength(0) // none chosen yet
     expect(screen.getByText(/Nothing is hidden/)).toBeInTheDocument()
     await user.click(screen.getByRole('checkbox', { name: 'total' }))
-    expect(answerBoxes()).toHaveLength(5)
+    expect(answerBoxes()).toHaveLength(4)
     expect(answerBoxes().every((b) => b.dataset.studyCol === '<module>:total')).toBe(true)
     await user.click(screen.getByRole('checkbox', { name: 'Output' }))
-    expect(answerBoxes()).toHaveLength(6)
+    expect(answerBoxes()).toHaveLength(5)
   })
 
   it('"Random" hides an exact share, and "New random mask" picks a different set and clears answers', async () => {
@@ -327,16 +330,16 @@ describe('Study Mode: masking', () => {
     const pct = screen.getByLabelText('Percentage of cells to hide')
     await user.clear(pct)
     await user.type(pct, '40')
-    expect(answerBoxes()).toHaveLength(6) // round(15 × 40%)
+    expect(answerBoxes()).toHaveLength(5) // round(13 × 40%)
 
     const before = answerBoxes().map((b) => b.dataset.studyKey).join('|')
     await user.click(answerBoxes()[0]!)
     await user.paste('x')
     vi.spyOn(Math, 'random').mockReturnValue(0.123)
     await user.click(screen.getByRole('button', { name: /new random mask/i }))
-    expect(answerBoxes()).toHaveLength(6)
+    expect(answerBoxes()).toHaveLength(5)
     expect(answerBoxes().every((b) => b.value === '')).toBe(true)
-    // (a different seed picks different cells; with 15 cells choose-6 a repeat is possible but astronomically unlikely)
+    // (a different seed picks different cells; with 13 cells choose-5 a repeat is possible but astronomically unlikely)
     const seed = study().seed
     expect(seed).toBe(Math.floor(0.123 * 4294967296))
     expect(answerBoxes().map((b) => b.dataset.studyKey).join('|')).not.toBe(before)
@@ -388,7 +391,7 @@ describe('Study Mode: the session is frozen', () => {
       useStore.getState().setDisplayStyle('carry')
     })
     expect(within(screen.getByRole('table')).getAllByRole('columnheader').map((h) => h.textContent)).toEqual(headersBefore)
-    expect(answerBoxes()).toHaveLength(15)
+    expect(answerBoxes()).toHaveLength(13)
     expect(within(screen.getByRole('table')).getAllByRole('row')).toHaveLength(16)
     // leaving study mode lets the live settings take effect
     await user.click(screen.getByRole('button', { name: /exit study mode/i }))
@@ -453,7 +456,7 @@ describe('Study Mode: answers are remembered by program run', () => {
     await startStudy(user)
     await user.click(answerBoxes()[0]!)
     await user.paste('1234')
-    await user.click(screen.getByRole('button', { name: /Reveal Row 2/ }))
+    await user.click(screen.getByRole('button', { name: /Reveal Row 4/ }))
     const key = traces.digitSum.executionKey
     const saved = (stored()!.state.studySessions as Record<string, { answers: Record<string, string>; revealed: string[]; seed: number }>)[key]!
     expect(Object.values(saved.answers)).toEqual(['1234'])
@@ -552,7 +555,7 @@ describe('Study Mode: teacher share links carry the mask settings', () => {
       studySeed: 99,
     })
     await startStudy(userEvent.setup())
-    expect(answerBoxes()).toHaveLength(5)
+    expect(answerBoxes()).toHaveLength(4)
     expect(study().seed).toBe(99)
   })
 })
@@ -566,8 +569,8 @@ describe('Study Mode: keyboard', () => {
     nBoxes[0]!.focus()
     await user.keyboard('{Enter}')
     expect(document.activeElement).toBe(nBoxes[1])
-    for (let i = 0; i < 3; i++) await user.keyboard('{Enter}')
-    expect(document.activeElement).toBe(nBoxes[4])
+    for (let i = 0; i < 2; i++) await user.keyboard('{Enter}')
+    expect(document.activeElement).toBe(nBoxes[3])
     await user.keyboard('{Enter}') // end of the n column
     expect((document.activeElement as HTMLInputElement).dataset.studyCol).toBe('<module>:total')
     expect(document.activeElement).toBe(answerBoxes().find((b) => b.dataset.studyCol === '<module>:total'))
@@ -693,7 +696,7 @@ describe('Study Mode: keyboard', () => {
     const n = answerBoxes().filter((b) => b.dataset.studyCol === '<module>:n')
     n[0]!.focus()
     await user.keyboard('{Alt>}r{/Alt}')
-    expect(screen.getByTestId('revealed-cell')).toHaveTextContent('1234')
+    expect(screen.getByTestId('revealed-cell')).toHaveTextContent('123')
     expect(document.activeElement).toBe(n[1])
   })
 
@@ -743,8 +746,9 @@ describe('Study Mode: keyboard', () => {
 
     // 2. focus has already moved to the first answer box: no tabbing through the page, no mouse anywhere
     await waitFor(() => expect((document.activeElement as HTMLElement | null)?.dataset?.studyKey).toBeTruthy())
+    // the top of the leftmost column (not the first box in reading order, which is further right)
     expect((document.activeElement as HTMLInputElement).dataset.studyCol).toBe('<module>:n')
-    expect(document.activeElement).toBe(answerBoxes()[0])
+    expect(document.activeElement).toBe(answerBoxes().find((b) => b.dataset.studyCol === '<module>:n'))
 
     // 3. answer the whole table: type, Enter, type, Enter … down each column, then across
     for (const answer of EVERYTHING) await user.keyboard(`${answer}{Enter}`)
@@ -753,13 +757,13 @@ describe('Study Mode: keyboard', () => {
     expect(document.activeElement).toBe(screen.getByRole('button', { name: /check answers/i }))
     await user.keyboard('{Enter}')
 
-    expect(screen.getByText(/Score: 15 \/ 15 · 100%/)).toBeInTheDocument()
+    expect(screen.getByText(/Score: 13 \/ 13 · 100%/)).toBeInTheDocument()
     expect(answerBoxes().map((b) => b.value)).toEqual(
       // row-major order of the same answers
       answerBoxes().map((b) => {
         const col = b.dataset.studyCol!
         const rowsOfCol = answerBoxes().filter((x) => x.dataset.studyCol === col)
-        const base = { '<module>:n': 0, '<module>:total': 5, '<module>:digit': 10, output: 14 }[col]!
+        const base = { '<module>:n': 0, '<module>:total': 4, '<module>:digit': 8, output: 12 }[col]!
         return EVERYTHING[base + rowsOfCol.indexOf(b)]!
       }),
     )
@@ -769,16 +773,17 @@ describe('Study Mode: keyboard', () => {
     mount()
     const user = userEvent.setup()
     await startStudy(user)
-    await waitFor(() => expect(document.activeElement).toBe(answerBoxes()[0])) // toggling Study mode focuses the first box
+    const first = () => answerBoxes().find((b) => b.dataset.studyCol === '<module>:n')
+    await waitFor(() => expect(document.activeElement).toBe(first())) // toggling Study mode focuses the first box
     const wrong = [...EVERYTHING]
     wrong[1] = '124' // wrong n
-    wrong[7] = '7.0' // total's third answer is the int 7: right number, float spelling = almost
-    wrong[12] = '' // blank
-    wrong[14] = 'ten' // wrong output
+    wrong[5] = '7.0' // total's second answer is the int 7: right number, float spelling = almost
+    wrong[10] = '' // blank
+    wrong[12] = 'ten' // wrong output
     for (const answer of wrong) await user.keyboard(answer === '' ? '{Enter}' : `${answer}{Enter}`)
     await user.keyboard('{Enter}') // Check answers
-    // 11 correct + 1 almost (half) = 11.5 of 15
-    expect(screen.getByText(/Score: 11\.5 \/ 15 · 77%/)).toBeInTheDocument()
+    // 9 correct + 1 almost (half) = 9.5 of 13
+    expect(screen.getByText(/Score: 9\.5 \/ 13 · 73%/)).toBeInTheDocument()
     expect(screen.getByText(/≈ 1 almost/)).toBeInTheDocument()
     expect(screen.getByText(/✗ 3 wrong/)).toBeInTheDocument()
   })
@@ -812,13 +817,13 @@ describe('Study Mode: store guards', () => {
     await startStudy(user)
     act(() => {
       useStore.getState().setAnswer('99999:nope', 'junk')
-      useStore.getState().revealCell('0:<module>:n')
+      useStore.getState().revealCell('5:<module>:n')
       useStore.getState().checkAnswers()
     })
     const graded = study().graded!
-    expect(Object.keys(graded)).toHaveLength(14)
+    expect(Object.keys(graded)).toHaveLength(12)
     expect(graded).not.toHaveProperty('99999:nope')
-    expect(graded).not.toHaveProperty('0:<module>:n')
+    expect(graded).not.toHaveProperty('5:<module>:n')
   })
 })
 
@@ -894,9 +899,10 @@ describe('Study Mode: Why was this wrong?', () => {
     const user = userEvent.setup()
     await startStudy(user)
     await user.click(check())
-    await user.click(box('<module>:digit'))
+    // the second `digit` reads the n from the row above, which is a question nobody has answered (123)
+    await user.click(answerBoxes().filter((b) => b.dataset.studyCol === '<module>:digit')[1]!)
     await user.keyboard('{Alt>}w{/Alt}')
     expect(callouts()[0]).toHaveTextContent('digit = n % 10')
-    expect(callouts()[0]).not.toHaveTextContent('1234')
+    expect(callouts()[0]).not.toHaveTextContent('123')
   })
 })

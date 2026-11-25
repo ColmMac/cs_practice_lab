@@ -22,6 +22,7 @@ function lineInfo(w: WireLineInfo): LineInfo {
   if (w.tg) info.targets = w.tg
   if (w.in) info.readsInput = true
   if (w.ol) info.oneLine = true
+  if (w.c) info.constant = true
   return info
 }
 

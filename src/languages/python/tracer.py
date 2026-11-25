@@ -344,6 +344,36 @@ def _reads_input(node) -> bool:
     return any(isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id == "input" for n in ast.walk(node))
 
 
+def _is_literal(node) -> bool:
+    """A value written out in full: ``0``, ``-1``, ``"a"``, ``[4, 8, 15]``, ``[]``."""
+    if isinstance(node, ast.Constant):
+        return True
+    if isinstance(node, ast.UnaryOp) and isinstance(node.op, (ast.UAdd, ast.USub)):
+        return isinstance(node.operand, ast.Constant)
+    if isinstance(node, (ast.List, ast.Tuple, ast.Set)):
+        return all(_is_literal(e) for e in node.elts)
+    if isinstance(node, ast.Dict):
+        return all(k is not None and _is_literal(k) for k in node.keys) and all(_is_literal(v) for v in node.values)
+    return False
+
+
+def _is_name_target(node) -> bool:
+    if isinstance(node, (ast.Tuple, ast.List)):
+        return all(_is_name_target(e) for e in node.elts)
+    return isinstance(node, ast.Name)
+
+
+def _is_constant_assign(n: ast.stmt) -> bool:
+    """``name = <literal>``: the value can be copied straight from the code. ``a[0] = 1`` does not count."""
+    if isinstance(n, ast.Assign):
+        targets = n.targets
+    elif isinstance(n, ast.AnnAssign) and n.value is not None:
+        targets = [n.target]
+    else:
+        return False
+    return all(_is_name_target(t) for t in targets) and _is_literal(n.value)
+
+
 def _describe(n: ast.stmt, src: _Source, is_elif: bool) -> dict:
     kind, exprs, targets, text, value = "other", [], [], None, None
     if isinstance(n, ast.If):
@@ -397,7 +427,8 @@ class Static:
     ephemeral    names bound only as comprehension targets (hidden by default).
     header_span  every line of a MULTI-LINE if/elif/while test or for iterable -> the header's first line,
                  so line events inside it are one evaluation of one row.
-    line_info    line -> description of the first statement on it (sent to the host as ``lines``).
+    line_info    line -> description of the first statement on it (sent to the host as ``lines``). ``c`` is set
+                 only when EVERY statement starting on the line assigns a written-out constant to plain names.
     """
 
     def __init__(self, tree: ast.AST, code: str):
@@ -412,7 +443,10 @@ class Static:
         elifs: set[int] = set()  # id() of If nodes written as `elif` (not `else:` followed by `if`)
         comp: set[str] = set()
         params: set[str] = set()
+        not_constant: set[int] = set()  # lines holding any statement other than a constant assignment
         for n in ast.walk(tree):  # breadth-first: the first statement on a line is visited first
+            if isinstance(n, ast.stmt) and not _is_constant_assign(n):
+                not_constant.add(n.lineno)
             if isinstance(n, ast.If) and len(n.orelse) == 1 and isinstance(n.orelse[0], ast.If):
                 if src.line(n.orelse[0].lineno).lstrip().startswith("elif"):
                     elifs.add(id(n.orelse[0]))
@@ -454,6 +488,9 @@ class Static:
                 _target_names(n.target, comp)
             elif isinstance(n, ast.arg):
                 params.add(n.arg)
+        for line, info in self.line_info.items():
+            if line not in not_constant:
+                info["c"] = True
         for line, header in self.header_span.items():  # e.g. a `:=` on a continuation line of a condition
             if line != header and line in self.assigns:
                 self.assigns[header] |= self.assigns[line]
