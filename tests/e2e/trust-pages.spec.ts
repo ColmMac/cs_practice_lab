@@ -92,17 +92,49 @@ test('"Manage cookie choices" is hidden without Google’s consent tool', async 
   await expect(page.getByRole('button', { name: 'Manage cookie choices' })).toHaveCount(0)
 })
 
-test('"Manage cookie choices" appears once the consent tool loads, and reopens its message', async ({ page }) => {
+/**
+ * Google's consent tool as it arrives, some time after the page: it keeps what the page already put on `googlefc`,
+ * runs the queued entries and then runs each new one as it is pushed. No Google traffic.
+ */
+function startConsentTool() {
+  type Entry = (() => void) | { CONSENT_API_READY?: () => void }
+  const w = window as unknown as {
+    googlefc?: { callbackQueue?: unknown; showRevocationMessage?: () => void }
+    reopened: number
+  }
+  w.reopened = 0
+  const fc = (w.googlefc ??= {})
+  const queued = (fc.callbackQueue ?? []) as Entry[]
+  const run = (entry: Entry) => (typeof entry === 'function' ? entry() : entry.CONSENT_API_READY?.())
+  fc.showRevocationMessage = () => w.reopened++
+  fc.callbackQueue = { push: run }
+  queued.forEach(run)
+}
+const reopened = (page: Page) => page.evaluate(() => (window as unknown as { reopened: number }).reopened)
+const cookieButton = (page: Page) => page.getByRole('button', { name: 'Manage cookie choices' })
+
+test('"Manage cookie choices" appears once the consent tool loads, however late, and reopens its message', async ({ page }) => {
+  await page.clock.install()
   await page.goto('/privacy')
   await expect(page.getByRole('heading', { level: 1, name: 'Privacy' })).toBeVisible()
-  // a stub that arrives after the page, as the real script does
-  await page.evaluate(() => {
-    const w = window as unknown as { googlefc: unknown; reopened: number }
-    w.reopened = 0
-    w.googlefc = { showRevocationMessage: () => w.reopened++ }
-  })
-  await page.getByRole('button', { name: 'Manage cookie choices' }).click()
-  expect(await page.evaluate(() => (window as unknown as { reopened: number }).reopened)).toBe(1)
+  // a slow connection: the page doesn't give up on the tool
+  await page.clock.fastForward('01:00')
+  await expect(cookieButton(page)).toHaveCount(0)
+  await page.evaluate(startConsentTool)
+  await cookieButton(page).click()
+  expect(await reopened(page)).toBe(1)
+})
+
+test('"Manage cookie choices" is there straight away on a later visit to the page', async ({ page }) => {
+  await page.goto('/privacy')
+  await expect(page.getByRole('heading', { level: 1, name: 'Privacy' })).toBeVisible()
+  await page.evaluate(startConsentTool)
+  await expect(cookieButton(page)).toBeVisible()
+  await page.getByRole('contentinfo').getByRole('link', { name: 'About' }).click()
+  await expect(page.getByRole('heading', { level: 1, name: 'About' })).toBeVisible()
+  await page.getByRole('contentinfo').getByRole('link', { name: 'Privacy' }).click()
+  await cookieButton(page).click()
+  expect(await reopened(page)).toBe(1)
 })
 
 for (const path of ['/', '/about', '/privacy', '/truth-tables'] as const) {

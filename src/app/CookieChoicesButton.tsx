@@ -1,33 +1,46 @@
 import { useEffect, useState } from 'react'
 import { Button } from '../components/ui/Button'
 
+/** Google's consent tool ("Funding Choices"), which the AdSense tag loads. */
+interface GoogleFc {
+  /** The tool runs what is queued here, at once if the entry's key has already happened. */
+  callbackQueue?: unknown[]
+  /** Clears the stored consent answer and shows the message again. */
+  showRevocationMessage?: () => void
+}
+
 declare global {
   interface Window {
-    /** Google's consent tool ("Funding Choices"), which the AdSense tag loads. Absent without ads or when blocked. */
-    googlefc?: { showRevocationMessage?: () => void }
+    googlefc?: GoogleFc
   }
 }
 
-const POLL_MS = 500
-const POLL_LIMIT = 20
+/** The documented way to call the tool: through its queue, which may be created before the tool has loaded. */
+function consentQueue(): unknown[] {
+  const fc = (window.googlefc ??= {})
+  return (fc.callbackQueue ??= [])
+}
 
-const consentToolReady = () => typeof window.googlefc?.showRevocationMessage === 'function'
-
-/** Reopens the consent message. Hidden until the consent tool exists, which can be a while after the page does. */
+/**
+ * Reopens the consent message. Hidden until the tool says its API is ready, however long that takes. Without ads,
+ * or with the tool blocked, that never happens.
+ */
 export function CookieChoicesButton() {
-  const [ready, setReady] = useState(consentToolReady)
+  const [ready, setReady] = useState(false)
 
   useEffect(() => {
-    if (ready) return
-    let tries = 0
-    const timer = setInterval(() => {
-      if (consentToolReady()) setReady(true)
-      else if (++tries < POLL_LIMIT) return
-      clearInterval(timer)
-    }, POLL_MS)
-    return () => clearInterval(timer)
-  }, [ready])
+    let mounted = true
+    consentQueue().push({
+      CONSENT_API_READY: () => {
+        if (mounted && typeof window.googlefc?.showRevocationMessage === 'function') setReady(true)
+      },
+    })
+    return () => {
+      mounted = false
+    }
+  }, [])
 
   if (!ready) return null
-  return <Button onClick={() => window.googlefc?.showRevocationMessage?.()}>Manage cookie choices</Button>
+  const reopen = () => consentQueue().push(() => window.googlefc?.showRevocationMessage?.())
+  return <Button onClick={reopen}>Manage cookie choices</Button>
 }

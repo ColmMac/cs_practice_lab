@@ -8,7 +8,7 @@ import { useMediaQuery, WIDE_SCREEN } from './useMediaQuery'
 declare global {
   interface Window {
     /** AdSense's command queue. The loader script replaces `push` and sets `loaded`. */
-    adsbygoogle?: unknown[] & { loaded?: boolean }
+    adsbygoogle?: unknown[] & { loaded?: boolean; requestNonPersonalizedAds?: 0 | 1 }
   }
 }
 
@@ -44,7 +44,10 @@ export function GoogleAdUnit({
       requested.add(unit)
       sent = true
       try {
-        ;(window.adsbygoogle ??= []).push({})
+        const queue = (window.adsbygoogle ??= [])
+        // Non-personalised only, whatever the account settings say (PLAN.md §18, E1). Must be set before the push.
+        queue.requestNonPersonalizedAds = 1
+        queue.push({})
       } catch {
         onFail()
       }

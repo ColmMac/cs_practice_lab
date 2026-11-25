@@ -75,6 +75,8 @@ describe('static hosting config', () => {
         'https://*.googlesyndication.com',
         'https://*.adtrafficquality.google',
         'https://*.google',
+        // `*.google` is the .google ending only: it doesn't cover google.com hosts
+        'https://fundingchoicesmessages.google.com',
       ]),
     )
   })

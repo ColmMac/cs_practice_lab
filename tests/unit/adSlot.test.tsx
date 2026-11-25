@@ -103,6 +103,15 @@ describe('AdSlot', () => {
     expect(push).toHaveBeenCalledTimes(1)
   })
 
+  it('asks for non-personalised ads before the request goes', async () => {
+    enableAds()
+    const flags: unknown[] = []
+    loader().mockImplementation(() => flags.push(window.adsbygoogle!.requestNonPersonalizedAds))
+    render(slot())
+    await tick()
+    expect(flags).toEqual([1])
+  })
+
   it('skips a unit AdSense has already taken', async () => {
     enableAds()
     const push = loader()

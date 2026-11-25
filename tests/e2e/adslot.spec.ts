@@ -203,13 +203,16 @@ test.describe('built with fake AdSense IDs', () => {
   const stub = (status: 'filled' | 'unfilled') => `
     const queued = window.adsbygoogle || []
     window.pushes = 0
+    window.personalised = 0
     const take = () => {
       window.pushes++
+      // a request is only allowed with the non-personalised flag already set
+      if (window.adsbygoogle.requestNonPersonalizedAds !== 1) window.personalised++
       const unit = document.querySelector('ins.adsbygoogle:not([data-adsbygoogle-status])')
       unit.setAttribute('data-adsbygoogle-status', 'done')
       setTimeout(() => unit.setAttribute('data-ad-status', '${status}'), 600)
     }
-    window.adsbygoogle = { loaded: true, push: take }
+    window.adsbygoogle = { loaded: true, push: take, requestNonPersonalizedAds: queued.requestNonPersonalizedAds }
     queued.forEach(take)
   `
   const pushes = (page: Page) => page.evaluate(() => (window as unknown as { pushes: number }).pushes)
@@ -232,6 +235,7 @@ test.describe('built with fake AdSense IDs', () => {
     await expect(page.getByRole('heading', { level: 1, name: 'About' })).toBeVisible()
     await expect.poll(() => pushes(page)).toBe(2)
     await expect(page.locator('ins.adsbygoogle[data-ad-status="filled"]')).toHaveCount(1)
+    expect(await page.evaluate(() => (window as unknown as { personalised: number }).personalised)).toBe(0)
   })
 
   for (const [name, loader] of [

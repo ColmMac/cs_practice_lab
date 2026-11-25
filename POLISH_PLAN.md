@@ -215,11 +215,11 @@ Gate: unit green. In the browser pane at 1280×800 and 375×812, the box is visi
 
 ## P8. Consent (CMP) wiring
 
-- [ ] In AdSense → *Privacy & messaging*, create the **European regulations** message (UK, EEA, CH) and, if wanted, the US states message. This is a dashboard step (owner). The message is served by the AdSense tag itself, so no extra script tag is needed, but its hosts must be in the CSP (P5).
-- [ ] If P0 chose non-personalised ads only, set it in AdSense (*Blocking controls* / *Privacy & messaging* settings) **and** document it on `/privacy`.
-- [ ] Privacy page "Manage cookie choices" button (P4) works once the CMP is live. It's hidden when `window.googlefc` is absent (ads disabled or blocked).
+- **Moved to P13 (not done):** In AdSense → *Privacy & messaging*, create the **European regulations** message (UK, EEA, CH) and, if wanted, the US states message. This is a dashboard step (owner). The message is served by the AdSense tag itself, so no extra script tag is needed, but its hosts must be in the CSP (P5). *2026-11-25: **not done** (dashboard, owner): moved to P13. The CSP part was incomplete: `connect-src` did not allow `fundingchoicesmessages.google.com` (`https://*.google` is only the `.google` ending). Added.*
+- [x] If P0 chose non-personalised ads only, set it in AdSense (*Blocking controls* / *Privacy & messaging* settings) **and** document it on `/privacy`. *2026-11-25: in code, `AdSlot` sets `requestNonPersonalizedAds = 1` before every push, and `/privacy` already says so. The AdSense dashboard setting is **not done**: moved to P13.*
+- [x] Privacy page "Manage cookie choices" button (P4) works once the CMP is live. It's hidden when `window.googlefc` is absent (ads disabled or blocked). *2026-11-25: the button now uses `googlefc.callbackQueue` (`CONSENT_API_READY`), so it no longer gives up after 10 seconds. Tested with a stub only: the check against the live CMP moved to P13.*
 
-Gate: on a preview deployment with real IDs, a UK visitor (use a fresh profile) sees the consent message before ads, and "Manage cookie choices" reopens it.
+Gate: on a preview deployment with real IDs, a UK visitor (use a fresh profile) sees the consent message before ads, and "Manage cookie choices" reopens it. *2026-11-25: this gate has **not been run** (no deployment and no publisher ID yet); it is now a P13 item. What is green: typecheck, build, lint, 1223 unit tests and the targeted E2E specs (`trust-pages`, `adslot`, `hosting`, `adsense`: 50 tests). The full E2E suite was not run.*
 
 ---
 
@@ -295,6 +295,8 @@ Gate: `npm run test:e2e` green on both projects.
 - [ ] Optional: Google's Rich Results Test and the Schema.org validator on two routes. Lighthouse (SEO and best practices) on `/` and `/trace-table`.
 - [ ] Production deploy, then add the domain in Search Console and submit the sitemap.
 - [ ] Apply to AdSense, which needs the site live with P4 and P9 content. On approval: set `VITE_ADSENSE_CLIENT` and `VITE_ADSENSE_SLOT` in Pages → Settings → Environment variables (Production), put the real line in `public/ads.txt`, redeploy, and recheck the CSP with live ads (P5).
+- [ ] **Consent message (owner, from P8), before any visitor gets ads:** in AdSense → *Privacy & messaging*, publish the **European regulations** message (UK, EEA, CH) and, if wanted, the US states message, and choose non-personalised ads there too. Leave Auto ads off: only `AdSlot` sets the non-personalised flag, and adverts have fixed placements.
+- [ ] **Consent check (from P8), on a deployment with real IDs:** in a fresh profile, a UK visitor sees the consent message before any ad, the ad request has `npa=1`, and "Manage cookie choices" on `/privacy` reopens the message. Check the console for CSP violations from the message (including its styles and fonts), and what the button does for a visitor outside the UK, EEA and CH. Needs approval first, so it follows the AdSense item above.
 
 ---
 

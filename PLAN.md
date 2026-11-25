@@ -1692,3 +1692,10 @@ None of this is legal advice.
 DNS lookups from the development machine for `cspracticelab.com` (NS, MX, A) and `www.cspracticelab.com` all returned "DNS name does not exist". So the Cloudflare DNS, the `www` redirect and the mailbox are decisions, not verified facts. The owner said the domain is still pending and the mailbox is not set up.
 
 These do not block the code tickets, which use `https://cspracticelab.com` as the default origin. They do block launch, and are tracked as unchecked items at the start of `POLISH_PLAN.md` P13.
+
+### 18.3 Consent wiring (P8, 2026-11-25)
+
+- **Non-personalised ads are enforced in code.** `GoogleAdUnit` sets `adsbygoogle.requestNonPersonalizedAds = 1` before its push, so E1 doesn't depend on an account setting. It covers only requests made by `AdSlot`, so Auto ads stay off. Non-personalised ads still use cookies for frequency capping and reporting ([Google](https://support.google.com/adsense/answer/7670312)), so the consent message is still needed.
+- **"Manage cookie choices"** queues a `CONSENT_API_READY` callback on `window.googlefc.callbackQueue`, creating both if the tool hasn't loaded, and reopens the message through the same queue ([API](https://developers.google.com/funding-choices/fc-api-docs)). Creating them loads nothing.
+- **CSP:** `connect-src` now names `fundingchoicesmessages.google.com`.
+- **Not verified:** anything against the live consent message. The dashboard steps and that check are in `POLISH_PLAN.md` P13.

@@ -131,6 +131,7 @@ test('the CSP lets ad scripts, frames, images and requests through, and still bl
     await add('iframe', 'https://googleads.g.doubleclick.net/pagead/ads')
     await add('img', 'https://images.example/pixel.gif')
     await fetch('https://ep1.adtrafficquality.google/ping')
+    await fetch('https://fundingchoicesmessages.google.com/f/ping')
     // not on the list
     await add('script', 'https://scripts.example/tracker.js')
     await add('iframe', 'https://frames.example/')
