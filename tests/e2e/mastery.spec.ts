@@ -26,7 +26,7 @@ test.beforeEach(async ({ page }) => {
   })
 })
 
-const goHome = (page: Page) => page.getByRole('navigation', { name: 'Tools' }).getByRole('link', { name: 'CS Study Hub' }).click()
+const goHome = (page: Page) => page.getByRole('navigation', { name: 'Tools' }).getByRole('link', { name: 'CS Practice Lab' }).click()
 
 test('practise the next preset from the home page, master it, and be offered the one after', async ({ page }) => {
   await page.goto('/')

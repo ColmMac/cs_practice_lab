@@ -58,7 +58,7 @@ afterEach(() => {
 describe('index.html', () => {
   const html = readFileSync('index.html', 'utf8')
   it('declares the language, a title, and a responsive viewport', () => {
-    expect(html).toMatch(/<html[^>]*\blang="en"/)
+    expect(html).toMatch(/<html[^>]*\blang="en-GB"/)
     expect(html).toMatch(/<title>[^<]+<\/title>/)
     expect(html).toMatch(/name="viewport"[^>]*width=device-width/)
   })

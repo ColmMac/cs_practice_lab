@@ -1,6 +1,7 @@
 import { NavLink, Outlet } from 'react-router'
 import { ThemeToggle } from '../components/ui/ThemeToggle'
-import { BRAND, TOOLS } from './tools'
+import { SITE_NAME } from '../config/site'
+import { TOOLS } from './tools'
 
 const linkClass = ({ isActive }: { isActive: boolean }) =>
   `rounded px-2 py-1 text-sm font-medium hover:bg-slate-200 focus-visible:outline-2 focus-visible:outline-emerald-700 dark:hover:bg-slate-800 ${
@@ -26,7 +27,7 @@ export function AppShell() {
           end
           className="mr-2 rounded text-sm font-semibold focus-visible:outline-2 focus-visible:outline-emerald-700"
         >
-          {BRAND}
+          {SITE_NAME}
         </NavLink>
         <ul className="flex flex-wrap items-center gap-1">
           {TOOLS.map((t) => (

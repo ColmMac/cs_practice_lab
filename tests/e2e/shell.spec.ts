@@ -9,7 +9,7 @@ test.beforeEach(async ({ page }) => {
 test('the nav reaches all four tools and the home page', async ({ page }) => {
   await page.goto('/')
   const nav = page.getByRole('navigation', { name: 'Tools' })
-  await expect(page.getByRole('heading', { level: 1, name: 'CS Study Hub' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'CS Practice Lab' })).toBeVisible()
 
   const tools = [
     ['Truth tables', '/truth-tables'],
@@ -22,9 +22,9 @@ test('the nav reaches all four tools and the home page', async ({ page }) => {
     await expect(page).toHaveURL(new RegExp(`${path}$`))
     await expect(nav.getByRole('link', { name })).toHaveAttribute('aria-current', 'page')
   }
-  await expect(page.getByRole('heading', { level: 1, name: 'Trace Table Studio' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'CS Practice Lab' })).toBeVisible()
 
-  await nav.getByRole('link', { name: 'CS Study Hub' }).click()
+  await nav.getByRole('link', { name: 'CS Practice Lab' }).click()
   await expect(page).toHaveURL(/\/$/)
 })
 

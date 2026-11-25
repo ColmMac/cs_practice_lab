@@ -6,7 +6,7 @@ test.beforeEach(async ({ page }) => {
 
 test('home page: hero, CTA and a card per tool with curriculum badges', async ({ page }) => {
   await page.goto('/')
-  await expect(page.getByRole('heading', { level: 1, name: 'CS Study Hub' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'CS Practice Lab' })).toBeVisible()
   await expect(page.getByText(/No login, nothing to install/)).toBeVisible()
   const cards = page.getByRole('list', { name: 'Tools' }).locator('> li')
   await expect(cards).toHaveCount(4)

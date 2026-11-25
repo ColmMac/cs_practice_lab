@@ -1,3 +1,4 @@
+import { SITE_NAME } from '../../config/site'
 import { getLanguage } from '../../languages/registry'
 import { useStore } from '../../store'
 import { RuntimeStatusBadge } from './RuntimeStatusBadge'
@@ -16,7 +17,7 @@ export function Toolbar() {
   const notReady = runnerStatus.state !== 'ready' && runnerStatus.state !== 'running'
 
   return (
-    <ToolHeader title="Trace Table Studio">
+    <ToolHeader title={SITE_NAME}>
       {running ? (
         <Button variant="danger" onClick={cancel}>
 Cancel

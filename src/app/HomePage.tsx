@@ -7,7 +7,8 @@ import { Panel } from '../components/ui/Panel'
 import { ToolHeader } from '../components/ui/ToolHeader'
 import { MasteryStrip } from './MasteryStrip'
 import { PageMeta } from './PageMeta'
-import { BRAND, HOME_DESCRIPTION, TOOLS } from './tools'
+import { SITE_DESCRIPTION, SITE_NAME } from '../config/site'
+import { TOOLS } from './tools'
 import { TRACE_PRESET_IDS, useMastery } from './useMastery'
 import { presetProgress } from '../core/mastery/mastery'
 
@@ -102,8 +103,8 @@ export function HomePage() {
   if (payload) return <Navigate to={`/trace-table#${SHARE_KEY}${payload}`} replace />
   return (
     <>
-      <PageMeta description={HOME_DESCRIPTION} />
-      <ToolHeader title={BRAND} />
+      <PageMeta description={SITE_DESCRIPTION} />
+      <ToolHeader title={SITE_NAME} />
       <main className="min-h-0 flex-1 overflow-auto p-4">
         <section aria-labelledby="hero-heading" className="mb-6 max-w-3xl">
           <h2 id="hero-heading" className="text-2xl font-semibold">

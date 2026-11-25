@@ -34,11 +34,6 @@ export const TOOLS: readonly ToolInfo[] = [
   },
 ]
 
-export const BRAND = 'CS Study Hub'
-
-export const HOME_DESCRIPTION =
-  'Free computer science revision tools for GCSE, SQA Higher, A-Level and CS1: trace tables, truth tables, number systems and sorting. No login, runs in your browser.'
-
 /** Every indexable route, the home page first. sitemap.xml is generated from this. */
 export const SITE_PATHS: readonly string[] = ['/', ...TOOLS.map((t) => t.path)]
 

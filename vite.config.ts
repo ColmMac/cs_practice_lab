@@ -4,6 +4,7 @@ import { defineConfig, loadEnv, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { SITE_PATHS } from './src/app/tools.ts'
+import { normaliseOrigin } from './src/config/site.ts'
 
 /**
  * The production headers live in ONE place: public/_headers, the file Netlify and Cloudflare Pages serve. The
@@ -37,7 +38,7 @@ function seoFiles(origin: string): Plugin {
     name: 'seo-files',
     apply: 'build',
     generateBundle() {
-      const site = origin.trim().replace(/\/+$/, '')
+      const site = normaliseOrigin(origin)
       const robots = ['User-agent: *', 'Allow: /', ...(site ? ['', 'Sitemap: ' + site + '/sitemap.xml'] : [])]
       this.emitFile({ type: 'asset', fileName: 'robots.txt', source: robots.join('\n') + '\n' })
       if (!site) {

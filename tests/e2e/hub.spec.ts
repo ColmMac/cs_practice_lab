@@ -6,7 +6,7 @@ test.beforeEach(async ({ page }) => {
 
 const ROUTES = [
   ['/', 'Tools'],
-  ['/trace-table', 'Trace Table Studio'],
+  ['/trace-table', 'CS Practice Lab'],
   ['/truth-tables', 'Truth tables'],
   ['/number-systems', 'Number systems'],
   ['/sorting-visualizer', 'Sorting & searching'],

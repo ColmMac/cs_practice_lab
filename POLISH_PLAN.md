@@ -47,7 +47,7 @@ Gate: decisions are written down in `PLAN.md` §18.
 
 ## P1. Site config, brand constants and head basics
 
-- [ ] Create `src/config/site.ts`:
+- [x] Create `src/config/site.ts`:
   ```ts
   export const SITE_URL = (import.meta.env.VITE_SITE_URL || 'https://cspracticelab.com').trim().replace(/\/+$/, '')
   export const SITE_NAME = 'CS Practice Lab'
@@ -56,12 +56,12 @@ Gate: decisions are written down in `PLAN.md` §18.
   export const REPO_URL = 'https://github.com/ColmMac/cs_practice_lab'
   ```
   Keep it free of React and the store, because `vite.config.ts` imports it in Node. Read the env through a helper that works in both Node (`loadEnv`) and the browser (`import.meta.env`). Use one exported `normaliseOrigin()` for both, replacing `siteUrl()` in `PageMeta.tsx`.
-- [ ] `tools.ts`: drop `BRAND` and `HOME_DESCRIPTION` in favour of `SITE_NAME` and `SITE_DESCRIPTION`. Update every importer: `AppShell`, `HomePage`, `PageMeta` and `Toolbar.tsx`, which also names the brand.
-- [ ] **Behaviour change:** a canonical is now **always** emitted (default origin). Update `tests/unit/seo.test.tsx` and the E2E test "there is no canonical link without VITE_SITE_URL" so they assert the default origin instead.
-- [ ] Add `src/vite-env.d.ts` typing `VITE_SITE_URL`, `VITE_ADSENSE_CLIENT` and `VITE_ADSENSE_SLOT` as `string | undefined` (if typing isn't already provided another way).
-- [ ] `index.html`: `<html lang="en-GB">`, title "CS Practice Lab", `theme-color` metas for light and dark, favicon links.
-- [ ] Add `public/favicon.svg`, `public/favicon.ico` (32 px), `public/apple-touch-icon.png` (180 px) and `public/og-image.png` (1200×630, plain brand mark on a neutral background, no stock art).
-- [ ] Grep gate: `grep -rn "localhost\|pages.dev\|netlify" src index.html public` returns only comments or test-only code. `dist/` contains no `localhost`.
+- [x] `tools.ts`: drop `BRAND` and `HOME_DESCRIPTION` in favour of `SITE_NAME` and `SITE_DESCRIPTION`. Update every importer: `AppShell`, `HomePage`, `PageMeta` and `Toolbar.tsx`, which also names the brand.
+- [x] **Behaviour change:** a canonical is now **always** emitted (default origin). Update `tests/unit/seo.test.tsx` and the E2E test "there is no canonical link without VITE_SITE_URL" so they assert the default origin instead.
+- [x] Add `src/vite-env.d.ts` typing `VITE_SITE_URL`, `VITE_ADSENSE_CLIENT` and `VITE_ADSENSE_SLOT` as `string | undefined` (if typing isn't already provided another way).
+- [x] `index.html`: `<html lang="en-GB">`, title "CS Practice Lab", `theme-color` metas for light and dark, favicon links.
+- [x] Add `public/favicon.svg`, `public/favicon.ico` (32 px), `public/apple-touch-icon.png` (180 px) and `public/og-image.png` (1200×630, plain brand mark on a neutral background, no stock art).
+- [x] Grep gate: `grep -rn "localhost\|pages.dev\|netlify" src index.html public` returns only comments or test-only code. `dist/` contains no `localhost`. *2026-11-25: source is clean. `dist/` has `http://localhost` only inside react-router (its placeholder base for parsing relative URLs), none from our code.*
 
 Gate: `npm run typecheck`, `npm test`, `npm run lint` green.
 
