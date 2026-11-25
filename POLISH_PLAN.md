@@ -309,8 +309,8 @@ Gate: `npm run test:e2e` green on both projects. *2026-11-25: green. The full su
 
 **Owner decision, 2026-11-25: P14 is the next ticket, ahead of P13’s open items.** Those wait on the owner, a deployment or AdSense approval, and `REPO_URL` already names the renamed repo. Take P14 next, and leave P13’s unticked items open.
 
-- [ ] `package.json` `"name": "cs_practice_lab"`, then run `npm install` to update the lockfile's name. Remaining brand strings (`Trace Table Studio`, `CS Study Hub`) → **CS Practice Lab** in `README.md`, `CLAUDE.md` (title, and the Git line → `ColmMac/cs_practice_lab`), the `PLAN.md` header note, `Toolbar.tsx`, the export headers (`json.ts`, `latex.ts`, re-review the goldens), the docstring and blocked-import message in `tracer.py` (users see that message; run `test:py` and `fixtures` afterwards) and the E2E title assertions. **Don't** touch the `tts:`/`hub:` storage keys (F14).
-- [ ] Rename the GitHub repo (outward-facing, so confirm with the owner at execution time):
+- [x] `package.json` `"name": "cs_practice_lab"`, then run `npm install` to update the lockfile's name. Remaining brand strings (`Trace Table Studio`, `CS Study Hub`) → **CS Practice Lab** in `README.md`, `CLAUDE.md` (title, and the Git line → `ColmMac/cs_practice_lab`), the `PLAN.md` header note, `Toolbar.tsx`, the export headers (`json.ts`, `latex.ts`, re-review the goldens), the docstring and blocked-import message in `tracer.py` (users see that message; run `test:py` and `fixtures` afterwards) and the E2E title assertions. **Don't** touch the `tts:`/`hub:` storage keys (F14).
+- [x] Rename the GitHub repo (outward-facing, so confirm with the owner at execution time):
   ```powershell
   gh repo rename cs_practice_lab --yes
   ```
@@ -321,11 +321,13 @@ Gate: `npm run test:e2e` green on both projects. *2026-11-25: green. The full su
   git remote -v
   ```
   GitHub redirects the old URL, but update every reference anyway. In Cloudflare Pages, confirm the Git integration still points at the renamed repo, and trigger a deploy to prove it.
-- [ ] New `README.md`: a one-line pitch and a link to https://cspracticelab.com, the four tools (one short paragraph each), architecture highlights (Pyodide in a worker, every-line trace with pure TS projections, language-neutral `src/core`, sanitised share links that never auto-run, a CSP-first static deploy), local dev and test commands (the table from the current README, including the Windows `uv` note), **Cloudflare Pages deployment** (build `npm run build`, output `dist`, Node version, env vars, custom domain, `_headers`/`_redirects`), and **Activating Google AdSense**:
+- [x] New `README.md`: a one-line pitch and a link to https://cspracticelab.com, the four tools (one short paragraph each), architecture highlights (Pyodide in a worker, every-line trace with pure TS projections, language-neutral `src/core`, sanitised share links that never auto-run, a CSP-first static deploy), local dev and test commands (the table from the current README, including the Windows `uv` note), **Cloudflare Pages deployment** (build `npm run build`, output `dist`, Node version, env vars, custom domain, `_headers`/`_redirects`), and **Activating Google AdSense**:
   1. Get approved, then note your `ca-pub-…` ID and create one display ad unit (its numeric slot ID).
   2. Pages → Settings → Environment variables (Production): `VITE_ADSENSE_CLIENT`, `VITE_ADSENSE_SLOT`.
   3. Replace the commented line in `public/ads.txt` with `google.com, pub-…, DIRECT, f08c47fec0942fa0`.
   4. Make sure the Privacy & messaging consent message is published.
   5. Redeploy, check `/ads.txt`, and check the console for CSP violations with ads live.
-- [ ] Commit, and push after the owner says so.
-- [ ] Final summary to the owner includes: **rename the local folder `C:\ip\trace_table` → `cs_practice_lab` manually after exiting Claude Code.** The project memory under `~/.claude/projects/C--ip-trace-table/` is keyed to the old path and won't follow the folder. Copy it over if it's still wanted.
+- [x] Commit, and push after the owner says so.
+- [x] Final summary to the owner includes: **rename the local folder `C:\ip\trace_table` → `cs_practice_lab` manually after exiting Claude Code.** The project memory under `~/.claude/projects/C--ip-trace-table/` is keyed to the old path and won't follow the folder. Copy it over if it's still wanted.
+
+*2026-11-25: done. Typecheck, lint, build, 1242 unit tests, 292 tracer tests on each of 3.12, 3.13 and 3.14, and the full E2E suite (310 tests on both projects, including the new `brand.spec.ts`). The wire fixtures did not change; the three `.tex` goldens differ only in their header line, reviewed by hand. The JSON and LaTeX exporters now take the name from `SITE_NAME`. The repo is renamed to `ColmMac/cs_practice_lab` and `origin` points at it. **Not done:** nothing has been pushed (it waits for the owner), and the Cloudflare Pages Git-integration check and proof deploy have not been made, so they belong with P13’s deployment items. The README’s Cloudflare steps have not been tried on a real deployment.*

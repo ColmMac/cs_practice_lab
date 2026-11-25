@@ -1,4 +1,4 @@
-"""Trace harness for Trace Table Studio.
+"""Trace harness for CS Practice Lab.
 
 Runs user code under ``sys.settrace`` and returns a JSON document describing every executed line.
 Imports nothing from ``js``/``pyodide`` so it can be tested on plain CPython (see tests/tracer).
@@ -966,7 +966,7 @@ def _make_builtins(opts: Options, tracer: Tracer):
 
     def _guarded_import(name, globals=None, locals=None, fromlist=(), level=0):
         if level == 0 and name.split(".")[0] in BLOCKED_IMPORTS:
-            raise ImportError(f"Importing '{name}' is not available in Trace Table Studio")
+            raise ImportError(f"Importing '{name}' is not available in CS Practice Lab")
         return real_import(name, globals, locals, fromlist, level)
 
     def _check():

@@ -1,7 +1,7 @@
 [project]
 name = "trace-table-tracer"
 version = "0.0.0"
-description = "Python tracer harness for Trace Table Studio (tested on plain CPython)"
+description = "Python tracer harness for CS Practice Lab (tested on plain CPython)"
 requires-python = ">=3.12"
 dependencies = []
 

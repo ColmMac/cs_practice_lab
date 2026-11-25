@@ -1,4 +1,4 @@
-# Trace Table Studio
+# CS Practice Lab
 
 Client-side Python trace-table generator (React + TS + Vite, Pyodide in a Web Worker). Full design: [PLAN.md](PLAN.md) — read it before changing contracts.
 
@@ -16,7 +16,7 @@ Client-side Python trace-table generator (React + TS + Vite, Pyodide in a Web Wo
 - `tracer.py` must not import `js`/`pyodide` (it is tested with plain CPython).
 - `runTrace` resolves with a `status` for all user-code failures; it rejects only if the runtime is broken.
 - Code from share links must never auto-run.
-- Git: this folder is its own repo (`ColmMac/trace_table`), nested inside `C:\ip`. Commit from here.
+- Git: this folder is its own repo (`ColmMac/cs_practice_lab`), nested inside `C:\ip`. Commit from here.
 - Presets are real files in `src/languages/python/presets/` (`presets.json` + `*.py`). After editing one, run `npm run fixtures` and review the golden tables in `tests/fixtures/presets/*.txt` BY HAND against your own execution of the program before accepting a snapshot; a freshly written snapshot proves nothing. (This caught a real bug in M2.)
 - When writing Python test code via a shell heredoc, `\n` escapes get mangled. Use the Write/Edit tools for files that contain them.
 - The editor's lint machinery must stay a static extension (`linter(null)`); `setDiagnostics` alone is discarded when @uiw/react-codemirror reconfigures.
@@ -60,4 +60,4 @@ Client-side Python trace-table generator (React + TS + Vite, Pyodide in a Web Wo
 - Projector mode is the `projector:` Tailwind variant, driven by a class on `<html>` that only `useProjectorClass` (trace page) sets. The print pack (`printJob`) contains the mark scheme, so it stays behind the challenge lock; its student page must never fall back to filled-in cells.
 
 ## Status
-M0-M5, the hub tickets H0-W5.4 (PLAN.md §16) and C1-C6 of §17 are done: 1242 unit, 292 tracer and 301 E2E tests (POLISH_PLAN.md P0–P12 done; P13’s local checks pass, its owner and deployment items and P14 are open). Every planned ticket is complete. M0-M5: the plan in PLAN.md is complete (see §9 and §11-§15). Not done / not verifiable here: LaTeX compilation, Lighthouse, real print pagination, Playwright E2E in CI (see PLAN.md §15). Ideas for later are listed at the end of §15.
+M0-M5, the hub tickets H0-W5.4 (PLAN.md §16) and C1-C6 of §17 are done: 1242 unit, 292 tracer and 310 E2E tests (POLISH_PLAN.md P0–P12 and P14 done; P13’s local checks pass, its owner and deployment items are open). Every planned ticket is complete. M0-M5: the plan in PLAN.md is complete (see §9 and §11-§15). Not done / not verifiable here: LaTeX compilation, Lighthouse, real print pagination, Playwright E2E in CI (see PLAN.md §15). Ideas for later are listed at the end of §15.

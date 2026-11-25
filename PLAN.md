@@ -1,5 +1,7 @@
-# Trace Table Studio — Architecture & Implementation Plan
+# CS Practice Lab — Architecture & Implementation Plan
 
+> **Naming (2026-11-25):** the product is **CS Practice Lab** (https://cspracticelab.com), in the repo `ColmMac/cs_practice_lab`. It began as “Trace Table Studio” and then “CS Study Hub”; later sections keep those names where they record what was planned at the time. Storage keys keep their old `tts:` and `hub:` prefixes on purpose.
+>
 > Client-side Python trace-table generator with Study/Quiz mode and multi-format export.
 > Stack: React + TypeScript + Vite · Tailwind CSS v4 · CodeMirror 6 · Pyodide in a Web Worker · Zustand · lz-string · html-to-image.
 
@@ -94,7 +96,7 @@ sequenceDiagram
 ## 2. Project structure
 
 ```
-trace_table/
+cs_practice_lab/
 ├─ index.html
 ├─ package.json · vite.config.ts · tsconfig.json · eslint.config.js
 ├─ public/

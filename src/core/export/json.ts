@@ -1,3 +1,4 @@
+import { SITE_NAME } from '../../config/site'
 import type { DisplayStyle, Granularity } from '../derive/rows'
 import type { TraceResult } from '../types'
 import type { ExportVariant, TableModel } from './tableModel'
@@ -24,7 +25,7 @@ export function toJson(i: JsonExportInput): string {
     JSON.stringify(
       {
         schema: JSON_SCHEMA,
-        generator: 'Trace Table Studio',
+        generator: SITE_NAME,
         source: { language: i.language, code: i.code, stdin: i.stdin },
         view: {
           granularity: i.granularity,
