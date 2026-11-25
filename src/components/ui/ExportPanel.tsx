@@ -53,8 +53,17 @@ export function ExportPanel({ table, baseName, controls, extras, trailing }: Pro
     setBusy(true)
     setMessage('Creating the image…')
     try {
-      downloadBlob(`${baseName}.png`, dataUrlToBlob(await renderPng(table)))
-      setMessage(`Saved ${baseName}.png.`)
+      const images = await renderPng(table)
+      const single = images.length === 1
+      images.forEach((image, i) => {
+        const name = single ? `${baseName}.png` : `${baseName}-part-${i + 1}-of-${images.length}.png`
+        downloadBlob(name, dataUrlToBlob(image))
+      })
+      setMessage(
+        single
+          ? `Saved ${baseName}.png.`
+          : `The table is long, so it was saved as ${images.length} images to keep it readable. If only one arrived, allow multiple downloads for this site.`,
+      )
     } catch {
       setMessage('Couldn’t create the image. Try the other formats, or Print and choose Save as PDF.')
     } finally {

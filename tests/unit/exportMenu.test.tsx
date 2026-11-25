@@ -322,6 +322,32 @@ describe('Export menu: PNG', () => {
     expect(within(dlg).getByRole('button', { name: 'Download .png' })).toBeEnabled()
   })
 
+  it('saves a very tall table as numbered parts, each repeating the header row', async () => {
+    const user = userEvent.setup()
+    const files = captureDownloads()
+    // jsdom has no layout: say each row is 1000px tall
+    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function (this: HTMLElement) {
+      if (this.tagName === 'TR') return 1000
+      return this.classList.contains('export-table') ? this.querySelectorAll('tbody tr').length * 1000 : 0
+    })
+    const drawn: { rows: number; headers: number }[] = []
+    vi.mocked(toPng).mockImplementation(async (node) => {
+      drawn.push({ rows: node.querySelectorAll('tbody tr').length, headers: node.querySelectorAll('th').length })
+      return PNG
+    })
+    mount()
+    const dlg = await openMenu(user)
+    await user.click(within(dlg).getByRole('button', { name: 'Download .png' }))
+
+    await waitFor(() => expect(files.has('trace-table-part-2-of-2.png')).toBe(true))
+    expect(drawn).toEqual([
+      { rows: 8, headers: 5 },
+      { rows: 7, headers: 5 },
+    ])
+    expect(files.has('trace-table.png')).toBe(false)
+    expect(await within(dlg).findByText(/saved as 2 images/)).toBeInTheDocument()
+  })
+
   it('a worksheet PNG has blank cells', async () => {
     const user = userEvent.setup()
     captureDownloads()

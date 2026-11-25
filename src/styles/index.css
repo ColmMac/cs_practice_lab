@@ -115,7 +115,15 @@ html {
   margin: 12mm;
 }
 
+/* a table too wide for portrait (see printLayout) gets landscape pages of its own */
+@page wide {
+  size: landscape;
+}
+
 @media print {
+  .print-region .print-landscape {
+    page: wide;
+  }
   html,
   body {
     background: #fff !important;

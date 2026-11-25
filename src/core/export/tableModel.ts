@@ -89,5 +89,24 @@ export function buildPrintPack(columns: ColumnDef[], rows: TraceRow[], opts: Pac
   }
 }
 
+/** The longest line in each column's cells (the header not counted), in characters. */
+export function valueWidths(m: TableModel): number[] {
+  return m.columns.map((_, j) => {
+    let widest = 0
+    for (const row of m.rows) for (const line of (row[j] ?? '').split('\n')) widest = Math.max(widest, line.length)
+    return widest
+  })
+}
+
+/**
+ * A header as the lines it may be stacked on. `binary_find.target` splits after the dot when that is what makes its
+ * column wide: the header is much longer than anything under it.
+ */
+export function headerParts(header: string, valueWidth: number): string[] {
+  const dot = header.lastIndexOf('.')
+  const worthIt = header.length > Math.max(valueWidth, 8) && dot > 0 && dot < header.length - 1
+  return worthIt ? [header.slice(0, dot + 1), header.slice(dot + 1)] : [header]
+}
+
 /** Safe base name for downloads: `trace-table`, `trace-table-worksheet`. */
 export const exportBaseName = (variant: ExportVariant): string => (variant === 'worksheet' ? 'trace-table-worksheet' : 'trace-table')
