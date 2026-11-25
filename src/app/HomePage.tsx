@@ -18,7 +18,7 @@ import { presetProgress } from '../core/mastery/mastery'
 /** Extra home-page detail per tool, keyed by route path. Names, summaries and paths come from TOOLS. */
 const CARDS: Record<string, { tags: string[]; Icon: LucideIcon }> = {
   '/trace-table': { tags: ['GCSE', 'SQA Higher', 'A-Level', 'CS1'], Icon: Table },
-  '/truth-tables': { tags: ['GCSE', 'SQA Higher', 'A-Level', 'CS1'], Icon: ToggleLeft },
+  '/truth-tables': { tags: ['GCSE', 'A-Level', 'CS1'], Icon: ToggleLeft },
   '/number-systems': { tags: ['GCSE', 'SQA Higher', 'A-Level'], Icon: Binary },
   '/sorting-visualizer': { tags: ['GCSE', 'SQA Higher', 'A-Level', 'CS1'], Icon: ChartColumn },
 }

@@ -36,6 +36,7 @@
   --color-on-error-soft: var(--color-red-900);
   --color-danger-fill: var(--color-red-600);
   --color-danger-fill-hover: var(--color-red-700);
+  --color-ran-light: var(--color-lime-400); /* the light on Run just after a run */
 
   /* sorting card states: each one is a different state, so they stay different hues */
   --color-state-compare: var(--color-amber-600);
