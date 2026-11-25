@@ -1,4 +1,6 @@
+import { findGuide } from '../../app/guides'
 import { PageMeta } from '../../app/PageMeta'
+import { ToolGuide } from '../../app/ToolGuide'
 import { toolDescription } from '../../app/tools'
 import { findLogicPreset, logicPresets } from '../../core/logic'
 import { AdSlot } from '../ui/AdSlot'
@@ -24,10 +26,12 @@ export function TruthTablePage() {
   const preset = findLogicPreset(s.selectValue)
   const study = useTruthStudy(s.table, s.notation)
   const ads = useAdsAllowed(study.active)
+  // no worked table under one that is being filled in
+  const guide = study.active ? null : findGuide('/truth-tables')!
 
   return (
     <>
-      <PageMeta title="Truth tables" description={toolDescription('/truth-tables')} />
+      <PageMeta title="Truth tables" description={toolDescription('/truth-tables')} faq={guide?.faq} />
       <ToolWorkspace>
         <ToolHeader title="Truth tables">
           <label className="flex items-center gap-2 text-xs">
@@ -107,6 +111,7 @@ export function TruthTablePage() {
           </div>
         </main>
       </ToolWorkspace>
+      {guide && <ToolGuide guide={guide} />}
     </>
   )
 }

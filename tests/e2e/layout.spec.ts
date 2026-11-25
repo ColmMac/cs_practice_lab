@@ -64,10 +64,11 @@ test.describe('on a desktop screen', () => {
     await page.goto('/trace-table')
     await expect(traceTable(page).getByRole('cell', { name: '58' }).last()).toBeVisible({ timeout: 80_000 })
 
-    // the table did not stretch the document: it only scrolls as far as the footer
+    // the table did not stretch the document: it only scrolls as far as the guide and the footer
     const footerHeight = (await footer(page).boundingBox())!.height
+    const guideHeight = (await page.getByRole('region', { name: 'How to complete a trace table' }).boundingBox())!.height
     const pageScroll = await page.evaluate(() => document.documentElement.scrollHeight - window.innerHeight)
-    expect(Math.abs(pageScroll - footerHeight)).toBeLessThanOrEqual(2)
+    expect(Math.abs(pageScroll - guideHeight - footerHeight)).toBeLessThanOrEqual(2)
 
     const pane = page.locator('[data-scroll-parent]')
     expect(await pane.evaluate((el) => el.scrollHeight - el.clientHeight)).toBeGreaterThan(500)

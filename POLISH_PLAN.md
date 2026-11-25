@@ -227,15 +227,15 @@ Gate: on a preview deployment with real IDs, a UK visitor (use a fresh profile) 
 
 Hand-written, accurate and exam-relevant. 300–600 words per tool, below the workspace (after P3's layout), in semantic HTML (`<section aria-labelledby>`, `<h2>`, `<h3>`, lists, one worked example). It's also emitted in the route shell's `<noscript>`.
 
-- [ ] Put the content in `src/app/guides/*.ts(x)` as **data** (`{ intro, steps, workedExample, examTips, faq[] }`), so the visible text, the `<noscript>` copy and the `FAQPage` JSON-LD come from one source.
-- [ ] **Trace tables:** what a trace table is, how examiners expect one laid out (a row per change, blank when unchanged), loops and conditions, a worked example on a preset, common mark-losing mistakes. FAQ: "Do I write a row when a value doesn't change?" and others.
-- [ ] **Truth tables:** operators and precedence (NOT > AND > OR), row ordering 000→111, intermediate columns, half and full adders, the gate symbols AQA/OCR/SQA use.
-- [ ] **Number systems:** binary↔denary↔hex method, two's complement (invert and add 1), overflow, shifts as ×2/÷2. A worked 8-bit example.
-- [ ] **Sorting & searching:** what one "pass" means in exam answers, bubble vs insertion vs merge (what changes each pass), binary search's precondition and midpoint rule (match the app's rounding), complexity in one line each.
-- [ ] Check every worked example by **running it in the tool** and by hand. A wrong worked example on an exam-practice site is worse than none. Check board-specific wording against the boards' published specifications (the same care as `CLAUDE.md`'s pseudocode rule).
-- [ ] Unit test: every tool route renders a guide with at least one `h2`, more than 250 words, and an FAQ whose JSON-LD matches the visible questions exactly.
+- [x] Put the content in `src/app/guides/*.ts(x)` as **data** (`{ intro, steps, workedExample, examTips, faq[] }`), so the visible text, the `<noscript>` copy and the `FAQPage` JSON-LD come from one source.
+- [x] **Trace tables:** what a trace table is, how examiners expect one laid out (a row per change, blank when unchanged), loops and conditions, a worked example on a preset, common mark-losing mistakes. FAQ: "Do I write a row when a value doesn't change?" and others.
+- [x] **Truth tables:** operators and precedence (NOT > AND > OR), row ordering 000→111, intermediate columns, half and full adders, the gate symbols AQA/OCR/SQA use.
+- [x] **Number systems:** binary↔denary↔hex method, two's complement (invert and add 1), overflow, shifts as ×2/÷2. A worked 8-bit example.
+- [x] **Sorting & searching:** what one "pass" means in exam answers, bubble vs insertion vs merge (what changes each pass), binary search's precondition and midpoint rule (match the app's rounding), complexity in one line each.
+- [x] Check every worked example by **running it in the tool** and by hand. A wrong worked example on an exam-practice site is worse than none. Check board-specific wording against the boards' published specifications (the same care as `CLAUDE.md`'s pseudocode rule).
+- [x] Unit test: every tool route renders a guide with at least one `h2`, more than 250 words, and an FAQ whose JSON-LD matches the visible questions exactly.
 
-Gate: content reviewed by the owner. axe passes on the real page in light and dark.
+Gate: content reviewed by the owner. axe passes on the real page in light and dark. *2026-11-25: the axe half is green (`design.spec.ts` and `hub.spec.ts` on the production build, every route with its guide, light and dark). The **owner review has not happened**: moved to P13. Also green: typecheck, build, lint, 1241 unit tests (run before a one-line tip correction, after which the guide and shell tests were rerun) and the targeted E2E specs (`guides`, `layout`, `seo`, `design`, `adslot`, `truth-tables`, `number-systems`, `sorting`, `trust-pages`, `hub`). The full E2E suite was not run. Notes: guides are hidden wherever a mode hides answers. Board wording sources and limits are in `PLAN.md` §18.4 (OCR's gate drawings were not viewed, so the guide doesn't describe them; the SQA courses list no gates).*
 
 ---
 
@@ -287,6 +287,7 @@ Gate: `npm run test:e2e` green on both projects.
 ## P13. Release gate (everything, in one go)
 
 - [ ] **Domain (owner, from P0):** register `cspracticelab.com` if needed, put its DNS on Cloudflare, attach it to the Pages project and redirect `www` to the apex. Check both with a DNS lookup and `curl -I`.
+- [ ] **Guide review (owner, from P9):** read the four tool guides (`src/app/guides/`) for accuracy and tone before launch. Decide whether the home page should still tag Truth tables "SQA Higher" (`PLAN.md` §18.4).
 - [ ] **Mailbox (owner, from P0):** route `contact@cspracticelab.com` to a real inbox with Cloudflare Email Routing, and confirm a test message arrives **before** `/about` is public.
 - [ ] `npm run typecheck` · `npm run lint` · `npm test` · `npm run test:py` (3.12, 3.13, 3.14) · `npm run test:e2e`, all green. Record the counts in `CLAUDE.md` Status.
 - [ ] Golden files reviewed **by hand**: `tests/fixtures/export/*` (brand change F15), `tests/fixtures/presets/*` if any preset changed.

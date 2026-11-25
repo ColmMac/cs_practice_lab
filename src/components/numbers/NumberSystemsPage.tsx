@@ -1,6 +1,8 @@
 import { useLayoutEffect, useState } from 'react'
 import { useSearchParams } from 'react-router'
+import { findGuide } from '../../app/guides'
 import { PageMeta } from '../../app/PageMeta'
+import { ToolGuide } from '../../app/ToolGuide'
 import { toolDescription } from '../../app/tools'
 import { numberUrlParams, parseNumberUrl, toBinary, type Mode, type Topic, type Width } from '../../core/numbers'
 import { newSeed } from '../../core/study/rng'
@@ -54,6 +56,8 @@ export function NumberSystemsPage() {
   const [topic, setTopic] = useState<Topic | null>(start.topic)
 
   const ads = useAdsAllowed(mode === 'practice')
+  // no worked answers under practice questions
+  const guide = mode === 'practice' ? null : findGuide('/number-systems')!
 
   // A LAYOUT effect: a passive one can still be pending when the next nav link is clicked, and then overwrites it.
   useLayoutEffect(() => {
@@ -61,7 +65,7 @@ export function NumberSystemsPage() {
   }, [mode, s.width, s.bits, topic, seed, setParams])
   return (
     <>
-      <PageMeta title="Number systems" description={toolDescription('/number-systems')} />
+      <PageMeta title="Number systems" description={toolDescription('/number-systems')} faq={guide?.faq} />
       <ToolWorkspace>
         <ToolHeader title="Number systems">
           <SegmentedToggle
@@ -176,6 +180,7 @@ export function NumberSystemsPage() {
           </main>
         )}
       </ToolWorkspace>
+      {guide && <ToolGuide guide={guide} />}
     </>
   )
 }

@@ -4,8 +4,9 @@
  * imported by `vite.config.ts` in Node.
  */
 import { SITE_DESCRIPTION, SITE_NAME } from '../config/site.ts'
+import { findGuide, FAQ_HEADING, guideSections, type Guide, type GuideBlock } from './guides/index.ts'
 import { ABOUT, privacyDoc, type Block, type InfoDoc, type Inline } from './info/content.ts'
-import { jsonLdText, pageHead, type PageHead, type PageInput } from './seo.ts'
+import { jsonLdText, pageHead, type Faq, type PageHead, type PageInput } from './seo.ts'
 import { INFO_PAGES, SITE_PATHS, TOOLS } from './tools.ts'
 
 const escapeHtml = (s: string): string =>
@@ -25,6 +26,27 @@ function infoHtml(name: string, doc: InfoDoc): string {
   ].join('\n')
 }
 
+function guideBlock(b: GuideBlock): string {
+  if ('code' in b) return `<pre><code>${escapeHtml(b.code)}</code></pre>`
+  if ('example' in b) return `<p>${link(b.example.href, b.example.text)}</p>`
+  if ('table' in b) {
+    const row = (tag: 'th' | 'td', cells: string[]) => `<tr>${cells.map((c) => `<${tag}>${escapeHtml(c)}</${tag}>`).join('')}</tr>`
+    const { caption, head, rows } = b.table
+    return `<table><caption>${escapeHtml(caption)}</caption>${row('th', head)}${rows.map((r) => row('td', r)).join('')}</table>`
+  }
+  return block(b)
+}
+
+function guideHtml(g: Guide): string {
+  return [
+    `<h2>${escapeHtml(g.title)}</h2>`,
+    `<p>${inline(g.intro)}</p>`,
+    ...guideSections(g).map((s) => `<h3>${escapeHtml(s.heading)}</h3>${s.blocks.map(guideBlock).join('')}`),
+    `<h3>${FAQ_HEADING}</h3>`,
+    ...g.faq.map((f) => `<h4>${escapeHtml(f.question)}</h4><p>${escapeHtml(f.answer)}</p>`),
+  ].join('\n')
+}
+
 export interface ShellPage {
   path: string
   /** Absent for the home page. */
@@ -32,6 +54,8 @@ export interface ShellPage {
   description: string
   /** What a reader without JavaScript gets, as HTML. */
   body: string
+  /** The questions in the body, for the FAQPage markup. */
+  faq?: readonly Faq[]
 }
 
 const siteLinks = (): string =>
@@ -47,13 +71,16 @@ export function shellPages(adsEnabled: boolean): ShellPage[] {
     }
     const tool = TOOLS.find((t) => t.path === path)
     if (tool) {
+      const guide = findGuide(path)
+      if (!guide) throw new Error(`No guide for ${path}`)
       const body = [
         `<h1>${escapeHtml(tool.name)}</h1>`,
         `<p>${escapeHtml(tool.description)}</p>`,
         `<p>${escapeHtml(tool.blurb)}</p>`,
         '<p>This tool needs JavaScript.</p>',
+        guideHtml(guide),
       ].join('\n')
-      return { path, title: tool.name, description: tool.description, body }
+      return { path, title: tool.name, description: tool.description, body, faq: guide.faq }
     }
     const info = INFO_PAGES.find((p) => p.path === path)
     const doc = infoDocs[path]
@@ -80,7 +107,7 @@ function replaceOnce(html: string, pattern: RegExp, value: string): string {
 
 /** `template` is the built index.html. `<head>` additions it already has (scripts, styles) are kept. */
 export function renderShell(template: string, page: ShellPage, siteUrl: string): string {
-  const input: PageInput = { title: page.title, description: page.description, pathname: page.path, siteUrl }
+  const input: PageInput = { title: page.title, description: page.description, pathname: page.path, siteUrl, faq: page.faq }
   const head = pageHead(input)
   let html = replaceOnce(template, /<title>[^<]*<\/title>/, `<title>${escapeHtml(head.title)}</title>`)
   html = replaceOnce(html, /[ \t]*<meta\s+data-default\s+name="description"[^>]*>\r?\n?/, '')

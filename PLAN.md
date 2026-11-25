@@ -1699,3 +1699,16 @@ These do not block the code tickets, which use `https://cspracticelab.com` as th
 - **"Manage cookie choices"** queues a `CONSENT_API_READY` callback on `window.googlefc.callbackQueue`, creating both if the tool hasn't loaded, and reopens the message through the same queue ([API](https://developers.google.com/funding-choices/fc-api-docs)). Creating them loads nothing.
 - **CSP:** `connect-src` now names `fundingchoicesmessages.google.com`.
 - **Not verified:** anything against the live consent message. The dashboard steps and that check are in `POLISH_PLAN.md` P13.
+
+### 18.4 Tool guides (P9, 2026-11-25)
+
+- **One source.** Each guide is data in `src/app/guides/`. `ToolGuide`, the route's `<noscript>` copy and the `FAQPage` JSON-LD all read it.
+- **Hidden with the answers.** Trace Study mode and challenges, truth-table Study mode, number practice and the sorting quiz render no guide and pass no FAQ to `PageMeta`: the worked examples would be answer sheets. The static shell always has it.
+- **Worked examples** are checked twice: `tests/unit/guides.test.tsx` against the core code (the trace table against the hand-reviewed `linear-search.compact.txt` golden) and `tests/e2e/guides.spec.ts` by following each link into the built tool.
+- **Board wording, sources read on 2026-11-25:**
+  - AQA 8525, spec v1.2 and the web page for section 3.4: gates NOT, AND, OR, XOR (not NAND or NOR); operators `.`, `+`, `⊕`, overbar; the four gate drawings (viewed on the web page); section 3.3 uses logical shifts only and doesn't mention two's complement; sections 3.1.3–3.1.4 name linear and binary search, bubble and merge sort.
+  - OCR J277 spec v3.1, **text only**: section 2.4 has AND, OR, NOT and "Recognition of each gate symbol" (its drawings were **not** viewed, so the guide doesn't describe them); 1.2.4 has left and right shifts; two's complement does not appear; 2.1.3 names both searches and bubble, merge and insertion sort.
+  - SQA C816 75 (National 5) and C816 76 (Higher), text search: no "logic gate" or "truth table" in either; National 5 data representation is positive integers; Higher has two's complement and, among its standard algorithms, linear search.
+- **Not covered:** A-Level specifications were not read, so the guides make no A-Level claim.
+- **For the owner:** the home page still tags Truth tables "SQA Higher", which the SQA course specification above doesn't support. Not changed in P9.
+- **Not verified:** the owner's review of the content (the P9 gate).

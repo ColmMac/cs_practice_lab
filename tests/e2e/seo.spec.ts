@@ -50,9 +50,11 @@ for (const [path, title] of ROUTES) {
     expect(head.card).toEqual(['summary_large_image'])
     expect(head.description).toHaveLength(1)
     expect(head.leftovers).toBe(0)
-    expect(head.jsonLd.map((b) => b['@type'])).toEqual(TOOL_PATHS.includes(path) ? ['WebSite', 'WebApplication'] : ['WebSite'])
+    expect(head.jsonLd.map((b) => b['@type'])).toEqual(
+      TOOL_PATHS.includes(path) ? ['WebSite', 'WebApplication', 'FAQPage'] : ['WebSite'],
+    )
     for (const block of head.jsonLd) {
-      expect(String(block.url).startsWith(ORIGIN)).toBe(true)
+      if (block['@type'] !== 'FAQPage') expect(String(block.url).startsWith(ORIGIN)).toBe(true)
       expect(String(block['@id']).startsWith(ORIGIN)).toBe(true)
     }
   })

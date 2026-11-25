@@ -1,6 +1,8 @@
 import { useLayoutEffect, useState } from 'react'
 import { useSearchParams } from 'react-router'
+import { findGuide } from '../../app/guides'
 import { PageMeta } from '../../app/PageMeta'
+import { ToolGuide } from '../../app/ToolGuide'
 import { toolDescription } from '../../app/tools'
 import {
   ALGORITHM_INFO,
@@ -39,6 +41,8 @@ export function SortingPage() {
   const [start] = useState(() => parseSortingUrl(params))
   const s = useSorting(start)
   const ads = useAdsAllowed(s.quizOn)
+  // no worked passes under the quiz
+  const guide = s.quizOn ? null : findGuide('/sorting-visualizer')!
   // A LAYOUT effect: a passive one can still be pending when the next nav link is clicked, and then overwrites it.
   useLayoutEffect(() => {
     setParams(
@@ -52,7 +56,7 @@ export function SortingPage() {
 
   return (
     <>
-      <PageMeta title="Sorting & searching" description={toolDescription('/sorting-visualizer')} />
+      <PageMeta title="Sorting & searching" description={toolDescription('/sorting-visualizer')} faq={guide?.faq} />
       <ToolWorkspace>
         <ToolHeader title="Sorting & searching">
           <label className="flex max-w-full items-center gap-2 text-xs">
@@ -299,6 +303,7 @@ export function SortingPage() {
           </div>
         </main>
       </ToolWorkspace>
+      {guide && <ToolGuide guide={guide} />}
     </>
   )
 }
