@@ -1,13 +1,50 @@
+# Dependencies and build outputs
 node_modules/
 dist/
+dist-ssr/
+# Build used by the "ads" Playwright project
 dist-ads/
+*.local
+*.tsbuildinfo
+.vite/
+
+# Python environments and caches
 .venv/
 __pycache__/
 *.pyc
 .pytest_cache/
-test-results/
-playwright-report/
+
+# Test coverage
 coverage/
-.vite/
-*.local
-.claude/settings.local.json
+
+# Environment variables (the template stays tracked)
+.env
+.env.*
+!.env.example
+
+# Playwright E2E artifacts
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+
+# Local AI workflow and scratch plans
+CLAUDE.md
+.claude/
+PLAN.md
+POLISH_PLAN.md
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Editors
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# OS files (Windows and macOS)
+Thumbs.db
+Desktop.ini
+.DS_Store
