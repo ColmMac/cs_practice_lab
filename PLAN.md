@@ -1712,3 +1712,24 @@ These do not block the code tickets, which use `https://cspracticelab.com` as th
 - **Not covered:** A-Level specifications were not read, so the guides make no A-Level claim.
 - **For the owner:** the home page still tags Truth tables "SQA Higher", which the SQA course specification above doesn't support. Not changed in P9.
 - **Not verified:** the owner's review of the content (the P9 gate).
+
+### 18.5 Bundle check (P11, 2026-11-25)
+
+Vite 8.3.8, no env vars. Sizes are gzip, as the build reports them.
+
+| What | Chunks | gzip |
+|------|--------|------|
+| First load, every page | `index` 28.2, `react` 68.3, `rolldown-runtime` 0.4 | 96.9 kB |
+| Editor (trace route only) | `codemirror` | 158.4 kB |
+| Trace route's own code | `TraceTableRoute` | 44.9 kB |
+| Other tools, each | `TruthTablePage` 8.7, `NumberSystemsPage` 9.0, `SortingPage` 10.4 | 9–10 kB |
+| Shared by tool routes, as needed | `ToolGuide` 9.8, `tableStyles` 9.1, and chunks under 1 kB | |
+| About and Privacy | `InfoPage` 3.6, plus a stub each | 4 kB |
+| CSS | `index` | 8.7 kB |
+
+- **Before P11:** entry 96.3 kB, trace route 174.9 kB plus a lazy 28.2 kB chunk (by its size, the Python language support), and Vite's 500 kB warning. The plan's older baseline was an entry of 92 kB.
+- **Two groups, not the one the plan asked for.** With only `codemirror`, the editor imported React from the entry chunk. The entry's name changes with every app edit, so the editor file was renamed too: confirmed by editing one button label in `StudyToolbar.tsx`. With a `react` group as well, the same edit renames only `index` and `TraceTableRoute`. `home.spec.ts` checks that the editor imports only stable chunks. The split adds 0.6 kB to the first load.
+- **`includeDependenciesRecursively: false` is required.** With the default, React went into `codemirror` and every page loaded the editor. The editor's own small dependencies are therefore listed in the group's `test`.
+- **Python language support** is now inside `codemirror`, so its dynamic import no longer fetches a separate file.
+- **Warning limit:** 480 kB minified. `codemirror` is 474 kB.
+- **`lucide-react`:** named imports only (19 icons). A build with the icons stubbed out has a first load 1.8 kB smaller, and 3.2 kB less JavaScript in total.

@@ -28,13 +28,37 @@ test('each card opens its tool', async ({ page }) => {
   }
 })
 
-test('the home page never loads CodeMirror or Pyodide', async ({ page }) => {
-  const urls: string[] = []
-  page.on('request', (r) => urls.push(r.url()))
-  await page.goto('/')
-  await expect(page.getByRole('list', { name: 'Tools' })).toBeVisible()
-  await page.waitForLoadState('networkidle')
-  expect(urls.filter((u) => /pyodide|codemirror|worker|\.whl|python_stdlib/i.test(u))).toEqual([])
+for (const [name, path, heading] of [
+  ['home', '/', 'CS Practice Lab'],
+  ['about', '/about', /About/],
+  ['privacy', '/privacy', /Privacy/],
+] as const) {
+  test(`the ${name} page never loads CodeMirror or Pyodide`, async ({ page }) => {
+    const urls: string[] = []
+    page.on('request', (r) => urls.push(r.url()))
+    await page.goto(path)
+    await expect(page.getByRole('heading', { level: 1, name: heading })).toBeVisible()
+    await page.waitForLoadState('networkidle')
+    expect(urls.filter((u) => /pyodide|codemirror|worker|\.whl|python_stdlib/i.test(u))).toEqual([])
+  })
+}
+
+// Without this, the tests above would pass just because no file was called "codemirror" any more.
+test('the editor is its own chunk, which an app change does not rename', async ({ page, request }) => {
+  const scripts: string[] = []
+  page.on('request', (r) => {
+    if (r.url().endsWith('.js')) scripts.push(new URL(r.url()).pathname)
+  })
+  await page.goto('/trace-table')
+  await expect(page.locator('.cm-content')).toBeVisible()
+  const editor = scripts.filter((u) => /\/assets\/codemirror-[\w-]+\.js$/.test(u))
+  expect(editor).toHaveLength(1)
+
+  // A file's name changes whenever a file it imports is renamed, so the editor may import only stable vendor code.
+  const source = await (await request.get(editor[0])).text()
+  const imports = [...source.matchAll(/(?:from|import)\s*["']\.\/([^"']+)["']/g)].map((m) => m[1].replace(/-[\w-]{8}\.js$/, ''))
+  expect(imports).toContain('react')
+  expect(imports.filter((i) => i !== 'react' && i !== 'rolldown-runtime')).toEqual([])
 })
 
 test.describe('axe audit on the real page', () => {

@@ -81,6 +81,30 @@ export default defineConfig(({ mode }) => {
       seoFiles(resolveSiteUrl(env.VITE_SITE_URL), isAdsenseClient(env.VITE_ADSENSE_CLIENT)),
     ],
     worker: { format: 'es' },
+    build: {
+      // In kB, minified. Just above the codemirror chunk (474 kB when set, PLAN.md §18.5), the largest there is:
+      // anything else that grows past it still warns, and so does a much bigger editor after an upgrade.
+      chunkSizeWarningLimit: 480,
+      rolldownOptions: {
+        output: {
+          // The editor library changes far less often than the app, so it gets a file the browser can keep cached.
+          codeSplitting: {
+            groups: [
+              // The editor imports React. Left in the entry chunk, React would tie the editor file's name to every
+              // app change (the entry is renamed each time), so it needs a stable file of its own.
+              { name: 'react', test: /node_modules[\\/](react|react-dom|scheduler)[\\/]/, includeDependenciesRecursively: false },
+              {
+                name: 'codemirror',
+                // @codemirror, @lezer and @uiw, then the small packages only they depend on
+                test: /node_modules[\\/](@codemirror|@lezer|@uiw|@marijn|@babel[\\/]runtime|codemirror|crelt|style-mod|w3c-keyname)[\\/]/,
+                // MUST stay false: following dependencies pulls React in, and then every page downloads the editor.
+                includeDependenciesRecursively: false,
+              },
+            ],
+          },
+        },
+      },
+    },
     server: { headers: devHeaders },
     preview: { headers: siteHeaders },
     test: {

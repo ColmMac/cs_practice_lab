@@ -257,11 +257,11 @@ Gate: `npm test`, `npm run test:py` on **3.12, 3.13 and 3.14**, typecheck, lint.
 
 ## P11. Bundle check (F7)
 
-- [ ] In `vite.config.ts`, `build.rolldownOptions.output.codeSplitting` (the option Vite 8's own warning names) gets one group, `codemirror` (`@codemirror/*`, `@lezer/*`, `@uiw/*`), so editor code is cached separately from the trace route's app code. Set `build.chunkSizeWarningLimit` just above the measured CodeMirror chunk, with a comment, so a *new* oversized chunk still warns.
-- [ ] Keep `lucide-react` tree-shaken: named imports only. Check that the entry chunk grows by no more than a few kB.
-- [ ] Record entry, route and vendor chunk sizes (gzip) in `PLAN.md` §18. Baseline from today's build: entry 92 kB gz, trace route 174 kB gz, other tools 9–10 kB gz each.
+- [x] In `vite.config.ts`, `build.rolldownOptions.output.codeSplitting` (the option Vite 8's own warning names) gets one group, `codemirror` (`@codemirror/*`, `@lezer/*`, `@uiw/*`), so editor code is cached separately from the trace route's app code. Set `build.chunkSizeWarningLimit` just above the measured CodeMirror chunk, with a comment, so a *new* oversized chunk still warns.
+- [x] Keep `lucide-react` tree-shaken: named imports only. Check that the entry chunk grows by no more than a few kB.
+- [x] Record entry, route and vendor chunk sizes (gzip) in `PLAN.md` §18. Baseline from today's build: entry 92 kB gz, trace route 174 kB gz, other tools 9–10 kB gz each.
 
-Gate: `home.spec.ts` "never loads CodeMirror or Pyodide" still passes. Extend it to `/about` and `/privacy`.
+Gate: `home.spec.ts` "never loads CodeMirror or Pyodide" still passes. Extend it to `/about` and `/privacy`. *2026-11-25: green. Typecheck, lint, build with no size warning, 1242 unit tests and the targeted E2E specs (`home`, `app`, `shell`, `hosting`: 45 passed). The full E2E suite was not run. One change from the ticket: a second group, `react`, because with `codemirror` alone any app change still renamed the editor chunk (`PLAN.md` §18.5).*
 
 ---
 
