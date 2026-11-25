@@ -5,6 +5,7 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { renderShell, shellFileName, shellPages } from './src/app/staticShell.ts'
 import { SITE_PATHS } from './src/app/tools.ts'
+import { adsense } from './src/config/adsensePlugin.ts'
 import { isAdsenseClient, resolveSiteUrl } from './src/config/site.ts'
 
 /**
@@ -72,7 +73,13 @@ function seoFiles(siteUrl: string, adsEnabled: boolean): Plugin {
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), 'VITE_')
   return {
-    plugins: [react(), tailwindcss(), seoFiles(resolveSiteUrl(env.VITE_SITE_URL), isAdsenseClient(env.VITE_ADSENSE_CLIENT))],
+    plugins: [
+      react(),
+      tailwindcss(),
+      adsense(env.VITE_ADSENSE_CLIENT),
+      // after adsense: the shells are cloned from the transformed index.html
+      seoFiles(resolveSiteUrl(env.VITE_SITE_URL), isAdsenseClient(env.VITE_ADSENSE_CLIENT)),
+    ],
     worker: { format: 'es' },
     server: { headers: devHeaders },
     preview: { headers: siteHeaders },

@@ -173,7 +173,7 @@ Gate: `npm run build` + `npm run preview`, then load every route in the browser 
 
 ## P6. AdSense build-time head injection and env docs
 
-- [ ] `.env.example` (committed, and `.gitignore` already excludes `*.local`):
+- [x] `.env.example` (committed, and `.gitignore` already excludes `*.local`):
   ```
   # Production origin; canonical, OG, sitemap and robots use it. Default: https://cspracticelab.com
   VITE_SITE_URL=https://cspracticelab.com
@@ -181,14 +181,14 @@ Gate: `npm run build` + `npm run preview`, then load every route in the browser 
   VITE_ADSENSE_CLIENT=
   VITE_ADSENSE_SLOT=
   ```
-- [ ] `vite.config.ts`: an `adsense(client)` plugin with `transformIndexHtml` that, **only when** `VITE_ADSENSE_CLIENT` matches `/^ca-pub-\d{16}$/`, injects into `<head>`:
+- [x] `vite.config.ts`: an `adsense(client)` plugin with `transformIndexHtml` that, **only when** `VITE_ADSENSE_CLIENT` matches `/^ca-pub-\d{16}$/`, injects into `<head>`:
   - `<meta name="google-adsense-account" content="ca-pub-…">` (the meta-tag verification route)
   - `<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-…" crossorigin="anonymous"></script>`
 
   If the value is empty, inject nothing. If it's malformed, fail the build with a clear message rather than ship a broken tag. The P4 route shells are cloned from the transformed HTML, so they inherit the tag. Check this.
-- [ ] Unit-test the plugin on three inputs: unset → no tag, valid → both tags, malformed → throws.
+- [x] Unit-test the plugin on three inputs: unset → no tag, valid → both tags, malformed → throws.
 
-Gate: build once with a fake valid ID into a temp dir and inspect `index.html` and one route shell. Build without it, and check no `googlesyndication` string appears anywhere in `dist/`.
+Gate: build once with a fake valid ID into a temp dir and inspect `index.html` and one route shell. Build without it, and check no `googlesyndication` string appears anywhere in `dist/`. *2026-11-25: green. Typecheck, build, lint, 1197 unit tests and the targeted E2E specs (`adsense`, `seo`, `hosting`: 47 tests). `adsense.spec.ts` builds with a fake ID into a temp dir and reads all seven HTML files, and checks that a malformed ID fails the build. The full E2E suite was not run. Notes: the plugin is in `src/config/adsensePlugin.ts`, so unit tests can import it without the Vite config, and the check also stops `npm run dev` and the unit tests when the ID is malformed. Without an ID, the one `googlesyndication` match in `dist/` is `_headers` (the CSP host list from P5, there on purpose); no HTML or JS file has it. With a valid ID the loader would also run under `npm run dev`.*
 
 ---
 
