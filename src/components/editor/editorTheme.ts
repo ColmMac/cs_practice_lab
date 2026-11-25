@@ -121,11 +121,13 @@ export const lightTheme = build('light')
 export const darkTheme = build('dark')
 
 /**
- * Row highlight colours and the editor's accessible name. The table row ↔ line highlight is drawn as an
- * overlay, so its colours are per theme and are part of the contrast check.
+ * Row highlight colours, the editor's accessible name and its tab stop. The table row ↔ line highlight is drawn
+ * as an overlay, so its colours are per theme and are part of the contrast check.
+ * `tabindex` changes nothing for a keyboard (editable content is already a tab stop), but it says so: without
+ * it axe reports the scroller as unreachable once a long line makes it scroll.
  */
 export const editorChrome = [
-  EditorView.contentAttributes.of({ 'aria-label': 'Code editor' }),
+  EditorView.contentAttributes.of({ 'aria-label': 'Code editor', tabindex: '0' }),
   EditorView.baseTheme({
     '&light .cm-trace-hover': { backgroundColor: PALETTES.light.hoverLine },
     '&light .cm-trace-selected': { backgroundColor: PALETTES.light.selectedLine, boxShadow: `inset 4px 0 0 ${PALETTES.light.selectedBar}` },

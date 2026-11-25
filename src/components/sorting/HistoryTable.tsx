@@ -14,7 +14,8 @@ export function HistoryTable({ table, frame }: { table: History; frame: number }
   }, [current])
 
   return (
-    <div className="max-h-80 overflow-auto">
+    // A tab stop, so a keyboard can scroll a long history or a wide row
+    <div tabIndex={0} role="group" aria-label="History scroll area" className="max-h-80 overflow-auto focus-visible:outline-2 focus-visible:outline-accent">
       <table aria-label={table.title} className={`${TABLE} w-auto`}>
         <thead className={THEAD}>
           <tr>

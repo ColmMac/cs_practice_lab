@@ -28,7 +28,8 @@ const SLOT = 4.5 // rem: card width plus gap
  */
 export function ArrayStage({ frame, count }: { frame: Frame; count: number }) {
   return (
-    <div className="overflow-x-auto pb-1">
+    // A tab stop, so a keyboard can scroll the cards on a narrow screen
+    <div tabIndex={0} role="group" aria-label="Visualiser cards" className="overflow-x-auto pb-1 focus-visible:outline-2 focus-visible:outline-accent">
       <div className="relative pt-6" style={{ width: `${count * SLOT}rem`, height: '9.5rem' }}>
         <ul aria-label="Array cards" className="contents">
           {frame.cards.map((c) => {

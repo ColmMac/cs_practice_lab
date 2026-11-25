@@ -169,6 +169,38 @@ test.describe('axe on the real page', () => {
         expect(await violations(page), 'sorting quiz').toEqual([])
       })
 
+      // At 1280 wide nothing overflows sideways, so rules about scrolling regions only bite on narrower screens
+      for (const [width, height] of [[1024, 768], [375, 812]] as const) {
+        test(`routes and every Study mode at ${width}×${height}`, async ({ page }) => {
+          await page.setViewportSize({ width, height })
+          for (const path of ROUTES) {
+            await ready(page, path)
+            expect.soft(await violations(page), path).toEqual([])
+          }
+
+          await ready(page, '/trace-table?preset=bubble-sort')
+          const overflow = await page.locator('.cm-scroller').evaluate((e) => e.scrollWidth - e.clientWidth)
+          expect(overflow, 'the editor must scroll sideways, or this audit proves nothing about it').toBeGreaterThan(0)
+          await expect(page.getByRole('textbox', { name: 'Code editor' })).toHaveAttribute('tabindex', '0')
+          await page.getByRole('button', { name: 'Study mode', exact: true }).click()
+          await expect(page.locator('input[data-study-key]').first()).toBeVisible()
+          expect.soft(await violations(page), 'trace study').toEqual([])
+
+          await ready(page, '/truth-tables')
+          await page.getByRole('button', { name: 'Study mode', exact: true }).click()
+          await expect(page.getByRole('region', { name: 'Study mode' })).toBeVisible()
+          expect.soft(await violations(page), 'truth study').toEqual([])
+
+          await page.goto('/number-systems?mode=practice')
+          await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+          expect.soft(await violations(page), 'number practice').toEqual([])
+
+          await page.goto('/sorting-visualizer?algo=bubble&quiz=1')
+          await expect(page.getByTestId('quiz-prompt')).toBeVisible()
+          expect.soft(await violations(page), 'sorting quiz').toEqual([])
+        })
+      }
+
       test('number practice and every sorting card state colour', async ({ page }) => {
         await page.goto('/number-systems?mode=practice')
         await expect(page.getByRole('heading', { level: 1 })).toBeVisible()

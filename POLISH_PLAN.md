@@ -289,9 +289,9 @@ Gate: `npm run test:e2e` green on both projects. *2026-11-25: green. The full su
 - [ ] **Domain (owner, from P0):** register `cspracticelab.com` if needed, put its DNS on Cloudflare, attach it to the Pages project and redirect `www` to the apex. Check both with a DNS lookup and `curl -I`.
 - [ ] **Guide review (owner, from P9):** read the four tool guides (`src/app/guides/`) for accuracy and tone before launch. Decide whether the home page should still tag Truth tables "SQA Higher" (`PLAN.md` §18.4).
 - [ ] **Mailbox (owner, from P0):** route `contact@cspracticelab.com` to a real inbox with Cloudflare Email Routing, and confirm a test message arrives **before** `/about` is public.
-- [ ] `npm run typecheck` · `npm run lint` · `npm test` · `npm run test:py` (3.12, 3.13, 3.14) · `npm run test:e2e`, all green. Record the counts in `CLAUDE.md` Status.
-- [ ] Golden files reviewed **by hand**: `tests/fixtures/export/*` (brand change F15), `tests/fixtures/presets/*` if any preset changed.
-- [ ] axe on the real page (browser pane), light and dark, for all seven routes plus Study mode on each tool.
+- [x] `npm run typecheck` · `npm run lint` · `npm test` · `npm run test:py` (3.12, 3.13, 3.14) · `npm run test:e2e`, all green. Record the counts in `CLAUDE.md` Status. *2026-11-25: green. Typecheck, lint, build, 1242 unit tests, 292 tracer tests on each of 3.12, 3.13 and 3.14, and 301 E2E tests on both projects. All but the tracer tests were rerun after the accessibility fix below (no Python changed).*
+- [x] Golden files reviewed **by hand**: `tests/fixtures/export/*` (brand change F15), `tests/fixtures/presets/*` if any preset changed. *2026-11-25: export goldens traced by hand and correct (the pack’s two spare rows and the worksheet’s visible Output are intended). No preset has changed; its goldens were read through too, without a line-by-line re-execution. The three `.tex` headers still say “Trace Table Studio”: P14 changes them, so review them again there.*
+- [x] axe on the real page (browser pane), light and dark, for all seven routes plus Study mode on each tool. *2026-11-25: zero violations in the browser pane (1024×768, production build, real CSP) for all 11 states in both themes, after a fix. The pane found what the 1280px E2E audit could not: `scrollable-region-focusable` on the code editor once a long line overflows. The new narrow audits (1024×768 and 375×812, in `design.spec.ts`) also found it on the sorting cards and pass history at phone width. All three are fixed.*
 - [ ] Cloudflare Pages preview deployment with `VITE_SITE_URL` set and the ad env vars **unset**: open each route, then view the source to check the canonical, JSON-LD and noscript text. Check that each route is served with **no trailing-slash redirect** and that `/trace-table.html` redirects to `/trace-table` (from P4). Check `/sitemap.xml`, `/robots.txt` and `/ads.txt`, the `_redirects` log line (P5), the response headers (`curl -I`), and that Pyodide loads with no CSP errors.
 - [ ] Optional: Google's Rich Results Test and the Schema.org validator on two routes. Lighthouse (SEO and best practices) on `/` and `/trace-table`.
 - [ ] Production deploy, then add the domain in Search Console and submit the sitemap.
@@ -301,9 +301,13 @@ Gate: `npm run test:e2e` green on both projects. *2026-11-25: green. The full su
 
 ---
 
+**Gate status, 2026-11-25: not green.** Everything that can be checked on this machine passes. The unticked items need the owner, a deployment or AdSense approval. `cspracticelab.com` does not resolve (no NS, A or MX record for the apex or `www`). The optional validator and Lighthouse checks have not been run.
+
+---
+
 ## P14. Rebrand, repository rename and README (last, after P13 is green)
 
-- [ ] `package.json` `"name": "cs_practice_lab"`, then run `npm install` to update the lockfile's name. Remaining brand strings (`Trace Table Studio`, `CS Study Hub`) → **CS Practice Lab** in `README.md`, `CLAUDE.md` (title, and the Git line → `ColmMac/cs_practice_lab`), the `PLAN.md` header note, `Toolbar.tsx`, the export headers (`json.ts`, `latex.ts`, re-review the goldens) and the E2E title assertions. **Don't** touch the `tts:`/`hub:` storage keys (F14).
+- [ ] `package.json` `"name": "cs_practice_lab"`, then run `npm install` to update the lockfile's name. Remaining brand strings (`Trace Table Studio`, `CS Study Hub`) → **CS Practice Lab** in `README.md`, `CLAUDE.md` (title, and the Git line → `ColmMac/cs_practice_lab`), the `PLAN.md` header note, `Toolbar.tsx`, the export headers (`json.ts`, `latex.ts`, re-review the goldens), the docstring and blocked-import message in `tracer.py` (users see that message; run `test:py` and `fixtures` afterwards) and the E2E title assertions. **Don't** touch the `tts:`/`hub:` storage keys (F14).
 - [ ] Rename the GitHub repo (outward-facing, so confirm with the owner at execution time):
   ```powershell
   gh repo rename cs_practice_lab --yes
