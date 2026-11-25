@@ -30,8 +30,6 @@ Step through bubble, insertion and merge sort, and linear and binary search, on 
 - **Untrusted input stays untrusted.** Shared links and saved data are sanitised field by field and size-limited (links are capped before decompression). A shared program is shown for review and **never runs until you press Run**. CSV exports neutralise spreadsheet formulas, and LaTeX exports escape special characters.
 - **A static, CSP-first deploy.** There is no application server. The production Content-Security-Policy allows no `'unsafe-eval'` and no inline scripts. Each route also gets its own static HTML file at build time, with its title, canonical link, structured data and a `<noscript>` copy of its text.
 
-The design and the reasons behind it are in [PLAN.md](PLAN.md).
-
 ## Local development
 
 You need [Node.js](https://nodejs.org) (20.19+ or 22.12+) and, for the tracer tests, [uv](https://docs.astral.sh/uv/).
@@ -58,7 +56,7 @@ The dev server is at http://localhost:5173. It leaves out the CSP, so test heade
 
 Before the E2E tests, run `npx playwright install chromium` once, and stop any `vite preview` on port 4173 (it would be reused, and might be a stale build). If the bundled Chromium can't start, set `$env:PW_CHANNEL = 'msedge'`.
 
-On Windows, application-control policies can block programs inside a project `.venv`, so don't use `uv sync` or `uv run pytest`. The npm scripts use `uv run --no-project` instead (see [CLAUDE.md](CLAUDE.md)).
+On Windows, application-control policies can block programs inside a project `.venv`, so don't use `uv sync` or `uv run pytest`. The npm scripts use `uv run --no-project` instead.
 
 ## Deploy to Cloudflare Pages
 
