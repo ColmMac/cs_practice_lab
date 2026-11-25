@@ -63,3 +63,29 @@ test('the theme choice persists across routes', async ({ page }) => {
   await expect(page.locator('html')).toHaveClass(/dark/)
   await expect(page.getByRole('button', { name: 'Switch to light mode' })).toBeVisible()
 })
+
+// Each of these pages writes its state to the URL when it appears. That write once ran late enough to land after
+// the next click, replacing the new address with the old page's, so the click did nothing.
+for (const [name, path] of [
+  ['Sorting & searching', '/sorting-visualizer'],
+  ['Number systems', '/number-systems'],
+  ['Truth tables', '/truth-tables'],
+] as const) {
+  test(`leaving ${path} the moment it appears is not undone by its URL write`, async ({ page }) => {
+    // Hold back React's scheduler (it runs on a MessageChannel), so anything it defers stays pending for the click.
+    await page.addInitScript(() => {
+      const post = MessagePort.prototype.postMessage
+      MessagePort.prototype.postMessage = function (this: MessagePort, message: unknown) {
+        setTimeout(() => post.call(this, message), 400)
+      } as typeof post
+    })
+    await page.goto('/')
+    const nav = page.getByRole('navigation', { name: 'Tools' })
+    await nav.getByRole('link', { name }).click()
+    await expect(page.getByRole('heading', { level: 1, name })).toBeVisible()
+    await nav.getByRole('link', { name: 'CS Practice Lab' }).click()
+    await expect(page.getByRole('heading', { level: 1, name: 'CS Practice Lab' })).toBeVisible()
+    await page.waitForTimeout(1500) // let anything still queued run
+    expect(new URL(page.url()).pathname).toBe('/')
+  })
+}

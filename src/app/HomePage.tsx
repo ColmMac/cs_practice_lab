@@ -53,7 +53,7 @@ export function HomePage() {
     <>
       <PageMeta description={SITE_DESCRIPTION} />
       <ToolHeader title={SITE_NAME} />
-      <main className="min-h-0 flex-1 overflow-auto p-4">
+      <main className="flex-1 p-4">
         <section aria-labelledby="hero-heading" className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 id="hero-heading" className="text-xl font-semibold">

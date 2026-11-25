@@ -97,12 +97,12 @@ Gate: unit, lint and typecheck green. **axe on the real page** (browser pane, li
 
 ## P3. Page scroll model and the global footer
 
-- [ ] `AppShell`: change from a fixed `h-dvh` viewport to a **scrolling document**: sticky nav, `<Outlet/>`, then `<SiteFooter/>`. Each tool keeps its workspace at full viewport height (`min-h-[calc(100dvh-var(--nav-h))]` on desktop), and the guide, ad and footer follow below it.
-- [ ] Trace page: the workspace grid keeps `lg:overflow-hidden` with internal column scrolling **inside a fixed-height block**. The Trace pane stays the `[data-scroll-parent]` scroll container, and nothing between the table and that pane gets `overflow-*` (`CLAUDE.md` sticky-header rule). Re-run the sticky-header and windowing E2E tests and the `--pane-width` checks.
-- [ ] `SiteFooter` (tokens, small text, `print:hidden`, hidden in projector mode): CS Practice Lab · About · Privacy · Contact (mailto) · GitHub · © year. One `<footer>` landmark.
-- [ ] Phones: confirm there's still no horizontal scroll (the existing `hub.spec.ts` "nothing scrolls sideways" test).
+- [x] `AppShell`: change from a fixed `h-dvh` viewport to a **scrolling document**: sticky nav, `<Outlet/>`, then `<SiteFooter/>`. Each tool keeps its workspace at full viewport height (`min-h-[calc(100dvh-var(--nav-h))]` on desktop), and the guide, ad and footer follow below it.
+- [x] Trace page: the workspace grid keeps `lg:overflow-hidden` with internal column scrolling **inside a fixed-height block**. The Trace pane stays the `[data-scroll-parent]` scroll container, and nothing between the table and that pane gets `overflow-*` (`CLAUDE.md` sticky-header rule). Re-run the sticky-header and windowing E2E tests and the `--pane-width` checks.
+- [x] `SiteFooter` (tokens, small text, `print:hidden`, hidden in projector mode): CS Practice Lab · About · Privacy · Contact (mailto) · GitHub · © year. One `<footer>` landmark.
+- [x] Phones: confirm there's still no horizontal scroll (the existing `hub.spec.ts` "nothing scrolls sideways" test).
 
-Gate: the full E2E suite still passes (stop any `vite preview` on :4173 first).
+Gate: the full E2E suite still passes (stop any `vite preview` on :4173 first). *2026-11-25: green, 185 tests. Notes: on phones the Trace pane is now a fixed 60dvh grid row. The footer's About and Privacy links show the 404 page until P4. The gate also exposed an older bug, reproduced on the P2 build: a tool's URL write, still pending at the next nav click, replaced the new address. The three URL writes are now layout effects.*
 
 ---
 

@@ -51,11 +51,13 @@ export function App({ preparingStudy = false }: { preparingStudy?: boolean }) {
 
   return (
     <>
-    <div className="flex min-h-0 flex-1 flex-col print:hidden">
+    {/* Wide screens: exactly the space under the nav, so each column scrolls inside it. The footer is below. */}
+    <div className="flex flex-col lg:h-[calc(100dvh-var(--nav-h))] print:hidden">
       <Toolbar />
       <SharedBanner />
-      {/* Phones: the page scrolls and the code column keeps its full height. Wide screens: each column scrolls itself. */}
-      <main className="grid min-h-0 flex-1 grid-cols-1 grid-rows-[max-content_minmax(60dvh,1fr)] gap-4 overflow-auto p-4 lg:grid-cols-[minmax(320px,2fr)_3fr] lg:grid-rows-[minmax(0,1fr)] lg:overflow-hidden">
+      {/* Phones: the page scrolls, the code column keeps its full height and the trace pane is a fixed-height box
+          (it must stay the table's scroll container). Wide screens: each column scrolls itself. */}
+      <main className="grid min-h-0 flex-1 grid-cols-1 grid-rows-[max-content_60dvh] gap-4 p-4 lg:grid-cols-[minmax(320px,2fr)_3fr] lg:grid-rows-[minmax(0,1fr)] lg:overflow-hidden">
         <section className="flex min-h-0 flex-col gap-3 lg:overflow-y-auto" aria-label="Code">
           <div className="min-h-[240px] flex-1 overflow-auto rounded border border-slate-300 dark:border-slate-700">
             <CodeEditor />

@@ -1,6 +1,9 @@
-import { NavLink, Outlet } from 'react-router'
+import { useLayoutEffect } from 'react'
+import { NavLink, Outlet, useLocation, useNavigationType } from 'react-router'
+import { useSizeVariable, type SizeSource } from '../components/table/useSizeVariable'
 import { ThemeToggle } from '../components/ui/ThemeToggle'
 import { SITE_NAME } from '../config/site'
+import { SiteFooter } from './SiteFooter'
 import { TOOLS } from './tools'
 
 const linkClass = ({ isActive }: { isActive: boolean }) =>
@@ -8,10 +11,28 @@ const linkClass = ({ isActive }: { isActive: boolean }) =>
     isActive ? 'bg-accent-soft text-on-accent-soft' : 'text-text-muted hover:bg-surface-hover hover:text-text'
   }`
 
-/** Sticky top nav + routed page. The shell is the viewport; each page fills the space under the nav. */
+/** The nav's height (it wraps on narrow screens). Published on <html>: workspaces and scroll padding subtract it. */
+const NAV_HEIGHT: SizeSource = { variable: '--nav-h', size: (el) => el.offsetHeight, host: () => document.documentElement }
+
+/**
+ * The document scrolls, so a new page must start at its top. Not on back/forward, where the browser puts the old
+ * position back, and not when only the query changes (tools write their state to the URL).
+ */
+function useScrollToTop() {
+  const { pathname } = useLocation()
+  const type = useNavigationType()
+  useLayoutEffect(() => {
+    if (type !== 'POP') document.documentElement.scrollTop = 0
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only a new page resets the position
+  }, [pathname])
+}
+
+/** Sticky top nav, the routed page, then the footer, in one scrolling document at least as tall as the screen. */
 export function AppShell() {
+  const navRef = useSizeVariable(NAV_HEIGHT)
+  useScrollToTop()
   return (
-    <div className="flex h-dvh flex-col bg-bg text-text print:block print:h-auto print:bg-white! print:text-black!">
+    <div className="flex min-h-dvh flex-col bg-bg text-text print:block print:min-h-0 print:bg-white! print:text-black!">
       <a
         href="#main"
         className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:rounded focus:bg-surface-elevated focus:px-3 focus:py-1.5 focus:text-sm focus:text-text focus:outline-2 focus:outline-accent"
@@ -19,6 +40,7 @@ export function AppShell() {
         Skip to content
       </a>
       <nav
+        ref={navRef}
         aria-label="Tools"
         className="sticky top-0 z-40 flex flex-wrap items-center gap-2 border-b border-border bg-bg px-4 py-1.5 print:hidden"
       >
@@ -42,9 +64,10 @@ export function AppShell() {
           <ThemeToggle />
         </div>
       </nav>
-      <div id="main" tabIndex={-1} className="flex min-h-0 flex-1 flex-col outline-none print:block">
+      <div id="main" tabIndex={-1} className="flex flex-1 flex-col outline-none print:block">
         <Outlet />
       </div>
+      <SiteFooter />
     </div>
   )
 }

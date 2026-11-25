@@ -66,7 +66,7 @@ export function AdditionView({ width, initial }: { width: Width; initial?: { a: 
   const cur = s.last && !s.done ? s.last.index : -1
 
   return (
-    <main className="grid min-h-0 flex-1 content-start gap-4 overflow-auto p-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+    <main className="grid flex-1 content-start gap-4 p-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
       <div className="flex min-w-0 flex-col gap-3">
         <Panel title="Operands">
           <div className="flex flex-col gap-3 p-3">

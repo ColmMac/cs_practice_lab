@@ -91,6 +91,18 @@
   --color-state-found-edge: var(--color-emerald-300);
 }
 
+/*
+ * The document scrolls under the sticky nav. --nav-h is measured by AppShell (this is only its first-paint value);
+ * the scroll padding keeps focused and scrolled-to elements out from under the nav.
+ */
+:root {
+  --nav-h: 2.75rem;
+}
+
+html {
+  scroll-padding-top: var(--nav-h);
+}
+
 /* Projector mode: bigger text and fewer panels on the trace page. The class is on <html> only while that page is up. */
 @custom-variant projector (&:where(.projector, .projector *));
 

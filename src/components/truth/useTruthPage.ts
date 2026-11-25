@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router'
 import {
   buildTruthTable,
@@ -67,7 +67,8 @@ export function useTruthPage() {
 
   // Keep the URL and the remembered expression in step with what is on screen.
   const presetId = logicPresets.find((p) => p.source === debounced)?.id
-  useEffect(() => {
+  // A LAYOUT effect: a passive one can still be pending when the next nav link is clicked, and then overwrites it.
+  useLayoutEffect(() => {
     setParams(presetId ? { preset: presetId } : debounced.trim() ? { expr: debounced } : {}, { replace: true })
     if (debounced.trim()) writeLast(debounced)
   }, [debounced, presetId, setParams])

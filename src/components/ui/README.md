@@ -27,6 +27,7 @@ Dark mode is the `.dark` class on `<html>` (custom variant in `src/styles/index.
 - `Badge` – `tone`: `neutral | warn | ok | info | error`; `role="status"`.
 - `Panel` – bordered section with an optional title.
 - `ToolHeader` – title plus toolbar slot.
+- `ToolWorkspace` – a tool's header and working area, at least as tall as the screen under the nav (wide screens).
 - `Popover` – trigger render-prop plus a dialog that closes on Escape or an outside click (`usePopover` underneath).
 - `tableStyles` – `TABLE`, `THEAD`, `TH`, `TD` class constants for data tables.
 - `ThemeToggle`, `theme.ts` – shared light/dark store (`tts:theme`).
