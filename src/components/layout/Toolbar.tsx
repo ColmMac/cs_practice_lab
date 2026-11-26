@@ -10,20 +10,17 @@ import { ToolHeader } from '../ui/ToolHeader'
 import { ProjectorToggle } from '../ui/ProjectorToggle'
 import { shownPresetId } from './shownPreset'
 import { RunButton } from './RunButton'
-import { useRunLit } from './runPress'
+import { useRunAnnouncements } from './useRunAnnouncements'
 
 export function Toolbar() {
   const { language, loadPreset } = useStore()
   const presets = getLanguage(language).presets
   const shownPreset = useStore((s) => shownPresetId(s, presets))
-  const lit = useRunLit((s) => s.lit)
+  useRunAnnouncements()
 
   return (
     <ToolHeader title={SITE_NAME}>
       <RunButton />
-      <span aria-live="polite" className="sr-only">
-        {lit ? 'Program ran' : ''}
-      </span>
 
       <label className="flex items-center gap-2 text-sm">
         <span className="text-slate-600 dark:text-slate-400">Example</span>

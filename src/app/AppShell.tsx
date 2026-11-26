@@ -2,6 +2,7 @@ import { useLayoutEffect } from 'react'
 import { NavLink, Outlet, useLocation, useNavigationType } from 'react-router'
 import { useSizeVariable, type SizeSource } from '../components/table/useSizeVariable'
 import { LINK_CLASSES } from '../components/ui/links'
+import { LiveRegion } from '../components/ui/LiveRegion'
 import { ThemeToggle } from '../components/ui/ThemeToggle'
 import { SITE_NAME } from '../config/site'
 import { SiteFooter } from './SiteFooter'
@@ -63,10 +64,11 @@ export function AppShell() {
           <ThemeToggle />
         </div>
       </nav>
-      <div id="main" tabIndex={-1} className="flex flex-1 flex-col outline-none print:block">
+      <div id="main" tabIndex={-1} className="flex flex-1 flex-col focus-visible:-outline-offset-2 print:block">
         <Outlet />
       </div>
       <SiteFooter />
+      <LiveRegion />
     </div>
   )
 }

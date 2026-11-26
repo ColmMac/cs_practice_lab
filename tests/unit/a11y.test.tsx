@@ -1,10 +1,16 @@
-import { act, cleanup, render, screen, within } from '@testing-library/react'
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import axe from 'axe-core'
 import { readFileSync } from 'node:fs'
+import type { ReactElement } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { MemoryRouter } from 'react-router'
 import { App } from '../../src/App'
+import { NumberSystemsPage } from '../../src/components/numbers/NumberSystemsPage'
+import { SortingPage } from '../../src/components/sorting/SortingPage'
+import { TruthTablePage } from '../../src/components/truth/TruthTablePage'
+import { announce, ANNOUNCEMENT_MS, resetAnnouncements } from '../../src/components/ui/announce'
+import { LiveRegion } from '../../src/components/ui/LiveRegion'
 import { FakeTraceRunner } from '../../src/core/fake/FakeTraceRunner'
 import { encodeShare } from '../../src/core/share/urlState'
 import type { TraceResult } from '../../src/core/types'
@@ -211,5 +217,195 @@ describe('axe: no accessibility violations in any major state', () => {
     await user.click(screen.getByRole('button', { name: /Reveal Row 4/ }))
     await user.click(screen.getByRole('radio', { name: 'Some columns' }))
     await expectAccessible('study: hints, reveal, column picker')
+  })
+})
+
+const withRouter = (page: ReactElement, url = '/') =>
+  render(
+    <MemoryRouter initialEntries={[url]}>
+      {page}
+      <LiveRegion />
+    </MemoryRouter>,
+  )
+
+const spoken = () => screen.getByTestId('live-region')
+const messages = () => [...spoken().children].map((c) => c.textContent)
+const expectSpoken = (text: string | RegExp) => waitFor(() => expect(spoken()).toHaveTextContent(text), { timeout: 3000 })
+
+describe('table semantics', () => {
+  it('the trace table has a caption, and each row is named by its line number', async () => {
+    mount()
+    const table = await screen.findByRole('table', { name: 'Trace table' })
+    expect(table.querySelector('caption')).toHaveTextContent(/^Trace of the program/)
+    const rows = [...table.querySelectorAll('tbody tr')]
+    expect(rows.length).toBeGreaterThan(3)
+    for (const row of rows) {
+      expect(row.firstElementChild!.tagName).toBe('TH')
+      expect(row.firstElementChild).toHaveAttribute('scope', 'row')
+      expect(row.querySelectorAll('th')).toHaveLength(1)
+    }
+  })
+
+  it('study answer boxes stay in plain cells, and the score table has headers of both kinds', async () => {
+    mount()
+    const user = userEvent.setup()
+    await screen.findByRole('table')
+    await user.click(screen.getByRole('button', { name: /^study mode/i }))
+    const boxes = screen.getAllByRole('textbox', { name: /^Row \d+ \(line/ })
+    for (const box of boxes) expect(box.closest('td, th')!.tagName).toBe('TD')
+    await user.click(screen.getByRole('button', { name: /check answers/i }))
+    await user.click(screen.getByText('By column'))
+    const byColumn = screen.getByRole('table', { name: 'Score by column' })
+    expect(byColumn.querySelectorAll('th[scope="col"]')).toHaveLength(4)
+    expect(byColumn.querySelectorAll('tbody th[scope="row"]').length).toBeGreaterThan(1)
+  })
+
+  it('the truth table has a caption, and the first input names its row', () => {
+    withRouter(<TruthTablePage />, '/truth-tables?expr=A+AND+B')
+    const table = screen.getByRole('table', { name: 'Truth table' })
+    expect(table.querySelector('caption')).toHaveTextContent(/^Truth table:/)
+    for (const row of table.querySelectorAll('tbody tr')) {
+      expect(row.querySelectorAll('th[scope="row"]')).toHaveLength(1)
+      expect(row.firstElementChild!.tagName).toBe('TH')
+    }
+  })
+
+  it('the history table is named by its caption, and the pass number names each row', () => {
+    withRouter(<SortingPage />)
+    const table = screen.getByRole('table', { name: 'Bubble sort: the array after each pass' })
+    expect(table.querySelector('caption')).toHaveTextContent('Bubble sort: the array after each pass')
+    const headers = [...table.querySelectorAll('tbody th[scope="row"]')].map((h) => h.textContent)
+    expect(headers.slice(0, 2)).toEqual(['Start', '1'])
+  })
+})
+
+describe('verdict icons', () => {
+  it('Correct and Not correct have a hidden icon, Almost its ≈, and the words are unchanged', async () => {
+    resetAnnouncements()
+    render(<LiveRegion />)
+    mount()
+    const user = userEvent.setup()
+    await screen.findByRole('table')
+    await user.click(screen.getByRole('button', { name: /^study mode/i }))
+    // the n column of this table reads 123, 12, 1, 0: right, "right number but a float", nonsense
+    const boxes = screen.getAllByRole('textbox', { name: /^Row \d+ \(line/ }).filter((b) => b.dataset.studyCol === '<module>:n')
+    for (const [i, text] of ['123', '12.0', 'oops'].entries()) {
+      await user.click(boxes[i]!)
+      await user.paste(text)
+    }
+    await user.click(screen.getByRole('button', { name: /check answers/i }))
+    const verdict = (i: number) => document.getElementById(boxes[i]!.getAttribute('aria-describedby')!.split(' ')[0]!)!
+
+    expect(verdict(0).textContent).toBe('Correct')
+    expect(verdict(0).querySelector('svg.lucide-check')).toHaveAttribute('aria-hidden', 'true')
+    expect(verdict(1).textContent).toMatch(/^≈ Almost — /)
+    expect(within(verdict(1)).getByText('≈')).toHaveAttribute('aria-hidden', 'true')
+    expect(verdict(2).textContent).toMatch(/^Not correct/)
+    expect(verdict(2).querySelector('svg.lucide-x')).toHaveAttribute('aria-hidden', 'true')
+    await expectSpoken(/Score: \d+(\.5)? \/ \d+ · \d+%/)
+  })
+})
+
+describe('non-colour marks', () => {
+  it('every sorting card says its state in its accessible name', async () => {
+    withRouter(<SortingPage />)
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Step' }))
+    const cards = within(screen.getByRole('list', { name: 'Array cards' })).getAllByRole('listitem')
+    expect(cards[0]).toHaveAccessibleName('index 0, value 5, Comparing')
+    expect(cards[1]).toHaveAccessibleName('index 1, value 1, Comparing')
+    expect(cards[2]).toHaveAccessibleName('index 2, value 4')
+  })
+
+  it('addition marks a carry out and an overflowed sign bit with a word', async () => {
+    withRouter(<NumberSystemsPage />, '/number-systems?mode=add')
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: 'Carry out' }))
+    expect(screen.getByTestId('carry-out')).toHaveTextContent(/^1Carry$/)
+    expect(screen.getAllByTestId('result-bit')[0]).toHaveTextContent(/^0$/)
+
+    await user.click(screen.getByRole('button', { name: 'Signed overflow' }))
+    expect(screen.getByTestId('carry-out')).toHaveTextContent(/^0$/)
+    expect(screen.getAllByTestId('result-bit')[0]).toHaveTextContent(/^1Overflow$/)
+
+    // nothing is marked before the column has been worked
+    await user.click(screen.getByRole('button', { name: 'Step through' }))
+    expect(screen.queryByText('Overflow')).not.toBeInTheDocument()
+  })
+})
+
+describe('announcements', () => {
+  beforeEach(() => resetAnnouncements())
+
+  it('the region is polite, not a status, and is the only polite live region written by hand', () => {
+    withRouter(<SortingPage />)
+    expect(spoken()).toHaveAttribute('aria-live', 'polite')
+    expect(spoken()).not.toHaveAttribute('role')
+    expect(spoken()).toBeEmptyDOMElement()
+    expect(document.querySelectorAll('[aria-live="polite"]')).toHaveLength(1)
+  })
+
+  it('Python ready is said once after loading, not again after later runs; each run says how it ended', async () => {
+    const runner = new FakeTraceRunner(traces.digitSum)
+    runner.init = () => new Promise(() => {})
+    setRunnerOverride(runner)
+    useStore.setState({ ...defaultWorkspace('n = 1\n'), ...CLEAN, runnerStatus: { state: 'loading', message: '' } })
+    withRouter(<App />)
+
+    act(() => useStore.setState({ runnerStatus: { state: 'ready' } }))
+    expect(messages()).toEqual(['Python ready'])
+    act(() => useStore.setState({ runnerStatus: { state: 'running', stepsExecuted: 0 } }))
+    act(() => useStore.setState({ result: traces.digitSum, runnerStatus: { state: 'ready' } }))
+    const done = `Run finished: ${traces.digitSum.steps.length} steps.`
+    await waitFor(() => expect(messages()).toEqual(['Python ready', done]))
+    act(() => useStore.setState({ result: traces.zeroDivision }))
+    await waitFor(() => expect(messages()).toEqual(['Python ready', done, 'Run failed.']))
+    // the badge keeps its role but leaves the talking to the region
+    const badge = screen.getAllByRole('status').find((el) => el.textContent === 'Python ready')
+    expect(badge).toHaveAttribute('aria-live', 'off')
+  })
+
+  it('a rebuilt truth table is announced once typing stops, and nothing half-typed is read', async () => {
+    withRouter(<TruthTablePage />, '/truth-tables?expr=A+AND+B')
+    expect(spoken()).toBeEmptyDOMElement()
+    const box = screen.getByLabelText('Boolean expression')
+    const user = userEvent.setup()
+    await user.clear(box)
+    await user.type(box, 'A AND (B OR C)')
+    await expectSpoken('Truth table built: 8 rows, 4 columns.')
+    expect(messages()).toHaveLength(1)
+  })
+
+  it('a sorting step reads its caption, and a bad list its error', async () => {
+    withRouter(<SortingPage />)
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: 'Step' }))
+    await expectSpoken('Compare 5 and 1: 5 is bigger, so swap them.')
+    await user.type(screen.getByLabelText(/^List/), ', x')
+    await expectSpoken(/List: /)
+  })
+
+  it('a conversion is read after typing stops, and a shift says which bit fell out', async () => {
+    withRouter(<NumberSystemsPage />)
+    const user = userEvent.setup()
+    await user.type(screen.getByLabelText(/^Binary/), '1', { initialSelectionStart: 0, initialSelectionEnd: 8 })
+    await expectSpoken('1 = 1')
+    await user.click(screen.getByRole('button', { name: 'Logical right' }))
+    await expectSpoken('Logical right shift by 1. Bit shifted out: 1.')
+  })
+
+  it('the same words are read again, and old messages leave the region', () => {
+    vi.useFakeTimers()
+    try {
+      render(<LiveRegion />)
+      act(() => {
+        announce('Again')
+        announce('Again')
+      })
+      expect(messages()).toEqual(['Again', 'Again'])
+      act(() => vi.advanceTimersByTime(ANNOUNCEMENT_MS))
+      expect(spoken()).toBeEmptyDOMElement()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })

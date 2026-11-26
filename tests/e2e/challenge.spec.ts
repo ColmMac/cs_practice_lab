@@ -84,7 +84,7 @@ test('a teacher’s link opens for review, starts masked, and ends back at the s
   await boxes(kid).nth(0).fill('1')
   await boxes(kid).nth(1).fill('7')
   await kid.getByRole('button', { name: 'Check answers' }).click()
-  await expect(kid.getByText(/Score: 1 \/ 2/)).toBeVisible()
+  await expect(kid.getByRole('region', { name: 'Score', exact: true })).toContainText(/Score: 1 \/ 2/)
   await expect(kid.getByRole('button', { name: /^Reveal / })).toHaveCount(2)
   expect(await leaks(kid)).toBe(0)
 

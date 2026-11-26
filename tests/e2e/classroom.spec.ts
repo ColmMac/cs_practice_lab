@@ -126,7 +126,7 @@ test.describe('projector mode', () => {
     // the selected row gets a bar, and the editor highlights its line
     const row = traceTable(page).locator('tbody tr').nth(2)
     await row.click()
-    await expect(row.locator('td').first()).toHaveCSS('box-shadow', /4px 0px 0px 0px inset/)
+    await expect(row.locator('th, td').first()).toHaveCSS('box-shadow', /4px 0px 0px 0px inset/)
     await expect(page.locator('.cm-trace-selected')).toHaveCount(1)
 
     // study answers grow with the text

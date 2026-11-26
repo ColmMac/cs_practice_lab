@@ -238,7 +238,7 @@ describe('Study Mode: grading in the UI', () => {
     await user.click(screen.getByRole('button', { name: /check answers/i }))
     await user.click(screen.getByText('By column'))
     const section = screen.getByRole('region', { name: 'Score' })
-    const row = (name: string) => within(section).getByText(name, { selector: 'td' }).closest('tr')!
+    const row = (name: string) => within(section).getByRole('rowheader', { name }).closest('tr')!
     expect(row('n')).toHaveTextContent('4 / 4')
     expect(row('total')).toHaveTextContent('4 / 4')
     expect(row('digit')).toHaveTextContent('4 / 4')

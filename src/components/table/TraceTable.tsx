@@ -15,7 +15,7 @@ import { useTableData } from './useTableData'
 
 /** From the back of a room a tint is not enough: the selected row also gets the editor's 4 px bar. */
 const PROJECTOR_SELECTED_BAR =
-  'projector:[&>td:first-child]:shadow-[inset_4px_0_0_var(--color-amber-700)] dark:projector:[&>td:first-child]:shadow-[inset_4px_0_0_var(--color-amber-500)]'
+  'projector:[&>:first-child]:shadow-[inset_4px_0_0_var(--color-amber-700)] dark:projector:[&>:first-child]:shadow-[inset_4px_0_0_var(--color-amber-500)]'
 
 export function TraceTable({ result, stale }: { result: TraceResult; stale: boolean }) {
   const { selectedStep, hoverStep, setHoverStep, selectStep } = useStore()
@@ -89,6 +89,7 @@ export function TraceTable({ result, stale }: { result: TraceResult; stale: bool
         aria-rowcount={win.active ? rows.length + headerRows : undefined}
         onKeyDown={study ? onStudyKey : undefined}
       >
+        <caption className="sr-only">Trace of the program: variable values and output at each step shown, one row per step</caption>
         <thead ref={headRef} className={THEAD}>
           {showGroups && (
             <tr>
@@ -163,11 +164,14 @@ export function TraceTable({ result, stale }: { result: TraceResult; stale: bool
                   const key = cellKey(step, c.id)
                   const question = study && model?.maskedKeys.has(key) ? questions.get(key) : undefined
                   const label = `Row ${row.rowIndex + 1} (line ${row.lineNumber}), ${columnLabel(c)}`
+                  // the line number names its row; an answer box never sits in a header cell
+                  const Cell = c.id === LINE_COL && !question ? 'th' : 'td'
                   return (
-                    <td
+                    <Cell
                       key={c.id}
+                      scope={Cell === 'th' ? 'row' : undefined}
                       title={cell?.note}
-                      className={`${td} ${cell?.written ? 'font-bold' : 'text-slate-600 dark:text-slate-400 projector:text-slate-800 dark:projector:text-slate-200'} ${c.id === OUTPUT_COL ? 'whitespace-pre' : ''}`}
+                      className={`${td} ${Cell === 'th' ? 'text-left [font-weight:inherit]' : ''} ${cell?.written ? 'font-bold' : 'text-slate-600 dark:text-slate-400 projector:text-slate-800 dark:projector:text-slate-200'} ${c.id === OUTPUT_COL ? 'whitespace-pre' : ''}`}
                       style={c.id === LINE_COL ? { paddingLeft: 12 + row.depth * 14 } : undefined}
                     >
                       {question && study ? (
@@ -219,7 +223,7 @@ export function TraceTable({ result, stale }: { result: TraceResult; stale: bool
                           {row.branch ? 'T' : 'F'}
                         </span>
                       )}
-                    </td>
+                    </Cell>
                   )
                 })}
               </tr>

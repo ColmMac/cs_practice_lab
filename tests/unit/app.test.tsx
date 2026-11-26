@@ -48,6 +48,8 @@ function mount(result: Result = traces.digitSum, opts: { validate?: Validate; wo
 const table = () => screen.getByRole('table', { name: 'Trace table' })
 const bodyRows = () => within(table()).getAllByRole('row').slice(1)
 const headers = () => within(table()).getAllByRole('columnheader').map((h) => h.textContent)
+/** A body row's cells by column, the row header (the line number) included. */
+const cellsIn = (row: HTMLElement) => [...(row as HTMLTableRowElement).cells]
 const stored = () => JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null') as { state: Record<string, unknown> } | null
 
 beforeEach(() => {
@@ -95,7 +97,7 @@ describe('App: running and the table', () => {
     mount()
     const user = userEvent.setup()
     await screen.findByRole('table')
-    const nCells = () => bodyRows().map((r) => within(r).getAllByRole('cell')[1]!.textContent)
+    const nCells = () => bodyRows().map((r) => cellsIn(r)[1]!.textContent)
     expect(nCells().slice(0, 3)).toEqual(['1234', '', ''])
     await user.click(screen.getByRole('radio', { name: 'Carry forward' }))
     expect(nCells().slice(0, 3)).toEqual(['1234', '1234', '1234'])
@@ -430,7 +432,7 @@ describe('Watch panel', () => {
     await screen.findByRole('table')
     expect(headers()).toContain('i < n')
     const col = headers().indexOf('i < n')
-    const values = bodyRows().map((r) => within(r).getAllByRole('cell')[col]!.textContent)
+    const values = bodyRows().map((r) => cellsIn(r)[col]!.textContent)
     expect(values).toContain('True')
     expect(values).toContain('False')
   })

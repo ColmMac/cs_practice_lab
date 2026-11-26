@@ -16,7 +16,8 @@ export function HistoryTable({ table, frame }: { table: History; frame: number }
   return (
     // A tab stop, so a keyboard can scroll a long history or a wide row
     <div tabIndex={0} role="group" aria-label="History scroll area" className="max-h-80 overflow-auto focus-visible:outline-2 focus-visible:outline-accent">
-      <table aria-label={table.title} className={`${TABLE} w-auto`}>
+      <table className={`${TABLE} w-auto`}>
+        <caption className="sr-only">{table.title}</caption>
         <thead className={THEAD}>
           <tr>
             <th scope="col" className={`${TH} w-6`}>
@@ -37,11 +38,19 @@ export function HistoryTable({ table, frame }: { table: History; frame: number }
                 <td className={`${TD} text-center`} aria-hidden="true">
                   {isCurrent ? '▶' : ''}
                 </td>
-                {r.cells.map((cell, j) => (
-                  <td key={j} className={TD}>
-                    {cell}
-                  </td>
-                ))}
+                {r.cells.map((cell, j) => {
+                  // the first column is the pass (or probe) number: it names the row
+                  const Cell = j === 0 ? 'th' : 'td'
+                  return (
+                    <Cell
+                      key={j}
+                      scope={j === 0 ? 'row' : undefined}
+                      className={j === 0 ? `${TD} text-left [font-weight:inherit]` : TD}
+                    >
+                      {cell}
+                    </Cell>
+                  )
+                })}
               </tr>
             )
           })}
