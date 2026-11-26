@@ -22,11 +22,12 @@ function setLit(lit: boolean) {
 
 /**
  * The user asking for a run: the Run button or Ctrl/⌘+Enter. Every other run (page load, loading a preset, a changed
- * watch) calls the store's `run` directly, so it has no cooldown and doesn't light the button.
+ * watch) calls the store's `run` directly, so it has no cooldown and doesn't light the button. Nothing happens until
+ * Python is ready: a press while it loads is dropped, not queued.
  */
 export async function pressRun(): Promise<void> {
   const before = useStore.getState()
-  if (before.running || inRunCooldown()) return
+  if (before.running || before.runnerStatus.state !== 'ready' || inRunCooldown()) return
   lastPress = Date.now()
   setLit(false)
   await before.run()

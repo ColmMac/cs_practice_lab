@@ -1,16 +1,20 @@
 import { lazy, Suspense, type ComponentType } from 'react'
 import { Route, Routes } from 'react-router'
+import { loadChunk } from '../components/ui/chunkError'
+import { ToolErrorBoundary, type ToolReset } from '../components/ui/ToolErrorBoundary'
 import { AppShell } from './AppShell'
 import { HomePage } from './HomePage'
 import { NotFoundPage } from './pages'
+import { TOOL_RESETS } from './toolResets'
 
 /**
  * A page in its own chunk, with the loading line shown until it arrives. The line holds a screen's height open, so the
- * footer isn't painted in view and then pushed out of it (a layout shift).
+ * footer isn't painted in view and then pushed out of it (a layout shift). `boundary` goes OUTSIDE Suspense, so it
+ * also catches a chunk that fails to load.
  */
-function lazyRoute(load: () => Promise<ComponentType>) {
-  const Page = lazy(async () => ({ default: await load() }))
-  return (
+function lazyRoute(load: () => Promise<ComponentType>, boundary?: ToolReset) {
+  const Page = lazy(() => loadChunk(async () => ({ default: await load() })))
+  const page = (
     <Suspense
       fallback={
         <p role="status" className="min-h-dvh p-4 text-sm">
@@ -21,13 +25,20 @@ function lazyRoute(load: () => Promise<ComponentType>) {
       <Page />
     </Suspense>
   )
+  return boundary ? <ToolErrorBoundary {...boundary}>{page}</ToolErrorBoundary> : page
 }
 
 // Each tool is its own chunk, so `/` and the light tools never download CodeMirror or start Pyodide.
-const traceTable = lazyRoute(() => import('./TraceTableRoute').then((m) => m.TraceTableRoute))
-const truthTables = lazyRoute(() => import('../components/truth/TruthTablePage').then((m) => m.TruthTablePage))
-const numberSystems = lazyRoute(() => import('../components/numbers/NumberSystemsPage').then((m) => m.NumberSystemsPage))
-const sorting = lazyRoute(() => import('../components/sorting/SortingPage').then((m) => m.SortingPage))
+const traceTable = lazyRoute(() => import('./TraceTableRoute').then((m) => m.TraceTableRoute), TOOL_RESETS.traceTable)
+const truthTables = lazyRoute(
+  () => import('../components/truth/TruthTablePage').then((m) => m.TruthTablePage),
+  TOOL_RESETS.truthTables,
+)
+const numberSystems = lazyRoute(
+  () => import('../components/numbers/NumberSystemsPage').then((m) => m.NumberSystemsPage),
+  TOOL_RESETS.numberSystems,
+)
+const sorting = lazyRoute(() => import('../components/sorting/SortingPage').then((m) => m.SortingPage), TOOL_RESETS.sorting)
 const about = lazyRoute(() => import('./AboutPage').then((m) => m.AboutPage))
 const privacy = lazyRoute(() => import('./PrivacyPage').then((m) => m.PrivacyPage))
 

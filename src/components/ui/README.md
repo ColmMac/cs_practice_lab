@@ -35,6 +35,7 @@ Dark mode is the `.dark` class on `<html>` (custom variant in `src/styles/index.
 - `StudyModeButton` – the Study mode switch (outlined off, filled on). The tool supplies the behaviour.
 - `KeyboardLegend` – the answer-box keys under a quiz; tool-specific keys go in `tab` and `children`.
 - `ExportPanel` – every tool's Export popover; `ExportVariantPicker` is its answer key / worksheet choice.
+- `ToolErrorBoundary` – one per tool route (`app/toolResets.ts`): a crash or a chunk that won’t load shows Reset Tool, which clears only that tool’s keys.
 - `ThemeToggle`, `theme.ts` – shared light/dark store (`tts:theme`).
 
 `tests/unit/uiPrimitives.test.tsx` pins these class strings; change one deliberately or not at all.
