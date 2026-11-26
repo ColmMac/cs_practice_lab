@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 import { watchForProblems } from './pageProblems'
 
 /** The smoke test every published route has to pass, on the production build with the real headers. */
-const ROUTES = ['/', '/trace-table', '/truth-tables', '/number-systems', '/sorting-visualizer', '/about', '/privacy']
+const ROUTES = ['/', '/trace-table', '/truth-tables', '/number-systems', '/sorting-visualizer', '/about', '/privacy', '/accessibility']
 
 for (const path of ROUTES) {
   test(`${path}: loads cleanly, with one h1, one footer and nothing requested from Google`, async ({ page }) => {

@@ -138,7 +138,7 @@ test('"Manage cookie choices" is there straight away on a later visit to the pag
   expect(await reopened(page)).toBe(1)
 })
 
-for (const path of ['/', '/about', '/privacy', '/truth-tables'] as const) {
+for (const path of ['/', '/about', '/privacy', '/accessibility', '/truth-tables'] as const) {
   test(`${path}: no console errors or CSP violations, structured data included`, async ({ page }) => {
     const problems = await watchForProblems(page)
     const response = await page.goto(path)
@@ -152,7 +152,7 @@ for (const path of ['/', '/about', '/privacy', '/truth-tables'] as const) {
 
 test('the new pages don’t scroll sideways on a phone', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 800 })
-  for (const path of ['/about', '/privacy']) {
+  for (const path of ['/about', '/privacy', '/accessibility']) {
     await page.goto(path)
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
     expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth), path).toBeLessThanOrEqual(0)

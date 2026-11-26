@@ -5,13 +5,13 @@ import { CookieChoicesButton } from './CookieChoicesButton'
 import type { InfoDoc } from './info/content'
 import { PageMeta } from './PageMeta'
 import { BlockView, Text } from './Prose'
-import { infoPage } from './tools'
+import { infoPage, type InfoPath } from './tools'
 
 const longDate = (iso: string) =>
   new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
 
-/** A page of plain prose: /about and /privacy. */
-export function InfoPage({ path, doc }: { path: '/about' | '/privacy'; doc: InfoDoc }) {
+/** A page of plain prose: /about, /privacy and /accessibility. */
+export function InfoPage({ path, doc }: { path: InfoPath; doc: InfoDoc }) {
   const page = infoPage(path)
   const ads = useAdsAllowed(path === '/privacy') // never on the privacy page
   return (
@@ -34,11 +34,11 @@ export function InfoPage({ path, doc }: { path: '/about' | '/privacy'; doc: Info
           ))}
           {doc.updated && (
             <p className="pt-2 text-xs tabular-nums text-text-muted">
-              Last updated: <time dateTime={doc.updated}>{longDate(doc.updated)}</time>
+              {doc.updatedLabel ?? 'Last updated'}: <time dateTime={doc.updated}>{longDate(doc.updated)}</time>
             </p>
           )}
         </div>
-        <AdSlot ads={ads} className="mt-6 max-w-prose" />
+        {path !== '/accessibility' && <AdSlot ads={ads} className="mt-6 max-w-prose" />}
       </main>
     </>
   )

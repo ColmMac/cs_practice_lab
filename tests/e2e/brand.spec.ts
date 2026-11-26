@@ -41,7 +41,7 @@ test('a blocked import is explained under the CS Practice Lab name', async ({ pa
   await expect(page.getByText("Importing 'js' is not available in CS Practice Lab").first()).toBeVisible()
 })
 
-for (const path of ['/', '/trace-table', '/truth-tables', '/number-systems', '/sorting-visualizer', '/about', '/privacy']) {
+for (const path of ['/', '/trace-table', '/truth-tables', '/number-systems', '/sorting-visualizer', '/about', '/privacy', '/accessibility']) {
   test(`${path}: the served HTML uses only the current brand`, async ({ request }) => {
     const html = await (await request.get(path)).text()
     expect(html).toContain('CS Practice Lab')

@@ -12,6 +12,7 @@ const ROUTES = [
   ['/sorting-visualizer', 'Sorting & searching · CS Practice Lab', /binary search/],
   ['/about', 'About · CS Practice Lab', /who it is for/],
   ['/privacy', 'Privacy · CS Practice Lab', /saves in your browser/],
+  ['/accessibility', 'Accessibility · CS Practice Lab', /known limitations/],
 ] as const
 
 const ORIGIN = 'https://cspracticelab.com'
@@ -108,7 +109,7 @@ for (const [path, title, description] of ROUTES) {
   })
 }
 
-test('sitemap.xml lists all seven routes on the production origin', async ({ request }) => {
+test('sitemap.xml lists all eight routes on the production origin', async ({ request }) => {
   const response = await request.get('/sitemap.xml')
   // a missing file would fall through to index.html with a 200, so the type is what counts
   expect(response.headers()['content-type']).toMatch(/xml/)

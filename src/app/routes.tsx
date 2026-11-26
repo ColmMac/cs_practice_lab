@@ -41,6 +41,7 @@ const numberSystems = lazyRoute(
 const sorting = lazyRoute(() => import('../components/sorting/SortingPage').then((m) => m.SortingPage), TOOL_RESETS.sorting)
 const about = lazyRoute(() => import('./AboutPage').then((m) => m.AboutPage))
 const privacy = lazyRoute(() => import('./PrivacyPage').then((m) => m.PrivacyPage))
+const accessibility = lazyRoute(() => import('./AccessibilityPage').then((m) => m.AccessibilityPage))
 
 export function AppRoutes() {
   return (
@@ -53,6 +54,7 @@ export function AppRoutes() {
         <Route path="sorting-visualizer" element={sorting} />
         <Route path="about" element={about} />
         <Route path="privacy" element={privacy} />
+        <Route path="accessibility" element={accessibility} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>

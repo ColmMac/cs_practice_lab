@@ -26,8 +26,8 @@ describe('seo', () => {
     expect(resolveSiteUrl('https://example.com/')).toBe('https://example.com')
   })
 
-  it('the sitemap covers the home page, the four tools and the two info pages, each with a description', () => {
-    expect(SITE_PATHS).toEqual(['/', '/trace-table', '/truth-tables', '/number-systems', '/sorting-visualizer', '/about', '/privacy'])
+  it('the sitemap covers the home page, the four tools and the three info pages, each with a description', () => {
+    expect(SITE_PATHS).toEqual(['/', '/trace-table', '/truth-tables', '/number-systems', '/sorting-visualizer', '/about', '/privacy', '/accessibility'])
     expect(TOOLS).toHaveLength(4) // the info pages stay out of the nav and the home directory
     for (const p of [...TOOLS, ...INFO_PAGES]) expect(p.description.length).toBeGreaterThan(40)
   })

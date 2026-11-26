@@ -33,6 +33,9 @@ export const SITE_NAME = 'CS Practice Lab'
 export const SITE_DESCRIPTION =
   'Free computer science revision tools for GCSE, SQA Higher, A-Level and CS1: trace tables, truth tables, number systems and sorting. No login, runs in your browser.'
 
+/** Shown in the footer and on /about. */
+export const NON_AFFILIATION = 'Not affiliated with or endorsed by any exam board.'
+
 export const CONTACT_EMAIL = 'contact@cspracticelab.com'
 
 export const SUPPORT_URL = 'https://buymeacoffee.com/cs_practice_lab'

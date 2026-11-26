@@ -48,6 +48,11 @@ describe('static hosting config', () => {
     expect(site().get('Referrer-Policy')).toBe('strict-origin-when-cross-origin')
   })
 
+  it('refuses framing in old browsers too, and doesn’t let types be sniffed', () => {
+    expect(site().get('X-Frame-Options')).toBe('DENY')
+    expect(site().get('X-Content-Type-Options')).toBe('nosniff')
+  })
+
   it('the CSP allows the AdSense and consent-message hosts', () => {
     expect(csp('script-src')).toEqual(
       expect.arrayContaining([
