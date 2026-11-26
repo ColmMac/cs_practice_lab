@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { axeViolations } from './axe'
 
 const traceTable = (page: Page) => page.getByRole('table', { name: 'Trace table' })
 const boxes = (page: Page) => page.locator('input[data-study-key]')
@@ -127,8 +128,6 @@ test('progress saved in another tab shows up, and Reset asks before forgetting i
 })
 
 test.describe('with progress saved', () => {
-  test.use({ bypassCSP: true }) // lets the test inject axe-core; the CSP itself is tested elsewhere
-
   const seed = (page: Page, theme: string) =>
     page.addInitScript(
       ([t, records]) => {
@@ -144,16 +143,10 @@ test.describe('with progress saved', () => {
       await page.goto('/')
       await expect(page.getByText('1/6 trace presets mastered')).toBeVisible()
       await expect(page.getByRole('button', { name: 'Reset my progress' })).toBeVisible()
-      await page.addScriptTag({ path: 'node_modules/axe-core/axe.min.js' })
-      const violations = () =>
-        page.evaluate(async () => {
-          const axe = (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: { target: unknown }[] }[] }> } }).axe
-          return (await axe.run()).violations.map((v) => `${v.id}: ${v.nodes.map((n) => String(n.target)).join(' ; ')}`)
-        })
-      expect(await violations()).toEqual([])
+      expect(await axeViolations(page)).toEqual([])
       await page.setViewportSize({ width: 375, height: 800 })
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375)
-      expect(await violations()).toEqual([])
+      expect(await axeViolations(page)).toEqual([])
     })
   }
 })

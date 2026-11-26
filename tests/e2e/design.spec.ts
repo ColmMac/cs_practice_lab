@@ -1,4 +1,5 @@
 import { expect, test, type Locator, type Page } from '@playwright/test'
+import { axeViolations } from './axe'
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('tts:welcomed', '1'))
@@ -118,16 +119,6 @@ test('numbers that line up use tabular numerals', async ({ page }) => {
 })
 
 test.describe('axe on the real page', () => {
-  test.use({ bypassCSP: true }) // lets the test inject axe-core; the CSP itself is tested elsewhere
-
-  async function violations(page: Page) {
-    await page.addScriptTag({ path: 'node_modules/axe-core/axe.min.js' })
-    return page.evaluate(async () => {
-      const axe = (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: { target: unknown }[] }[] }> } }).axe
-      return (await axe.run()).violations.map((v) => ({ id: v.id, targets: v.nodes.map((n) => n.target) }))
-    })
-  }
-
   for (const theme of ['light', 'dark'] as const) {
     test.describe(theme, () => {
       test.beforeEach(async ({ page }) => {
@@ -137,14 +128,14 @@ test.describe('axe on the real page', () => {
       test('routes, popovers included', async ({ page }) => {
         for (const path of ROUTES) {
           await ready(page, path)
-          expect(await violations(page), path).toEqual([])
+          expect(await axeViolations(page), path).toEqual([])
         }
         await ready(page, '/trace-table')
         await page.getByRole('button', { name: 'Export', exact: true }).click()
-        expect(await violations(page), 'export popover').toEqual([])
+        expect(await axeViolations(page), 'export popover').toEqual([])
         await page.keyboard.press('Escape')
         await page.getByRole('button', { name: /^Columns/ }).click()
-        expect(await violations(page), 'columns popover').toEqual([])
+        expect(await axeViolations(page), 'columns popover').toEqual([])
       })
 
       test('trace Study mode, with marked, hinted and revealed cells', async ({ page }) => {
@@ -156,17 +147,17 @@ test.describe('axe on the real page', () => {
         await page.getByRole('button', { name: /^Reveal / }).nth(2).click()
         await page.getByRole('button', { name: 'Check answers' }).click()
         await expect(page.getByRole('region', { name: 'Score' })).toContainText('1 revealed (not scored)')
-        expect(await violations(page)).toEqual([])
+        expect(await axeViolations(page)).toEqual([])
       })
 
       test('truth-table Study mode and the sorting quiz', async ({ page }) => {
         await ready(page, '/truth-tables')
         await page.getByRole('button', { name: 'Study mode', exact: true }).click()
         await expect(page.getByRole('region', { name: 'Study mode' })).toBeVisible()
-        expect(await violations(page), 'truth study').toEqual([])
+        expect(await axeViolations(page), 'truth study').toEqual([])
         await page.goto('/sorting-visualizer?algo=bubble&quiz=1')
         await expect(page.getByTestId('quiz-prompt')).toBeVisible()
-        expect(await violations(page), 'sorting quiz').toEqual([])
+        expect(await axeViolations(page), 'sorting quiz').toEqual([])
       })
 
       // At 1280 wide nothing overflows sideways, so rules about scrolling regions only bite on narrower screens
@@ -175,7 +166,7 @@ test.describe('axe on the real page', () => {
           await page.setViewportSize({ width, height })
           for (const path of ROUTES) {
             await ready(page, path)
-            expect.soft(await violations(page), path).toEqual([])
+            expect.soft(await axeViolations(page), path).toEqual([])
           }
 
           await ready(page, '/trace-table?preset=bubble-sort')
@@ -184,34 +175,34 @@ test.describe('axe on the real page', () => {
           await expect(page.getByRole('textbox', { name: 'Code editor' })).toHaveAttribute('tabindex', '0')
           await page.getByRole('button', { name: 'Study mode', exact: true }).click()
           await expect(page.locator('input[data-study-key]').first()).toBeVisible()
-          expect.soft(await violations(page), 'trace study').toEqual([])
+          expect.soft(await axeViolations(page), 'trace study').toEqual([])
 
           await ready(page, '/truth-tables')
           await page.getByRole('button', { name: 'Study mode', exact: true }).click()
           await expect(page.getByRole('region', { name: 'Study mode' })).toBeVisible()
-          expect.soft(await violations(page), 'truth study').toEqual([])
+          expect.soft(await axeViolations(page), 'truth study').toEqual([])
 
           await page.goto('/number-systems?mode=practice')
           await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
-          expect.soft(await violations(page), 'number practice').toEqual([])
+          expect.soft(await axeViolations(page), 'number practice').toEqual([])
 
           await page.goto('/sorting-visualizer?algo=bubble&quiz=1')
           await expect(page.getByTestId('quiz-prompt')).toBeVisible()
-          expect.soft(await violations(page), 'sorting quiz').toEqual([])
+          expect.soft(await axeViolations(page), 'sorting quiz').toEqual([])
         })
       }
 
       test('number practice and every sorting card state colour', async ({ page }) => {
         await page.goto('/number-systems?mode=practice')
         await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
-        expect(await violations(page), 'number practice').toEqual([])
+        expect(await axeViolations(page), 'number practice').toEqual([])
         for (const algo of ['bubble', 'insertion', 'merge', 'binary&data=3,9,10,23,27,38,43,82&target=23']) {
           await page.goto(`/sorting-visualizer?algo=${algo}`)
           const step = page.getByRole('button', { name: 'Step', exact: true })
           await expect(step).toBeEnabled()
           for (let i = 0; i < 4 && (await step.isEnabled()); i++) await step.click()
           await page.waitForTimeout(350) // the cards slide
-          expect(await violations(page), algo).toEqual([])
+          expect(await axeViolations(page), algo).toEqual([])
         }
       })
     })

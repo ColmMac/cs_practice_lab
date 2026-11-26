@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { axeViolations } from './axe'
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('tts:welcomed', '1'))
@@ -62,7 +63,6 @@ test('the editor is its own chunk, which an app change does not rename', async (
 })
 
 test.describe('axe audit on the real page', () => {
-  test.use({ bypassCSP: true }) // lets the test inject axe-core; the CSP itself is tested elsewhere
 
   for (const theme of ['light', 'dark'] as const) {
     test(`no axe violations in ${theme} mode`, async ({ page }) => {
@@ -70,12 +70,7 @@ test.describe('axe audit on the real page', () => {
       await page.goto('/')
       await expect(page.locator('html')).toHaveClass(theme === 'dark' ? /\bdark\b/ : /^(?!.*\bdark\b)/)
       await expect(page.getByRole('list', { name: 'Tools' })).toBeVisible()
-      await page.addScriptTag({ path: 'node_modules/axe-core/axe.min.js' })
-      const results = await page.evaluate(async () => {
-        const axe = (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: { target: unknown }[] }[] }> } }).axe
-        const r = await axe.run()
-        return r.violations.map((v) => ({ id: v.id, targets: v.nodes.map((n) => n.target) }))
-      })
+      const results = await axeViolations(page)
       expect(results, theme).toEqual([])
     })
   }

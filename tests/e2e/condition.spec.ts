@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { axeViolations } from './axe'
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('tts:welcomed', '1'))
@@ -85,19 +86,13 @@ test('a workspace saved before this setting existed opens with the column off', 
 })
 
 test.describe('axe audit with the Condition column', () => {
-  test.use({ bypassCSP: true }) // lets the test inject axe-core; the CSP itself is tested elsewhere
-
   for (const colorScheme of ['light', 'dark'] as const) {
     test(`no violations in ${colorScheme} mode (table and Columns popover)`, async ({ page }) => {
       await page.emulateMedia({ colorScheme })
       await loadLinearSearch(page)
       await showCondition(page)
       await page.getByRole('button', { name: /^Columns/ }).click()
-      await page.addScriptTag({ path: 'node_modules/axe-core/axe.min.js' })
-      const violations = await page.evaluate(async () => {
-        const axe = (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: { target: unknown }[] }[] }> } }).axe
-        return (await axe.run()).violations.map((v) => `${v.id}: ${v.nodes.map((n) => String(n.target)).join(' ; ')}`)
-      })
+      const violations = await axeViolations(page)
       expect(violations).toEqual([])
     })
   }
