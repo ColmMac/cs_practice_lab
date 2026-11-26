@@ -113,6 +113,8 @@ test.describe('focus is always visible', () => {
       return { tag: el.tagName, style: s.outlineStyle, width: parseFloat(s.outlineWidth) }
     })
 
+  const hasRing = (r: { style: string; width: number }) => r.style !== 'none' && r.width >= 2
+
   for (const scheme of ['light', 'dark'] as const) {
     test(`every tab stop on the trace page has a 2px ring (${scheme})`, async ({ page }) => {
       await page.addInitScript((theme) => localStorage.setItem('tts:theme', theme), scheme)
@@ -120,8 +122,13 @@ test.describe('focus is always visible', () => {
       const missing: string[] = []
       for (let i = 0; i < 30; i++) {
         await page.keyboard.press('Tab')
-        const r = await ring(page)
-        if (r.style === 'none' || r.width < 2) missing.push(`${i}: ${r.tag} ${r.style} ${r.width}`)
+        // CodeMirror marks itself focused from a timer, so its ring can land just after the focus does.
+        let r = await ring(page)
+        for (let waited = 0; waited < 1000 && !hasRing(r); waited += 50) {
+          await page.waitForTimeout(50)
+          r = await ring(page)
+        }
+        if (!hasRing(r)) missing.push(`${i}: ${r.tag} ${r.style} ${r.width}`)
       }
       expect(missing).toEqual([])
     })
