@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { encodeShare } from '../../src/core/share/urlState'
 import { defaultWorkspace } from '../../src/core/workspace'
+import { axeViolations } from './axe'
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('tts:welcomed', '1'))
@@ -80,7 +81,6 @@ test('shared code under review can be read as pseudocode but is not run', async 
 })
 
 test.describe('axe audit with the pseudocode panel open', () => {
-  test.use({ bypassCSP: true }) // lets the test inject axe-core; the CSP itself is tested elsewhere
 
   for (const colorScheme of ['light', 'dark'] as const) {
     test(`no violations in ${colorScheme} mode`, async ({ page }) => {
@@ -94,11 +94,7 @@ test.describe('axe audit with the pseudocode panel open', () => {
       await traceTable(page).locator('tbody tr[data-line="1"]').first().click()
       await expect(pseudo(page).locator('li[aria-current="true"]')).toHaveCount(1)
       await expect(pseudo(page)).toContainText('no exam equivalent')
-      await page.addScriptTag({ path: 'node_modules/axe-core/axe.min.js' })
-      const violations = await page.evaluate(async () => {
-        const axe = (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: { target: unknown }[] }[] }> } }).axe
-        return (await axe.run()).violations.map((v) => `${v.id}: ${v.nodes.map((n) => String(n.target)).join(' ; ')}`)
-      })
+      const violations = await axeViolations(page)
       expect(violations).toEqual([])
     })
   }

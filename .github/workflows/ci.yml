@@ -79,8 +79,9 @@ jobs:
           node-version-file: package.json
           cache: npm
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
-      # Builds and serves both the `app` and `ads` projects.
+      - run: npx playwright install --with-deps chromium firefox webkit
+      # Builds and serves for the `app` and `ads` projects. `firefox` and `webkit` run the @smoke tests on the
+      # `app` build.
       - run: npx playwright test
       - name: Upload the report and traces
         if: failure()

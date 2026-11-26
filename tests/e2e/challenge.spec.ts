@@ -1,6 +1,7 @@
 import { expect, test, type Browser, type Page } from '@playwright/test'
 import { decodeShare, encodeShare, MAX_SHARE_PAYLOAD, parseShareHash } from '../../src/core/share/urlState'
 import { defaultWorkspace } from '../../src/core/workspace'
+import { axeViolations } from './axe'
 
 const OWN_CODE = 'mine = "student-own-code"\nprint(mine)\n'
 
@@ -218,15 +219,8 @@ test('the review panel and toolbar fit a 375px phone', async ({ browser }) => {
 test.describe('axe audit of the challenge states', () => {
   for (const colorScheme of ['light', 'dark'] as const) {
     test(`no violations in ${colorScheme} mode: review, active and unreproducible`, async ({ browser }) => {
-      // bypassCSP lets the test inject axe-core; the CSP itself is tested elsewhere
-      const { context, page } = await student(browser, { colorScheme, bypassCSP: true })
-      const audit = async () => {
-        await page.addScriptTag({ path: 'node_modules/axe-core/axe.min.js' })
-        return page.evaluate(async () => {
-          const axe = (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: { target: unknown }[] }[] }> } }).axe
-          return (await axe.run()).violations.map((v) => `${v.id}: ${v.nodes.map((n) => String(n.target)).join(' ; ')}`)
-        })
-      }
+      const { context, page } = await student(browser, { colorScheme })
+      const audit = () => axeViolations(page)
       // one step too many, so Start ends in "unreproducible"
       await page.goto(`/trace-table#s=${encodeShare(defaultWorkspace('x = 1\n'), { steps: 999, executionKey: 'abc' })}`)
       await expect(start(page)).toBeEnabled({ timeout: 80_000 })

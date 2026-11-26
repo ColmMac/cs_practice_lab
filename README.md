@@ -57,7 +57,7 @@ The dev server is at http://localhost:5173. It leaves out the CSP, so test heade
 | `npm run check:bundle` | After a build, check chunk sizes against `bundle-budget.json` |
 | `npm run preview` | Serve `dist/` **with the production security headers**, to test the real CSP |
 
-Before the E2E tests, run `npx playwright install chromium` once, and stop any `vite preview` on port 4173 (it would be reused, and might be a stale build). If the bundled Chromium can't start, set `$env:PW_CHANNEL = 'msedge'`.
+Before the E2E tests, run `npx playwright install chromium firefox webkit` once (Firefox and WebKit run only the smoke tests), and stop any `vite preview` on port 4173 (it would be reused, and might be a stale build). If the bundled Chromium can't start, set `$env:PW_CHANNEL = 'msedge'` (it doesn't affect Firefox or WebKit).
 
 On Windows, application-control policies can block programs inside a project `.venv`, so don't use `uv sync` or `uv run pytest`. The npm scripts use `uv run --no-project` instead.
 

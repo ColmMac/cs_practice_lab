@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { axeViolations } from './axe'
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('tts:welcomed', '1'))
@@ -57,24 +58,16 @@ test('Alt+W toggles the explanation from the keyboard and leaves the Tab order a
 })
 
 test.describe('axe audit with an explanation open', () => {
-  test.use({ bypassCSP: true }) // lets the test inject axe-core; the CSP itself is tested elsewhere
-
   for (const colorScheme of ['light', 'dark'] as const) {
     test(`no violations in ${colorScheme} mode, before and after Reveal`, async ({ page }) => {
       await page.emulateMedia({ colorScheme })
       await oneWrongIncrement(page)
       await why(page).click()
-      await page.addScriptTag({ path: 'node_modules/axe-core/axe.min.js' })
-      const audit = () =>
-        page.evaluate(async () => {
-          const axe = (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: { target: unknown }[] }[] }> } }).axe
-          return (await axe.run()).violations.map((v) => `${v.id}: ${v.nodes.map((n) => String(n.target)).join(' ; ')}`)
-        })
       await expect(callout(page)).toBeVisible()
-      expect(await audit()).toEqual([])
+      expect(await axeViolations(page)).toEqual([])
       await reveal(page).click()
       await expect(callout(page).locator('[data-part=result]')).toBeVisible()
-      expect(await audit()).toEqual([])
+      expect(await axeViolations(page)).toEqual([])
     })
   }
 })

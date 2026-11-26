@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { axeViolations } from './axe'
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('tts:welcomed', '1'))
@@ -12,18 +13,7 @@ const ROUTES = [
   ['/sorting-visualizer', 'Sorting & searching'],
 ] as const
 
-async function axeViolations(page: Page) {
-  await page.addScriptTag({ path: 'node_modules/axe-core/axe.min.js' })
-  return page.evaluate(async () => {
-    const axe = (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: { target: unknown }[] }[] }> } }).axe
-    const r = await axe.run()
-    return r.violations.map((v) => ({ id: v.id, targets: v.nodes.map((n) => n.target) }))
-  })
-}
-
 test.describe('axe audit of every route and the 404 page', () => {
-  test.use({ bypassCSP: true }) // lets the test inject axe-core; the CSP itself is tested elsewhere
-
   for (const theme of ['light', 'dark'] as const) {
     for (const [path] of [...ROUTES, ['/no-such-page']] as const) {
       test(`${path} has no axe violations in ${theme} mode`, async ({ page }) => {
@@ -89,8 +79,6 @@ test.describe('the trace page in projector mode', () => {
   })
 
   test.describe('axe', () => {
-    test.use({ bypassCSP: true })
-
     for (const theme of ['light', 'dark'] as const) {
       test(`no violations in ${theme} mode`, async ({ page }) => {
         await page.addInitScript((t) => localStorage.setItem('tts:theme', t), theme)

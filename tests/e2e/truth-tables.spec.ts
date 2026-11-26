@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { axeViolations } from './axe'
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('tts:welcomed', '1'))
@@ -108,7 +109,6 @@ test('export: downloads the key and the worksheet as Markdown, and is disabled f
 })
 
 test.describe('axe audit on the real page', () => {
-  test.use({ bypassCSP: true }) // lets the test inject axe-core; the CSP itself is tested elsewhere
 
   for (const theme of ['light', 'dark'] as const) {
     test(`no axe violations in ${theme} mode (table, error and study states)`, async ({ page }) => {
@@ -116,14 +116,9 @@ test.describe('axe audit on the real page', () => {
       await page.goto('/truth-tables?preset=full-adder')
       await expect(page.locator('html')).toHaveClass(theme === 'dark' ? /\bdark\b/ : /^(?!.*\bdark\b)/)
       await expect(page.getByRole('table', { name: 'Truth table' }).locator('tbody tr')).toHaveCount(8)
-      await page.addScriptTag({ path: 'node_modules/axe-core/axe.min.js' })
 
       const audit = async (label: string) => {
-        const results = await page.evaluate(async () => {
-          const axe = (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: { target: unknown }[] }[] }> } }).axe
-          const r = await axe.run()
-          return r.violations.map((v) => ({ id: v.id, targets: v.nodes.map((n) => n.target) }))
-        })
+        const results = await axeViolations(page)
         expect(results, `${label} (${theme})`).toEqual([])
       }
 

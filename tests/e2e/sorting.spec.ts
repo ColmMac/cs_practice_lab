@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises'
 import { expect, test, type Page } from '@playwright/test'
+import { axeViolations } from './axe'
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('tts:welcomed', '1'))
@@ -339,21 +340,14 @@ test('the quiz deep link opens in quiz mode: one right answer, one wrong', async
 })
 
 test.describe('axe audit on the real page', () => {
-  test.use({ bypassCSP: true }) // lets the test inject axe-core; the CSP itself is tested elsewhere
-
   for (const theme of ['light', 'dark'] as const) {
     test(`no axe violations in ${theme} mode`, async ({ page }) => {
       await page.addInitScript((t) => localStorage.setItem('tts:theme', t), theme)
       await page.goto('/sorting-visualizer')
       await expect(page.locator('html')).toHaveClass(theme === 'dark' ? /\bdark\b/ : /^(?!.*\bdark\b)/)
       await expect(page.getByRole('heading', { level: 1, name: 'Sorting & searching' })).toBeVisible()
-      await page.addScriptTag({ path: 'node_modules/axe-core/axe.min.js' })
       const audit = async (label: string) => {
-        const results = await page.evaluate(async () => {
-          const axe = (window as unknown as { axe: { run: () => Promise<{ violations: { id: string; nodes: { target: unknown }[] }[] }> } }).axe
-          const r = await axe.run()
-          return r.violations.map((v) => ({ id: v.id, targets: v.nodes.map((n) => n.target) }))
-        })
+        const results = await axeViolations(page)
         expect(results, `${label} (${theme})`).toEqual([])
       }
       await audit('start')
@@ -388,7 +382,6 @@ test.describe('axe audit on the real page', () => {
       await audit('quiz next question')
       await page.goto('/sorting-visualizer?algo=binary&data=3,9,10,23,27,38,43,82&target=82&quiz=1')
       await expect(page.getByRole('radio', { name: 'Quiz' })).toBeChecked()
-      await page.addScriptTag({ path: 'node_modules/axe-core/axe.min.js' }) // a new page load drops axe
       await audit('deep link quiz')
     })
   }

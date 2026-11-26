@@ -1,4 +1,4 @@
-import { defineConfig } from '@playwright/test'
+import { defineConfig, devices } from '@playwright/test'
 
 /**
  * E2E runs against PRODUCTION builds served by `vite preview`, so the real security headers (CSP and COOP from
@@ -6,12 +6,17 @@ import { defineConfig } from '@playwright/test'
  *
  * Two projects, two builds. `app` is the build as it ships today, with no AdSense IDs. `ads` runs the tests tagged
  * @ads against a second build with fake IDs, in dist-ads/. Both servers start whichever tests are selected.
+ * `firefox` and `webkit` run only the tests tagged @smoke, against the `app` build.
  *
- * Browser: bundled Chromium by default. If it cannot launch (e.g. Windows Application Control),
- * run with a system browser instead:  $env:PW_CHANNEL = 'msedge'  (or 'chrome').
+ * Browsers: `npx playwright install chromium firefox webkit` once. `app` and `ads` use bundled Chromium; if it
+ * cannot launch (e.g. Windows Application Control), run those two with a system browser instead:
+ * $env:PW_CHANNEL = 'msedge'  (or 'chrome').
  */
 const PORT = 4173
 const ADS_PORT = 4174
+
+/** A system browser in place of bundled Chromium: the Chromium projects only. */
+const channel = process.env.PW_CHANNEL || undefined
 
 /** This process's environment with the AdSense variables set. A variable that is set, even to nothing, wins over .env files. */
 const withAds = (client: string, slot: string) => ({
@@ -32,12 +37,18 @@ export default defineConfig({
   reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : [['list']],
   use: {
     baseURL: `http://localhost:${PORT}`,
-    channel: process.env.PW_CHANNEL || undefined,
     trace: 'retain-on-failure',
   },
   projects: [
-    { name: 'app', grepInvert: /@ads/ },
-    { name: 'ads', testMatch: /adslot\.spec\.ts/, grep: /@ads/, use: { baseURL: `http://localhost:${ADS_PORT}` } },
+    { name: 'app', grepInvert: /@ads/, use: { channel } },
+    {
+      name: 'ads',
+      testMatch: /adslot\.spec\.ts/,
+      grep: /@ads/,
+      use: { channel, baseURL: `http://localhost:${ADS_PORT}` },
+    },
+    { name: 'firefox', grep: /@smoke/, use: { ...devices['Desktop Firefox'] } },
+    { name: 'webkit', grep: /@smoke/, use: { ...devices['Desktop Safari'] } },
   ],
   webServer: [
     {
