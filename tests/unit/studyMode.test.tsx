@@ -8,6 +8,7 @@ import { encodeShare, decodeShare } from '../../src/core/share/urlState'
 import type { TraceOptions, TraceResult } from '../../src/core/types'
 import { defaultWorkspace } from '../../src/core/workspace'
 import { resetRunPress } from '../../src/components/layout/runPress'
+import { firstStudyInput } from '../../src/components/study/navigation'
 import { useStore } from '../../src/store'
 import { STORAGE_KEY } from '../../src/store/persistence'
 import { setRunnerOverride } from '../../src/store/runner'
@@ -71,6 +72,12 @@ async function startStudy(user: ReturnType<typeof userEvent.setup>) {
   await screen.findByRole('table')
   await user.click(toggle())
   await screen.findByRole('region', { name: 'Study mode' })
+  // The toggle focuses the first box an animation frame later. Wait for it, or on a slow machine it lands in the
+  // middle of the test and takes focus back from wherever the test has put it.
+  await waitFor(() => {
+    const first = firstStudyInput(document)
+    if (first) expect(document.activeElement).toBe(first)
+  })
 }
 
 /** Types every answer by clicking each box (the fast path for tests that aren't about the keyboard). */
