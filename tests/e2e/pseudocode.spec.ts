@@ -64,6 +64,7 @@ test('a syntax error and a construct with no equivalent are both reported honest
   await expect(pseudo(page)).toHaveCount(0)
 
   await page.locator('.cm-content').fill('squares = [n * n for n in range(4)]\nprint(squares)')
+  await page.waitForTimeout(1000) // Run has a one-second cooldown
   await page.getByRole('button', { name: /^Run$/ }).click()
   await expect(pseudo(page).locator('li').first()).toContainText('squares = [n * n for n in range(4)]')
   await expect(pseudo(page).locator('li').first()).toContainText('no exam equivalent')

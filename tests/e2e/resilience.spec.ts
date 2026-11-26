@@ -18,6 +18,7 @@ async function openTracePage(page: Page) {
 
 async function run(page: Page, code: string) {
   await page.locator('.cm-content').first().fill(code)
+  await page.waitForTimeout(1000) // Run has a one-second cooldown
   await page.keyboard.press('Control+Enter')
 }
 

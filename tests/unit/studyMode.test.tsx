@@ -7,6 +7,7 @@ import { FakeTraceRunner } from '../../src/core/fake/FakeTraceRunner'
 import { encodeShare, decodeShare } from '../../src/core/share/urlState'
 import type { TraceOptions, TraceResult } from '../../src/core/types'
 import { defaultWorkspace } from '../../src/core/workspace'
+import { resetRunPress } from '../../src/components/layout/runPress'
 import { useStore } from '../../src/store'
 import { STORAGE_KEY } from '../../src/store/persistence'
 import { setRunnerOverride } from '../../src/store/runner'
@@ -91,6 +92,7 @@ async function fillAll(user: ReturnType<typeof userEvent.setup>, answers: string
 }
 
 beforeEach(() => {
+  resetRunPress() // each test starts outside the Run cooldown
   localStorage.clear()
   history.replaceState(null, '', '/')
 })

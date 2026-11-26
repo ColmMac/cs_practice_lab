@@ -39,6 +39,7 @@ test('Python runs without cross-origin isolation, and a runaway program is still
   await expect(page.getByText(/step limit|time limit|too long|stopped/i).first()).toBeVisible()
 
   await editor.fill('total = 40 + 2')
+  await page.waitForTimeout(1000) // Run has a one-second cooldown
   await page.keyboard.press('Control+Enter')
   await expect(page.getByRole('table', { name: 'Trace table' }).getByRole('cell', { name: '42' })).toBeVisible()
   expect(problems).toEqual([])

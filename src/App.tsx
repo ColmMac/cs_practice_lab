@@ -19,6 +19,7 @@ import { SharedBanner } from './components/layout/SharedBanner'
 import { ChallengePanel } from './components/layout/ChallengePanel'
 import { WatchPanel } from './components/editor/WatchPanel'
 import { useProjectorClass } from './components/ui/useProjectorClass'
+import { pressRun } from './components/layout/runPress'
 import { runSignature, useStore } from './store'
 
 /** `preparingStudy`: a practice link is about to replace whatever table is here, so none may show. */
@@ -41,7 +42,7 @@ export function App({ preparingStudy = false }: { preparingStudy?: boolean }) {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && !e.defaultPrevented) {
         e.preventDefault()
-        void useStore.getState().run()
+        void pressRun()
       }
     }
     window.addEventListener('keydown', onKey)

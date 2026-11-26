@@ -7,6 +7,7 @@ import { FakeTraceRunner } from '../../src/core/fake/FakeTraceRunner'
 import { encodeShare } from '../../src/core/share/urlState'
 import type { TraceOptions, TraceResult } from '../../src/core/types'
 import { defaultWorkspace } from '../../src/core/workspace'
+import { resetRunPress } from '../../src/components/layout/runPress'
 import { useStore } from '../../src/store'
 import { STORAGE_KEY } from '../../src/store/persistence'
 import { setRunnerOverride } from '../../src/store/runner'
@@ -50,6 +51,7 @@ const headers = () => within(table()).getAllByRole('columnheader').map((h) => h.
 const stored = () => JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null') as { state: Record<string, unknown> } | null
 
 beforeEach(() => {
+  resetRunPress() // each test starts outside the Run cooldown
   localStorage.clear()
   history.replaceState(null, '', '/')
 })

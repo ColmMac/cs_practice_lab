@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { MemoryRouter } from 'react-router'
 import { App } from '../../src/App'
+import { resetRunPress } from '../../src/components/layout/runPress'
 import { FakeTraceRunner } from '../../src/core/fake/FakeTraceRunner'
 import { decodeShare, encodeShare, parseShareHash, type ChallengeSpec } from '../../src/core/share/urlState'
 import { DEFAULT_STUDY_CONFIG, type StudyConfig } from '../../src/core/study/types'
@@ -87,7 +88,10 @@ async function openAndStart(hash = challengeHash(), result?: TraceResult) {
   return ctx
 }
 
-beforeEach(() => localStorage.clear())
+beforeEach(() => {
+  localStorage.clear()
+  resetRunPress() // each test starts outside the Run cooldown
+})
 afterEach(() => {
   watcher?.disconnect()
   cleanup()

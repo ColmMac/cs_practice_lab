@@ -9,47 +9,42 @@ import { ChallengeLinkButton } from './ChallengeLinkButton'
 import { Button } from '../ui/Button'
 import { ToolHeader } from '../ui/ToolHeader'
 import { ProjectorToggle } from '../ui/ProjectorToggle'
-import { Check, Play } from 'lucide-react'
+import { Play } from 'lucide-react'
 import { ICON_BEFORE } from '../ui/icons'
 import { shownPresetId } from './shownPreset'
-import { useJustRan } from './useJustRan'
+import { inRunCooldown, pressRun, useRunLit } from './runPress'
 
 export function Toolbar() {
-  const { language, run, cancel, running, runnerStatus, loadPreset } = useStore()
+  const { language, cancel, running, runnerStatus, loadPreset } = useStore()
   const inChallenge = useStore((s) => s.challenge !== null)
   const presets = getLanguage(language).presets
   const shownPreset = useStore((s) => shownPresetId(s, presets))
-  const justRan = useJustRan()
+  const lit = useRunLit((s) => s.lit)
   const notReady = runnerStatus.state !== 'ready' && runnerStatus.state !== 'running'
 
   return (
     <ToolHeader title={SITE_NAME}>
       {running ? (
-        <Button variant="danger" onClick={cancel}>
+        // a quick second press of Run lands here (it is the same button), so the cooldown covers it too
+        <Button variant="danger" onClick={() => !inRunCooldown() && cancel()}>
           Cancel
         </Button>
       ) : (
         <Button
           variant="primary"
-          onClick={() => void run()}
+          onClick={() => void pressRun()}
           disabled={notReady || inChallenge}
           title={inChallenge ? 'Run is off during a challenge: use Start challenge or End challenge' : 'Run (Ctrl/⌘ + Enter)'}
-          className="relative"
+          data-lit={lit || undefined}
+          // lights up and fades back; only colour and glow change, so the toolbar holds still
+          className="transition-[filter,box-shadow] duration-300 data-lit:ring-4 data-lit:ring-accent-fill/40 data-lit:brightness-135"
         >
-          {/* the same size either way, so the toolbar holds still */}
-          {justRan ? <Check aria-hidden="true" className={ICON_BEFORE} /> : <Play aria-hidden="true" className={ICON_BEFORE} />}
+          <Play aria-hidden="true" className={ICON_BEFORE} />
           Run
-          {justRan && (
-            <span aria-hidden="true" data-testid="ran-light" className="pointer-events-none absolute -top-1.5 -right-1.5 size-3.5">
-              {/* three pulses, then the light stays still until it goes */}
-              <span className="absolute inset-0 rounded-full bg-ran-light motion-safe:animate-[ping_0.8s_ease-out_3]" />
-              <span className="absolute inset-0 rounded-full border-2 border-bg bg-ran-light" />
-            </span>
-          )}
         </Button>
       )}
       <span aria-live="polite" className="sr-only">
-        {justRan ? 'Program ran' : ''}
+        {lit ? 'Program ran' : ''}
       </span>
 
       <label className="flex items-center gap-2 text-sm">
