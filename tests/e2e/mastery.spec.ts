@@ -40,7 +40,7 @@ test('practise the next preset from the home page, master it, and be offered the
 
   for (const [i, answer] of ANSWERS.entries()) await boxes(page).nth(i).fill(answer)
   await page.getByRole('button', { name: 'Check answers' }).click()
-  await expect(page.getByText('Score: 5 / 5 · 100%')).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Score', exact: true })).toContainText('Score: 5 / 5 · 100%')
   await expect(page.getByRole('region', { name: 'Score' })).toBeFocused()
 
   await goHome(page)

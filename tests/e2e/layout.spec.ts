@@ -5,7 +5,7 @@ test.beforeEach(async ({ page }) => {
 })
 
 const TOOL_ROUTES = ['/trace-table', '/truth-tables', '/number-systems', '/sorting-visualizer'] as const
-const ALL_ROUTES = ['/', ...TOOL_ROUTES, '/about', '/privacy', '/no-such-page'] as const
+const ALL_ROUTES = ['/', ...TOOL_ROUTES, '/about', '/privacy', '/accessibility', '/no-such-page'] as const
 
 const footer = (page: Page) => page.getByRole('contentinfo')
 const nav = (page: Page) => page.getByRole('navigation', { name: 'Tools' })
@@ -43,7 +43,13 @@ test.describe('on a desktop screen', () => {
       const box = (await footer(page).boundingBox())!
       expect(box.y, 'the footer starts below the fold').toBeGreaterThanOrEqual(799)
       await toBottom(page)
-      await expect(footer(page)).toBeInViewport({ ratio: 1 })
+      await expect(footer(page)).toBeInViewport()
+      // All of it, to the pixel: a fractional page height can leave part of a pixel below the last scroll position.
+      const end = async () => {
+        const f = (await footer(page).boundingBox())!
+        return f.y + f.height
+      }
+      await expect.poll(end).toBeLessThanOrEqual(801)
       // the nav stays at the top of the scrolled page
       expect((await nav(page).boundingBox())!.y).toBeCloseTo(0, 0)
       expect(await sideways(page)).toBeLessThanOrEqual(0)

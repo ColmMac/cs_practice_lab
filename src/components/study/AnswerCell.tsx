@@ -1,7 +1,8 @@
 import type { Explanation } from '../../core/explain/stepExplainer'
 import type { Grade } from '../../core/study/types'
 import { WhyCallout } from './WhyCallout'
-import { Eye } from 'lucide-react'
+import { Check, Eye, X } from 'lucide-react'
+import { useAnnounce } from '../ui/announce'
 
 interface Props {
   /** `${stepIndex}:${columnId}`; also what keyboard navigation groups by column */
@@ -25,7 +26,6 @@ interface Props {
   why?: Explanation | null
 }
 
-const ICON = { correct: '✓', close: '≈', incorrect: '✗' } as const
 const WORD = { correct: 'Correct', close: 'Almost', incorrect: 'Not correct' } as const
 const TONE = {
   correct: 'border-emerald-600 bg-emerald-50 text-emerald-950 dark:bg-emerald-950/60 dark:text-emerald-100',
@@ -37,9 +37,22 @@ const NEUTRAL = 'border-slate-400 bg-white text-slate-900 dark:border-slate-600 
 const iconBtn =
   'rounded border border-slate-300 px-1 text-[11px] leading-5 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800'
 
+const VERDICT_ICON = 'mr-0.5 inline-block size-3 align-[-0.125em]'
+
+/** The shape beside the word, so a verdict never rests on colour. "Almost" keeps its ≈ sign. */
+function VerdictIcon({ state }: { state: Grade['state'] }) {
+  if (state === 'close') return <span aria-hidden="true">≈ </span>
+  const Icon = state === 'correct' ? Check : X
+  return <Icon aria-hidden="true" strokeWidth={3} className={VERDICT_ICON} />
+}
+
 /** One masked cell (tool-agnostic): a text box for the student's prediction, with Hint / Reveal and per-cell feedback after checking. */
 export function AnswerCell({ cellKey, colId, label, answer, grade, revealed, truthText, hint, onAnswer, onReveal, onHint, onFocusCell, onWhy, why }: Props) {
   const whyId = `study-why-${cellKey}`
+  const offerWhy = !!onWhy && grade?.state === 'incorrect'
+  const open = !revealed && offerWhy && !!why
+  // opening it with Alt+W reads it out
+  useAnnounce(open && why ? why.parts.map((p) => p.s).join('') : '')
   if (revealed) {
     return (
       <div className="flex flex-col gap-1">
@@ -53,8 +66,6 @@ export function AnswerCell({ cellKey, colId, label, answer, grade, revealed, tru
   }
 
   const msgId = `study-msg-${cellKey}`
-  const offerWhy = !!onWhy && grade?.state === 'incorrect'
-  const open = offerWhy && !!why
   const described = [grade || hint ? msgId : '', open ? whyId : ''].filter(Boolean).join(' ') || undefined
   return (
     <div className="flex min-w-[6rem] flex-col gap-0.5">
@@ -113,7 +124,7 @@ export function AnswerCell({ cellKey, colId, label, answer, grade, revealed, tru
         <span id={msgId} className="text-[11px] leading-tight font-sans projector:text-sm">
           {grade && (
             <span className="font-semibold">
-              <span aria-hidden="true">{ICON[grade.state]} </span>
+              <VerdictIcon state={grade.state} />
               {WORD[grade.state]}
               {grade.message && grade.state !== 'correct' ? ` — ${grade.message}` : ''}
             </span>
@@ -138,8 +149,7 @@ export function AnswerCell({ cellKey, colId, label, answer, grade, revealed, tru
           Why?
         </button>
       )}
-      {/* the live region exists before the text arrives, so opening it with Alt+W is announced */}
-      {onWhy && <div aria-live="polite">{open && why && <WhyCallout id={whyId} explanation={why} />}</div>}
+      {open && why && <WhyCallout id={whyId} explanation={why} />}
     </div>
   )
 }

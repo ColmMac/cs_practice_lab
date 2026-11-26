@@ -32,8 +32,8 @@ test('the Condition column shows every test, including the final False, and repl
   const whileRows = table.locator('tbody tr[data-line="5"]')
   await expect(whileRows).toHaveCount(4)
   const column = (await table.getByRole('columnheader').allTextContents()).indexOf('Condition')
-  await expect(whileRows.last().locator('td').nth(column)).toHaveText('False')
-  await expect(whileRows.first().locator('td').nth(column)).toHaveText('True')
+  await expect(whileRows.last().locator('th, td').nth(column)).toHaveText('False')
+  await expect(whileRows.first().locator('th, td').nth(column)).toHaveText('True')
   await expect(table.getByLabel(/^condition (true|false)$/)).toHaveCount(0)
 })
 

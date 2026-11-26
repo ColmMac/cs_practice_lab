@@ -85,8 +85,8 @@ describe('the two palettes', () => {
 })
 
 describe('editorChrome', () => {
-  it('is a list of extensions (accessible name + per-theme row highlights)', () => {
+  it('is a list of extensions (accessible name, focus ring, per-theme row highlights)', () => {
     expect(Array.isArray(editorChrome)).toBe(true)
-    expect(editorChrome.length).toBe(2)
+    expect(editorChrome.length).toBe(3)
   })
 })

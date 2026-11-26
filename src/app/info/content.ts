@@ -1,11 +1,11 @@
 /**
- * The text of /about and /privacy, as data: the React pages and the static <noscript> copy both render it, so they
+ * The text of /about, /privacy and /accessibility, as data: the React pages and the static <noscript> copy both render it, so they
  * can't drift. `vite.config.ts` imports this in Node, so keep it free of React.
  *
  * The privacy text describes only what actually runs. A new storage key, a new third-party request or new URL
  * state changes this file in the same commit (a unit test checks the storage keys).
  */
-import { CONTACT_EMAIL, REPO_URL, SITE_NAME, SUPPORT_URL } from '../../config/site.ts'
+import { CONTACT_EMAIL, NON_AFFILIATION, REPO_URL, SITE_NAME, SUPPORT_URL } from '../../config/site.ts'
 import { TOOLS } from '../tools.ts'
 
 export type Inline = string | { text: string; href: string }
@@ -23,11 +23,15 @@ export interface InfoDoc {
   sections: Section[]
   /** ISO date. */
   updated?: string
+  /** What the date is called. 'Last updated' when left out. */
+  updatedLabel?: string
 }
 
 const email = { text: CONTACT_EMAIL, href: `mailto:${CONTACT_EMAIL}` }
 
-export const PRIVACY_UPDATED = '2026-11-25'
+export const PRIVACY_UPDATED = '2026-11-26'
+/** Change this only after checking the accessibility page against the real site. */
+export const ACCESSIBILITY_REVIEWED = '2026-11-26'
 
 export const ABOUT: InfoDoc = {
   intro: [
@@ -39,7 +43,8 @@ export const ABOUT: InfoDoc = {
       blocks: [
         {
           p: [
-            'Students on UK GCSE, SQA National 5 and Higher, and A-Level computer science courses, university students on a first programming course (CS1), and the people who teach them. Not every tool matches every course, so check your own specification. The site is not affiliated with or endorsed by any exam board.',
+            'Students on UK GCSE, SQA National 5 and Higher, and A-Level computer science courses, university students on a first programming course (CS1), and the people who teach them. Not every tool matches every course, so check your own specification.',
+            ` ${NON_AFFILIATION}`,
           ],
         },
       ],
@@ -83,6 +88,23 @@ export const ABOUT: InfoDoc = {
   ],
 }
 
+/** The short version at the top of /privacy. Every line has to be true for the build it appears in. */
+function privacySummary(adsEnabled: boolean): Inline[][] {
+  return [
+    adsEnabled
+      ? ['Google supplies the adverts. Advertising cookies and similar storage need your consent, and Google’s consent message asks for it.']
+      : ['We set no cookies.'],
+    ['We don’t collect or keep personal data ourselves while you use the tools. If you email us, we get your email address and your message.'],
+    [
+      'Other services do receive personal data, because under the UK GDPR your IP address counts as personal data. Cloudflare, which hosts the site, receives it. So does jsDelivr when your browser downloads Python from it.',
+      ...(adsEnabled ? [' Google receives it too, to show adverts.'] : []),
+    ],
+    [
+      'The site’s own browser storage (entries beginning tts: or hub:) is there for features you use. It stays on your device and isn’t sent to us. We treat it as strictly necessary under the Privacy and Electronic Communications Regulations (PECR), regulation 6 and Schedule A1, paragraph 4, so it needs no consent banner.',
+    ],
+  ]
+}
+
 export function privacyDoc(adsEnabled: boolean): InfoDoc {
   return {
     updated: PRIVACY_UPDATED,
@@ -90,6 +112,7 @@ export function privacyDoc(adsEnabled: boolean): InfoDoc {
       `This page says what happens to information when you use ${SITE_NAME}. “We” means the people who run the site. There are no accounts, and we don’t ask for your name or email address. We run no analytics.`,
     ],
     sections: [
+      { heading: 'In short', blocks: [{ ul: privacySummary(adsEnabled) }] },
       {
         heading: 'Saved in your browser',
         blocks: [
@@ -234,4 +257,78 @@ export function privacyDoc(adsEnabled: boolean): InfoDoc {
       },
     ],
   }
+}
+
+export const ACCESSIBILITY: InfoDoc = {
+  updated: ACCESSIBILITY_REVIEWED,
+  updatedLabel: 'Last reviewed',
+  intro: [
+    `We want everyone to be able to use ${SITE_NAME}. The site aims to meet level AA of the Web Content Accessibility Guidelines (WCAG) 2.1. We are still testing it, so we don’t claim that it meets them yet.`,
+  ],
+  sections: [
+    {
+      heading: 'Using a keyboard',
+      blocks: [
+        {
+          ul: [
+            ['“Skip to content” is the first thing the Tab key reaches on each page. It takes you past the navigation.'],
+            ['Whatever has keyboard focus is outlined or highlighted.'],
+            ['On the trace table page, Ctrl+Enter (⌘+Enter on a Mac) runs your program.'],
+            ['In the code editor, Tab indents your code. To leave the editor, press Escape and then, within two seconds, Tab (or Shift+Tab to go back).'],
+            ['In a trace table outside Study mode, Tab moves to a row, and Enter or Space highlights its line of code.'],
+          ],
+        },
+        { p: ['In Study mode and other self-test questions, from an answer box:'] },
+        {
+          ul: [
+            ['Enter or ↓: next box. After the last box, Check answers.'],
+            ['Shift+Enter or ↑: previous box.'],
+            ['Alt+H: hint.'],
+            ['Alt+R: reveal the answer, when revealing is allowed.'],
+            ['Alt+W, in a trace table: show why an answer was wrong.'],
+          ],
+        },
+      ],
+    },
+    {
+      heading: 'Display, motion and sound',
+      blocks: [
+        {
+          ul: [
+            ['Light and dark mode: the site follows your device’s setting until you choose one with the button at the top of the page.'],
+            ['Projector mode, on the trace table page, makes text bigger and hides some panels, for showing on a screen.'],
+            ['If your device asks for reduced motion, the site turns off its slides, fades, spinning icons and smooth scrolling. The sorting player only moves on by itself after you press Play.'],
+            ['Marked answers and the states in the sorting tool are shown with words or symbols as well as colour.'],
+            ['Results such as a finished run or your score are announced to screen readers. The site plays no sounds of its own.'],
+          ],
+        },
+      ],
+    },
+    {
+      heading: 'Known limitations',
+      blocks: [
+        {
+          ul: [
+            ['Our testing so far is mostly automated. We have not yet finished a manual test with screen readers.'],
+            ['The code editor (CodeMirror) may not work well with some screen readers.'],
+            ['A table saved as a PNG image has no text alternative. The CSV and Markdown exports give you a table as text.'],
+            ['In a trace table with more than 300 rows, outside Study mode, only the rows near the visible area are loaded. Your browser’s Find command and some screen reader table commands can’t reach the others. The CSV and Markdown exports contain every row.'],
+            ['The Tab key skips the small hint and reveal buttons beside each answer box, so use Alt+H and Alt+R from the keyboard. We have not tested the Alt shortcuts on a Mac, where the Option key can type a symbol instead.'],
+          ],
+        },
+      ],
+    },
+    {
+      heading: 'Report a problem',
+      blocks: [
+        {
+          p: [
+            'If something is hard or impossible to use, email ',
+            email,
+            '. It helps to know which page you were on, what you were trying to do, and which browser and assistive technology you use.',
+          ],
+        },
+      ],
+    },
+  ],
 }

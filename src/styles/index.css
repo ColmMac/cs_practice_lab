@@ -103,6 +103,33 @@ html {
   scroll-padding-top: var(--nav-h);
 }
 
+/*
+ * The default focus ring, for anything that doesn't style its own: 2px of the accent, which is at least 3:1 against
+ * both themes' surfaces. In the base layer, so a component's focus-visible utilities still win.
+ */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+}
+
+/*
+ * Reduced motion: no slides, fades, spins or smooth scrolling anywhere, third-party styles included. Not zero, so
+ * `transitionend` still fires.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0s !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* Projector mode: bigger text and fewer panels on the trace page. The class is on <html> only while that page is up. */
 @custom-variant projector (&:where(.projector, .projector *));
 

@@ -6,7 +6,7 @@ import { watchForProblems } from './pageProblems'
  * The per-path cache rules are applied by the host only, so tests/unit/deploy.test.ts covers those.
  */
 
-const ROUTES = ['/', '/trace-table', '/truth-tables', '/number-systems', '/sorting-visualizer', '/about', '/privacy']
+const ROUTES = ['/', '/trace-table', '/truth-tables', '/number-systems', '/sorting-visualizer', '/about', '/privacy', '/accessibility']
 
 test('pages are served with the ad-compatible security headers', async ({ request }) => {
   for (const path of ROUTES) {
@@ -15,6 +15,7 @@ test('pages are served with the ad-compatible security headers', async ({ reques
     expect(headers['cross-origin-opener-policy'], path).toBe('same-origin-allow-popups')
     expect(headers['referrer-policy'], path).toBe('strict-origin-when-cross-origin')
     expect(headers['x-content-type-options'], path).toBe('nosniff')
+    expect(headers['x-frame-options'], path).toBe('DENY')
     expect(headers['content-security-policy'], path).toContain("frame-ancestors 'none'")
     expect(headers['content-security-policy'], path).not.toContain("'unsafe-eval'")
   }

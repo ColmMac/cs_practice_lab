@@ -8,6 +8,9 @@ import { usePresetParam } from './usePresetParam'
 
 const GUIDE = findGuide('/trace-table')!
 
+/** For the error panel's Reset Tool. Exported from this chunk, so the entry chunk never imports the store. */
+export const resetTraceTool = () => useStore.getState().resetTool()
+
 /** The trace-table route: the app plus `?preset=` handling. Lazy-loaded, so the home page never pulls in the store. */
 export function TraceTableRoute() {
   const preparingStudy = usePresetParam()

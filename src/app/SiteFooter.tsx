@@ -1,7 +1,7 @@
 import { Coffee } from 'lucide-react'
 import { Link } from 'react-router'
 import { LINK_CLASSES } from '../components/ui/links'
-import { CONTACT_EMAIL, REPO_URL, SITE_NAME, SUPPORT_URL } from '../config/site'
+import { CONTACT_EMAIL, NON_AFFILIATION, REPO_URL, SITE_NAME, SUPPORT_URL } from '../config/site'
 
 /** The one <footer> on every page. It sits below the workspace in the scrolling document. */
 export function SiteFooter() {
@@ -13,6 +13,9 @@ export function SiteFooter() {
       </Link>
       <Link to="/privacy" className={LINK_CLASSES.footer}>
         Privacy
+      </Link>
+      <Link to="/accessibility" className={LINK_CLASSES.footer}>
+        Accessibility
       </Link>
       <a href={`mailto:${CONTACT_EMAIL}`} className={LINK_CLASSES.footer}>
         Contact
@@ -27,6 +30,7 @@ export function SiteFooter() {
         <Coffee aria-hidden className="size-3.5 text-accent" />
         Buy me a coffee
       </a>
+      <span>{NON_AFFILIATION}</span>
       <span className="tabular-nums sm:ml-auto">© {new Date().getFullYear()}</span>
     </footer>
   )

@@ -9,6 +9,7 @@ import { numberUrlParams, parseNumberUrl, toBinary, type Mode, type Topic, type 
 import { newSeed } from '../../core/study/rng'
 import { AdSlot } from '../ui/AdSlot'
 import { useAdsAllowed } from '../ui/useAdsAllowed'
+import { useAnnounce } from '../ui/announce'
 import { Badge } from '../ui/Badge'
 import { Button } from '../ui/Button'
 import { Panel } from '../ui/Panel'
@@ -20,6 +21,20 @@ import { BitRegister } from './BitRegister'
 import { PracticeView } from './PracticeView'
 import { FIELDS, SHIFTS, sumLine, useBitSandbox, type Note, type ShiftKind } from './useBitSandbox'
 
+const overflowText = (overflow: boolean) =>
+  overflow ? 'Overflow: the signed value is no longer doubled.' : 'No overflow: the signed value doubled.'
+
+/** The note in one sentence, as it is read out. */
+function noteText(note: Note): string {
+  if (!note) return ''
+  if (note.kind === 'shift') {
+    const base = `${SHIFTS[note.shift].label} shift by 1. Bit shifted out: ${note.out ?? 'none'}.`
+    return note.overflow === undefined ? base : `${base} ${overflowText(note.overflow)}`
+  }
+  if (note.kind === 'invert') return 'Every bit flipped (one’s complement).'
+  return `Two’s complement: invert ${toBinary(note.before)} → ${toBinary(note.inverted)}, then add 1.`
+}
+
 function Explain({ note }: { note: Note }) {
   if (!note) return null
   if (note.kind === 'shift') {
@@ -30,21 +45,14 @@ function Explain({ note }: { note: Note }) {
           <strong data-testid="bit-out">{note.out ?? 'none'}</strong>.
         </p>
         {note.overflow !== undefined && (
-          <Badge tone={note.overflow ? 'warn' : 'ok'}>
-            {note.overflow
-              ? 'Overflow: the signed value is no longer doubled.'
-              : 'No overflow: the signed value doubled.'}
+          <Badge tone={note.overflow ? 'warn' : 'ok'} quiet>
+            {overflowText(note.overflow)}
           </Badge>
         )}
       </>
     )
   }
-  if (note.kind === 'invert') return <p>Every bit flipped (one’s complement).</p>
-  return (
-    <p className="font-mono">
-      Two’s complement: invert {toBinary(note.before)} → {toBinary(note.inverted)}, then add 1.
-    </p>
-  )
+  return <p className={note.kind === 'negate' ? 'font-mono' : undefined}>{noteText(note)}</p>
 }
 
 export function NumberSystemsPage() {
@@ -61,6 +69,10 @@ export function NumberSystemsPage() {
   const guide = mode === 'practice' ? null : findGuide('/number-systems')!
 
   useUrlMirror(numberUrlParams({ mode, width: s.width, bits: s.bits, topic, seed }))
+  // the conversion, once typing stops; what a button did; and what was wrong with a typed value
+  useAnnounce(sumLine(s.bits, s.view), { delay: 700 })
+  useAnnounce(noteText(s.note), { on: s.note, delay: 700 })
+  useAnnounce(FIELDS.map((f) => (s.errors[f.base] ? `${f.label}: ${s.errors[f.base]}` : '')).join(''), { delay: 700 })
   return (
     <>
       <PageMeta title="Number systems" description={toolDescription('/number-systems')} faq={guide?.faq} />
@@ -109,7 +121,7 @@ export function NumberSystemsPage() {
               <Panel title="Register">
                 <div className="flex flex-col gap-3 p-3">
                   <BitRegister bits={s.bits} view={s.view} onToggle={s.toggle} />
-                  <p data-testid="sum-line" className="font-mono text-sm" aria-live="polite">
+                  <p data-testid="sum-line" className="font-mono text-sm">
                     {sumLine(s.bits, s.view)}
                   </p>
                 </div>
@@ -131,7 +143,7 @@ export function NumberSystemsPage() {
                       Negate
                     </Button>
                   </div>
-                  <div aria-live="polite" className="flex min-h-5 flex-col gap-1 text-sm">
+                  <div className="flex min-h-5 flex-col gap-1 text-sm">
                     <Explain note={s.note} />
                   </div>
                 </div>
@@ -163,7 +175,6 @@ export function NumberSystemsPage() {
                         />
                         <p
                           id={`num-${f.base}-err`}
-                          aria-live="polite"
                           className="min-h-4 text-xs text-red-700 dark:text-red-300"
                         >
                           {err}

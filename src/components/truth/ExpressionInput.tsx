@@ -1,4 +1,5 @@
 import { useRef } from 'react'
+import { useAnnounce } from '../ui/announce'
 import { Button } from '../ui/Button'
 import type { Parsed } from './useTruthPage'
 
@@ -34,6 +35,7 @@ export function ExpressionInput({
 }) {
   const ref = useRef<HTMLTextAreaElement>(null)
   const error = parsed.ok ? null : (parsed.error?.message ?? 'That expression could not be read.')
+  useAnnounce(error && `Error: ${error}`, { delay: 700 })
 
   const insert = (token: string) => {
     const el = ref.current
@@ -74,7 +76,7 @@ export function ExpressionInput({
           </Button>
         ))}
       </div>
-      <div id="truth-expr-status" aria-live="polite" className="min-h-5 text-sm">
+      <div id="truth-expr-status" className="min-h-5 text-sm">
         {error && (
           <p className="text-red-700 dark:text-red-300">
             <span className="font-semibold">Error:</span> {error}

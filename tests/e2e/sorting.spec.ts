@@ -140,7 +140,7 @@ const historyRows = async (page: Page) => {
   const rows = page.getByRole('table', { name: /after each pass/ }).locator('tbody tr')
   await expect(rows.first()).toBeVisible()
   return rows.evaluateAll((trs) =>
-    trs.map((tr) => Array.from(tr.querySelectorAll('td')).slice(1).map((td) => td.textContent ?? '')),
+    trs.map((tr) => Array.from(tr.querySelectorAll('th, td')).slice(1).map((td) => td.textContent ?? '')),
   )
 }
 
@@ -156,11 +156,11 @@ test('the pass table lists every pass and follows the visualiser', async ({ page
   await expect(current).toContainText('Start')
   await step(page).click()
   await expect(current).toHaveCount(1)
-  await expect(current.locator('td').nth(1)).toHaveText('1') // pass 1 is under way
+  await expect(current.locator('th, td').nth(1)).toHaveText('1') // pass 1 is under way
   for (let i = 0; i < 8; i++) await step(page).click() // finish pass 1, start pass 2
-  await expect(current.locator('td').nth(1)).toHaveText('2')
+  await expect(current.locator('th, td').nth(1)).toHaveText('2')
   await page.getByRole('button', { name: 'Reset' }).click()
-  await expect(current.locator('td').nth(1)).toHaveText('Start')
+  await expect(current.locator('th, td').nth(1)).toHaveText('Start')
 })
 
 test('binary search probes show low, mid and high, and the row follows the step', async ({ page }) => {
@@ -240,7 +240,7 @@ test('quiz: a right and a wrong answer on the bubble sort passes, and nothing le
   await page.getByRole('button', { name: /^Reveal/ }).click()
   await expect(page.getByTestId('revealed-cell')).toContainText('[1, 2, 4, 5, 8]')
   await page.getByRole('button', { name: 'Finish' }).click()
-  await expect(page.getByRole('status').filter({ hasText: 'Score:' })).toContainText('2 / 2')
+  await expect(page.getByRole('region', { name: 'Score', exact: true })).toContainText('2 / 2')
   await expect(page.getByText('1 revealed (not scored)')).toBeVisible()
   // The history table is back once the quiz is over.
   await expect(page.getByRole('heading', { name: 'Pass history' })).toBeVisible()
@@ -306,7 +306,7 @@ test('the binary search deep link shows the mid sequence 3, 5, 6, 7', async ({ p
   await expect(page.getByLabel(/^Target/)).toHaveValue('82')
   const table = page.getByRole('table', { name: /Binary search for 82/ })
   const mids = await table.locator('tbody tr').evaluateAll((rows) =>
-    rows.map((r) => r.querySelectorAll('td')[3]?.textContent?.trim()),
+    rows.map((r) => r.querySelectorAll('th, td')[3]?.textContent?.trim()),
   )
   expect(mids).toEqual(['3', '5', '6', '7'])
 })

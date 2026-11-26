@@ -1,0 +1,12 @@
+{
+  "maxChunkMinifiedKb": 480,
+  "groups": [
+    { "name": "First load, every page", "type": "js", "chunks": ["index", "react", "rolldown-runtime"], "gzipKb": 102, "firstLoad": true },
+    { "name": "Editor", "type": "js", "chunks": ["codemirror"], "gzipKb": 166 },
+    { "name": "Trace route", "type": "js", "chunks": ["TraceTableRoute"], "gzipKb": 47 },
+    { "name": "Truth tables", "type": "js", "chunks": ["TruthTablePage"], "gzipKb": 11 },
+    { "name": "Number systems", "type": "js", "chunks": ["NumberSystemsPage"], "gzipKb": 11 },
+    { "name": "Sorting and searching", "type": "js", "chunks": ["SortingPage"], "gzipKb": 11 },
+    { "name": "CSS", "type": "css", "chunks": ["index"], "gzipKb": 9.5 }
+  ]
+}

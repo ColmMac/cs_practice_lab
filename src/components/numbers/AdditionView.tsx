@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import type { Bits, Width } from '../../core/numbers'
+import { useAnnounce } from '../ui/announce'
 import { Badge } from '../ui/Badge'
 import { Button } from '../ui/Button'
 import { Panel } from '../ui/Panel'
@@ -9,6 +10,16 @@ import { describeColumn, useAddition, type Operand } from './useAddition'
 const cell = 'px-1.5 py-1 text-center font-mono text-base tabular-nums'
 const rowHead = 'pr-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400'
 const colHead = 'px-1.5 text-center text-xs font-normal tabular-nums text-slate-600 dark:text-slate-400'
+
+/** A word under a marked bit, so the amber fill is never the only sign. */
+function Marker({ children }: { children: string }) {
+  return (
+    <span className="mx-auto block w-max rounded-sm border border-current px-0.5 font-sans text-[10px] leading-tight font-semibold">
+      {children}
+    </span>
+  )
+}
+const FLAGGED = 'bg-amber-100 font-bold text-amber-900 dark:bg-amber-950 dark:text-amber-200'
 
 function OperandField({
   which,
@@ -20,6 +31,7 @@ function OperandField({
   s: ReturnType<typeof useAddition>
 }) {
   const err = s.errors[which]
+  useAnnounce(err && `${name}: ${err}`, { delay: 700 })
   return (
     <div className="flex flex-col gap-1">
       <label htmlFor={`add-${which}`} className="text-sm font-semibold">
@@ -40,7 +52,6 @@ function OperandField({
       />
       <p
         id={`add-${which}-err`}
-        aria-live="polite"
         className="min-h-4 text-xs text-red-700 dark:text-red-300"
       >
         {err}
@@ -73,6 +84,13 @@ export function AdditionView({
   const n = width
   const lo = n - s.revealed // index of the leftmost column worked so far
   const cur = s.last && !s.done ? s.last.index : -1
+  const stepText =
+    s.last && !s.done
+      ? describeColumn(s.last)
+      : s.done
+        ? 'All columns added.'
+        : 'Press “Next column” to add one column at a time, starting from the right.'
+  useAnnounce(stepText, { delay: 300 })
 
   return (
     <main className="grid flex-1 content-start gap-4 p-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
@@ -119,15 +137,16 @@ export function AdditionView({
                     </th>
                     <td
                       data-testid="carry-out"
-                      className={`${cell} ${result.carryOut === 1 ? 'bg-amber-100 font-bold text-amber-900 dark:bg-amber-950 dark:text-amber-200' : ''}`}
+                      className={`${cell} ${s.done && result.carryOut === 1 ? FLAGGED : ''}`}
                     >
                       {s.done ? result.carryOut : ''}
+                      {s.done && result.carryOut === 1 && <Marker>Carry</Marker>}
                     </td>
                     {result.carries.map((c, i) => (
                       <td
                         key={i}
                         data-testid="carry"
-                        className={`${cell} ${c === 1 ? 'bg-amber-100 font-bold text-amber-900 dark:bg-amber-950 dark:text-amber-200' : 'text-slate-600 dark:text-slate-400'}`}
+                        className={`${cell} ${c === 1 ? FLAGGED : 'text-slate-600 dark:text-slate-400'}`}
                       >
                         {i >= lo - 1 ? c : ''}
                       </td>
@@ -162,16 +181,21 @@ export function AdditionView({
                     <td className={`${cell} text-slate-600 dark:text-slate-400`}>
                       {s.done && result.carryOut === 1 ? '(1)' : ''}
                     </td>
-                    {result.bits.map((x, i) => (
-                      <td
-                        key={i}
-                        data-testid="result-bit"
-                        aria-current={cur === i ? 'step' : undefined}
-                        className={`${cell} font-bold ${cur === i ? 'bg-emerald-100 outline outline-2 -outline-offset-2 outline-accent dark:bg-emerald-950' : ''}`}
-                      >
-                        {i >= lo ? x : ''}
-                      </td>
-                    ))}
+                    {result.bits.map((x, i) => {
+                      // signed overflow shows in the sign bit, the leftmost
+                      const overflowed = i === 0 && s.done && result.overflow
+                      return (
+                        <td
+                          key={i}
+                          data-testid="result-bit"
+                          aria-current={cur === i ? 'step' : undefined}
+                          className={`${cell} font-bold ${overflowed ? FLAGGED : ''} ${cur === i ? 'bg-emerald-100 outline outline-2 -outline-offset-2 outline-accent dark:bg-emerald-950' : ''}`}
+                        >
+                          {i >= lo ? x : ''}
+                          {overflowed && <Marker>Overflow</Marker>}
+                        </td>
+                      )
+                    })}
                   </tr>
                 </tbody>
               </table>
@@ -188,12 +212,8 @@ export function AdditionView({
                 Show all
               </Button>
             </div>
-            <p data-testid="step-text" aria-live="polite" className="min-h-5 text-sm">
-              {s.last && !s.done
-                ? describeColumn(s.last)
-                : s.done
-                  ? 'All columns added.'
-                  : 'Press “Next column” to add one column at a time, starting from the right.'}
+            <p data-testid="step-text" className="min-h-5 text-sm">
+              {stepText}
             </p>
           </div>
         </Panel>

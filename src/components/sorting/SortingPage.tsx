@@ -17,6 +17,7 @@ import {
   type AlgorithmId,
 } from '../../core/algorithms'
 import { AdSlot } from '../ui/AdSlot'
+import { useAnnounce } from '../ui/announce'
 import { useAdsAllowed } from '../ui/useAdsAllowed'
 import { Button } from '../ui/Button'
 import { ExportUnavailable } from '../ui/ExportPanel'
@@ -47,6 +48,10 @@ export function SortingPage() {
   useUrlMirror(sortingUrlParams({ algo: s.algo, data: s.data, target: s.target, search: s.search, quiz: s.quizOn }))
   const count = s.frame.cards.length
   const unsorted = s.algo === 'binary' && s.listError?.startsWith('Binary search needs')
+  // longer than a Fast frame: at that speed only where playback stops is read, not a queue of every frame
+  useAnnounce(s.frame.caption, { delay: 400 })
+  useAnnounce(s.listError && `List: ${s.listError}`, { delay: 700 })
+  useAnnounce(s.targetError && `Target: ${s.targetError}`, { delay: 700 })
 
   return (
     <>
@@ -146,8 +151,6 @@ export function SortingPage() {
                 )}
                 <p
                   data-testid="caption"
-                  aria-live="polite"
-                  aria-atomic="true"
                   className="min-h-10 rounded bg-slate-50 px-3 py-2 text-sm dark:bg-slate-900"
                 >
                   {s.frame.caption}
@@ -227,7 +230,6 @@ export function SortingPage() {
                   />
                   <p
                     id="sort-list-err"
-                    aria-live="polite"
                     className="min-h-4 text-xs text-red-700 dark:text-red-300"
                   >
                     {s.listError}
@@ -258,7 +260,6 @@ export function SortingPage() {
                     />
                     <p
                       id="sort-target-err"
-                      aria-live="polite"
                       className="min-h-4 text-xs text-red-700 dark:text-red-300"
                     >
                       {s.targetError}

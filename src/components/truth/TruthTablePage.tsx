@@ -5,6 +5,7 @@ import { toolDescription } from '../../app/tools'
 import { findLogicPreset, logicPresets } from '../../core/logic'
 import { AdSlot } from '../ui/AdSlot'
 import { useAdsAllowed } from '../ui/useAdsAllowed'
+import { useAnnounce } from '../ui/announce'
 import { Badge } from '../ui/Badge'
 import { Panel } from '../ui/Panel'
 import { SegmentedToggle } from '../ui/SegmentedToggle'
@@ -24,6 +25,11 @@ export function TruthTablePage() {
   const preset = findLogicPreset(s.selectValue)
   const study = useTruthStudy(s.table, s.notation)
   const ads = useAdsAllowed(study.active)
+  // `on` the table itself: a new one of the same size is still news
+  useAnnounce(s.table && `Truth table built: ${s.table.rows.length} rows, ${s.table.columns.length} columns.`, {
+    on: s.table,
+    delay: 700,
+  })
   // no worked table under one that is being filled in
   const guide = study.active ? null : findGuide('/truth-tables')!
 

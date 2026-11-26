@@ -32,7 +32,7 @@ coverage/
 CLAUDE.md
 .claude/
 PLAN.md
-POLISH_PLAN.md
+*_PLAN.md
 
 # Logs
 npm-debug.log*

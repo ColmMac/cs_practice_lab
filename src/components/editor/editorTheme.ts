@@ -128,6 +128,12 @@ export const darkTheme = build('dark')
  */
 export const editorChrome = [
   EditorView.contentAttributes.of({ 'aria-label': 'Code editor', tabindex: '0' }),
+  // CodeMirror's own ring is a 1px dotted near-black, invisible on the dark editor. The ring goes round the whole
+  // editor, inside its edge because the box around it clips, and not round the text as well.
+  EditorView.theme({
+    '&.cm-focused': { outline: '2px solid var(--color-accent)', outlineOffset: '-2px' },
+    '.cm-content:focus-visible': { outline: 'none' },
+  }),
   EditorView.baseTheme({
     '&light .cm-trace-hover': { backgroundColor: PALETTES.light.hoverLine },
     '&light .cm-trace-selected': { backgroundColor: PALETTES.light.selectedLine, boxShadow: `inset 4px 0 0 ${PALETTES.light.selectedBar}` },

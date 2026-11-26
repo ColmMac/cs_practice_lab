@@ -77,14 +77,19 @@ const verdicts = () =>
     return id ? (document.getElementById(id)?.textContent ?? '') : ''
   })
 const start = () => userEvent.setup().click(screen.getByRole('button', { name: /study mode/i }))
+/** All 8 boxes are up and the first has focus. That happens a frame later: left pending, it steals focus mid-test. */
+const started = () =>
+  waitFor(() => {
+    expect(boxes()).toHaveLength(8)
+    expect(document.activeElement).toBe(boxes()[0])
+  })
 
 describe('Truth Table Study Mode', () => {
   it('hides the outputs (4 rows × S, C = 8 boxes), focuses the first, and Exit restores the table', async () => {
     mount()
     const user = userEvent.setup()
     await user.click(screen.getByRole('button', { name: /study mode/i }))
-    await waitFor(() => expect(boxes()).toHaveLength(8))
-    await waitFor(() => expect(document.activeElement).toBe(boxes()[0]))
+    await started()
     await user.click(screen.getByRole('button', { name: 'Exit study mode' }))
     expect(boxes()).toHaveLength(0)
     expect(screen.getByRole('table', { name: 'Truth table' })).toHaveTextContent('1')
@@ -94,7 +99,7 @@ describe('Truth Table Study Mode', () => {
     mount()
     await start()
     const user = userEvent.setup()
-    await waitFor(() => expect(boxes()).toHaveLength(8))
+    await started()
     // Half adder rows A,B → S,C. The boxes go in DOM order: row 1 S, row 1 C, row 2 S, row 2 C...
     const [r1s, , r2s] = boxes()
     await user.type(r1s!, '0') // 0 XOR 0 = 0: right
@@ -111,7 +116,7 @@ describe('Truth Table Study Mode', () => {
     mount()
     await start()
     const user = userEvent.setup()
-    await waitFor(() => expect(boxes()).toHaveLength(8))
+    await started()
     await user.type(boxes()[0]!, 'F') // right value, table is 0/1
     await user.click(screen.getByRole('button', { name: 'Reveal Row 1, S' }))
     await user.type(boxes()[0]!, 'F') // the next box: row 1 C = 0
@@ -125,7 +130,7 @@ describe('Truth Table Study Mode', () => {
     mount()
     await start()
     const user = userEvent.setup()
-    await waitFor(() => expect(boxes()).toHaveLength(8))
+    await started()
     const first = boxes()[0]!
     first.focus()
     await user.keyboard('{Enter}')
@@ -153,7 +158,7 @@ describe('Truth Table Study Mode', () => {
     mount()
     await start()
     const user = userEvent.setup()
-    await waitFor(() => expect(boxes()).toHaveLength(8))
+    await started()
     boxes()[boxes().length - 1]!.focus()
     await user.keyboard('{Enter}')
     expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Check answers' }))
@@ -163,7 +168,7 @@ describe('Truth Table Study Mode', () => {
     mount()
     await start()
     const user = userEvent.setup()
-    await waitFor(() => expect(boxes()).toHaveLength(8))
+    await started()
     await user.click(screen.getByRole('radio', { name: 'T / F' }))
     await waitFor(() => expect(boxes()).toHaveLength(0))
     expect(screen.queryByRole('region', { name: 'Study mode' })).toBeNull()
@@ -173,7 +178,7 @@ describe('Truth Table Study Mode', () => {
     mount()
     await start()
     const user = userEvent.setup()
-    await waitFor(() => expect(boxes()).toHaveLength(8))
+    await started()
     await user.click(screen.getByRole('radio', { name: 'Random' }))
     expect(boxes()).toHaveLength(4) // 50% of 8
     expect(screen.getByRole('button', { name: 'New random mask' })).toBeInTheDocument()

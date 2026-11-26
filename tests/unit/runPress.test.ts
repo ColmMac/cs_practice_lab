@@ -12,7 +12,7 @@ function mount(make: () => TraceResult = () => ({ ...traces.digitSum })) {
   const runner = new FakeTraceRunner(make)
   const spy = vi.spyOn(runner, 'runTrace')
   setRunnerOverride(runner)
-  useStore.setState({ ...defaultWorkspace('x = 1\n'), result: null, ranSig: null, running: false, challenge: null })
+  useStore.setState({ ...defaultWorkspace('x = 1\n'), result: null, ranSig: null, running: false, challenge: null, runnerStatus: { state: 'ready' } })
   return spy
 }
 
@@ -36,6 +36,22 @@ async function press() {
 }
 
 describe('pressing Run', () => {
+  it.each([
+    { state: 'uninitialised' as const },
+    { state: 'loading' as const, message: 'Downloading…' },
+    { state: 'failed' as const, message: 'offline' },
+  ])('does nothing while Python is $state, and queues nothing', async (runnerStatus) => {
+    const spy = mount()
+    useStore.setState({ runnerStatus })
+    await press()
+    expect(spy).not.toHaveBeenCalled()
+    expect(useStore.getState().running).toBe(false)
+    // the dropped press started no cooldown
+    useStore.setState({ runnerStatus: { state: 'ready' } })
+    await press()
+    expect(spy).toHaveBeenCalledTimes(1)
+  })
+
   it('lights the button briefly once the table is filled', async () => {
     mount()
     await press()

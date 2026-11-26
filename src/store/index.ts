@@ -108,6 +108,11 @@ interface AppState extends PersistedState {
   studyOnRun: { config: StudyConfig; seed: number } | null
 
   init(): void
+  /**
+   * After a crash: put the tool back to a first visit's state. While a shared workspace is under review it brings back
+   * the visitor's own workspace instead and returns 'restored', so what is stored must be kept.
+   */
+  resetTool(): 'restored' | void
   /** Try loading Python again after it failed (offline, blocked CDN…). */
   retryRuntime(): Promise<void>
   dismissWelcome(): void
@@ -412,6 +417,20 @@ export const useStore = create<AppState>()(
               if (!s.shared && s.code.trim() !== '') void s.run() // bring back the last table; own code only
             })
             .catch(() => {}) // failure is surfaced through runnerStatus
+        },
+
+        resetTool() {
+          if (get().shared) {
+            get().discardShared()
+            return 'restored'
+          }
+          clearTimeout(rerunTimer)
+          runToken++ // a run in flight belongs to what is being thrown away
+          if (get().running) getRunner(get().language).cancel()
+          const { runnerStatus, welcomed } = get()
+          set({ ...useStore.getInitialState(), runnerStatus, welcomed }, true)
+          // init() won't run again for a runner it has already bound, so bring the example's table back here
+          if (runnerStatus.state === 'ready') void get().run()
         },
 
         async retryRuntime() {

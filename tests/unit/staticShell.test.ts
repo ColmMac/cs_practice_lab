@@ -56,7 +56,7 @@ describe('static route shells', () => {
       const apps = [...parse(html).querySelectorAll('script[type="application/ld+json"]')]
         .map((s) => JSON.parse(s.textContent!))
         .filter((b) => b['@type'] === 'WebApplication')
-      const isTool = !['/', '/about', '/privacy'].includes(page.path)
+      const isTool = !['/', '/about', '/privacy', '/accessibility'].includes(page.path)
       expect(apps, page.path).toHaveLength(isTool ? 1 : 0)
       if (!isTool) continue
       expect(apps[0]).toMatchObject({
@@ -78,6 +78,8 @@ describe('static route shells', () => {
     expect(body('/about')).toContain('href="https://github.com/ColmMac/cs_practice_lab"')
     expect(body('/privacy')).toContain('Information Commissioner’s Office')
     expect(body('/privacy')).toContain('hub:mastery:v1')
+    expect(body('/accessibility')).toContain('href="mailto:contact@cspracticelab.com"')
+    expect(body('/accessibility')).toContain('Last reviewed: ')
   })
 
   it('uses the origin it is given', () => {
@@ -119,6 +121,19 @@ describe('privacy text', () => {
   it('names every browser storage key', () => {
     for (const key of [STORAGE_KEY, THEME_KEY, 'tts:welcomed', PROJECTOR_KEY, DIALECT_KEY, MASTERY_KEY, LAST_KEY]) {
       expect(text(false)).toContain(`${key}:`)
+    }
+  })
+
+  it('only claims there are no cookies in a build without adverts', () => {
+    expect(text(false)).toContain('We set no cookies.')
+    expect(text(true)).not.toContain('no cookies')
+    expect(text(true)).toContain('need your consent')
+  })
+
+  it('never says there is no personal data without saying who receives the IP address', () => {
+    for (const ads of [false, true]) {
+      expect(text(ads)).toContain('your IP address counts as personal data')
+      expect(text(ads)).not.toMatch(/zero personal data|\bDPA\b|data processing agreement/i)
     }
   })
 

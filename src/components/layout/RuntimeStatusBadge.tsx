@@ -23,7 +23,8 @@ export function RuntimeStatusBadge() {
   const retryRuntime = useStore((s) => s.retryRuntime)
   const { text, tone } = describe(status)
   return (
-    <Badge tone={tone}>
+    // quiet: useRunAnnouncements says "Python ready"; "Running…" before every result would only be noise
+    <Badge tone={tone} quiet>
       {status.state === 'failed' ? (
         text
       ) : (

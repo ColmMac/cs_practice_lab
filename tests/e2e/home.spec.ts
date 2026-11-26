@@ -130,7 +130,7 @@ test.describe('quick starts', () => {
     await expect(page.getByTestId('addition-table')).toBeVisible()
     await expect(page.getByRole('textbox', { name: /^Operand A/ })).toHaveValue('01111111')
     await expect(page.getByRole('textbox', { name: /^Operand B/ })).toHaveValue('00000001')
-    await expect(page.getByTestId('result-bit')).toHaveText(['1', '0', '0', '0', '0', '0', '0', '0'])
+    await expect(page.getByTestId('result-bit')).toHaveText(['1Overflow', '0', '0', '0', '0', '0', '0', '0'])
     await expect(page.getByText('Overflow: two positives gave a negative.')).toBeVisible()
   })
 

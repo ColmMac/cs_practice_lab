@@ -5,7 +5,7 @@
  */
 import { SITE_DESCRIPTION, SITE_NAME } from '../config/site.ts'
 import { findGuide, FAQ_HEADING, guideSections, type Guide, type GuideBlock } from './guides/index.ts'
-import { ABOUT, privacyDoc, type Block, type InfoDoc, type Inline } from './info/content.ts'
+import { ABOUT, ACCESSIBILITY, privacyDoc, type Block, type InfoDoc, type Inline } from './info/content.ts'
 import { jsonLdText, pageHead, type Faq, type PageHead, type PageInput } from './seo.ts'
 import { INFO_PAGES, SITE_PATHS, TOOLS } from './tools.ts'
 
@@ -22,7 +22,7 @@ function infoHtml(name: string, doc: InfoDoc): string {
     `<h1>${escapeHtml(name)}</h1>`,
     `<p>${inline(doc.intro)}</p>`,
     ...doc.sections.map((s) => `<h2>${escapeHtml(s.heading)}</h2>${s.blocks.map(block).join('')}`),
-    ...(doc.updated ? [`<p>Last updated: ${doc.updated}</p>`] : []),
+    ...(doc.updated ? [`<p>${doc.updatedLabel ?? 'Last updated'}: ${doc.updated}</p>`] : []),
   ].join('\n')
 }
 
@@ -63,7 +63,7 @@ const siteLinks = (): string =>
 
 /** The routes that get their own HTML, in `SITE_PATHS` order. */
 export function shellPages(adsEnabled: boolean): ShellPage[] {
-  const infoDocs: Record<string, InfoDoc> = { '/about': ABOUT, '/privacy': privacyDoc(adsEnabled) }
+  const infoDocs: Record<string, InfoDoc> = { '/about': ABOUT, '/privacy': privacyDoc(adsEnabled), '/accessibility': ACCESSIBILITY }
   return SITE_PATHS.map((path): ShellPage => {
     if (path === '/') {
       const tools = TOOLS.map((t) => `<li>${link(t.path, t.name)}: ${escapeHtml(t.blurb)}</li>`).join('')

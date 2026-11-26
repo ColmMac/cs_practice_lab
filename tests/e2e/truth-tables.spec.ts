@@ -6,7 +6,7 @@ test.beforeEach(async ({ page }) => {
 
 const rowsOf = (page: import('@playwright/test').Page) =>
   page.getByRole('table', { name: 'Truth table' }).locator('tbody tr').evaluateAll((trs) =>
-    trs.map((tr) => Array.from(tr.querySelectorAll('td')).map((td) => td.textContent)),
+    trs.map((tr) => Array.from(tr.querySelectorAll('th, td')).map((td) => td.textContent)),
   )
 
 test('a preset shows its table, with the input and output groups', async ({ page }) => {
@@ -44,7 +44,7 @@ test('an invalid expression announces the error, underlines it and shows no tabl
   await page.goto('/truth-tables')
   await page.locator('#truth-expr').fill('A AND')
   await expect(page.locator('#truth-expr-status')).toContainText('Error:')
-  await expect(page.locator('#truth-expr-status')).toHaveAttribute('aria-live', 'polite')
+  await expect(page.getByTestId('live-region')).toContainText('Error:')
   await expect(page.getByTestId('error-underline')).toBeVisible()
   await expect(page.getByRole('table', { name: 'Truth table' })).toHaveCount(0)
 })
@@ -73,7 +73,7 @@ test('study mode: a right and a wrong answer are graded, then Exit restores the 
   await boxes.nth(0).fill('0') // row 1, S = 0 XOR 0 = 0: right
   await boxes.nth(2).fill('0') // row 2, S = 0 XOR 1 = 1: wrong
   await page.getByRole('button', { name: 'Check answers' }).click()
-  await expect(page.getByText(/Score: 1 \/ 8/)).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Score', exact: true })).toContainText(/Score: 1 \/ 8/)
   await expect(boxes.nth(0)).toHaveAccessibleDescription(/Correct/)
   await expect(boxes.nth(2)).toHaveAccessibleDescription(/Not correct/)
 

@@ -24,6 +24,7 @@ export function TruthTableView({ table, study }: { table: TruthTable; study?: Tr
   return (
     <div className="overflow-auto">
       <table aria-label="Truth table" className={`${TABLE} w-auto`} onKeyDown={grid?.onKeyDown}>
+        <caption className="sr-only">Truth table: every combination of the inputs and the value of each column</caption>
         <thead className={THEAD}>
           <tr>
             {groups.map((g) => (
@@ -46,9 +47,15 @@ export function TruthTableView({ table, study }: { table: TruthTable; study?: Tr
               {r.cells.map((cell, i) => {
                 const col = columns[i]!
                 const key = truthCellKey(r.index, col.key)
+                const asked = !!grid && !!study?.masked.has(key)
+                const Cell = i === 0 && col.group === 'input' && !asked ? 'th' : 'td'
                 return (
-                  <td key={col.key} className={`${TD} text-center ${edge(i)}`}>
-                    {grid && study?.masked.has(key) ? (
+                  <Cell
+                    key={col.key}
+                    scope={Cell === 'th' ? 'row' : undefined}
+                    className={`${TD} text-center [font-weight:inherit] ${edge(i)}`}
+                  >
+                    {asked && grid && study ? (
                       <AnswerCell
                         cellKey={key}
                         colId={col.key}
@@ -65,7 +72,7 @@ export function TruthTableView({ table, study }: { table: TruthTable; study?: Tr
                     ) : (
                       cell
                     )}
-                  </td>
+                  </Cell>
                 )
               })}
             </tr>

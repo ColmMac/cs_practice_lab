@@ -121,7 +121,7 @@ test.describe('binary addition visualiser', () => {
   test('the overflow example flags signed overflow but not a carry out', async ({ page }) => {
     await openAdd(page)
     await fillOperands(page, '01111111', '00000001')
-    await expect(page.getByTestId('result-bit')).toHaveText(['1', '0', '0', '0', '0', '0', '0', '0'])
+    await expect(page.getByTestId('result-bit')).toHaveText(['1Overflow', '0', '0', '0', '0', '0', '0', '0'])
     await expect(page.getByText('Overflow: two positives gave a negative.')).toBeVisible()
     await expect(page.getByText('No carry out')).toBeVisible()
     await expect(page.getByTestId('carry-out')).toHaveText('0')
@@ -130,7 +130,7 @@ test.describe('binary addition visualiser', () => {
   test('the carry-out example explains the unsigned reading separately', async ({ page }) => {
     await openAdd(page)
     await page.getByRole('button', { name: 'Carry out' }).click()
-    await expect(page.getByTestId('carry-out')).toHaveText('1')
+    await expect(page.getByTestId('carry-out')).toHaveText('1Carry')
     await expect(page.getByText(/^Carry out of the top column/)).toBeVisible()
     await expect(page.getByText(/^No overflow/)).toBeVisible() // -1 + 1 = 0 is fine when signed
   })
@@ -203,7 +203,7 @@ test.describe('practice mode', () => {
 
     await expect(first.locator('[id^="study-msg-"]')).toContainText('Correct')
     await expect(page.getByTestId('question').nth(1).getByText(/Not correct/)).toBeVisible()
-    await expect(page.getByRole('status').filter({ hasText: 'Score:' })).toContainText('1 / 8')
+    await expect(page.getByRole('region', { name: 'Score', exact: true })).toContainText('1 / 8')
     await expect(first.getByTestId('working')).toContainText('weight')
   })
 
