@@ -1,0 +1,93 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+# A newer push to the same branch or pull request cancels the run it replaces.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# No secrets are used. Builds here never carry AdSense IDs: set empty, these beat any .env file.
+# The E2E "ads" project builds with its own fake IDs (playwright.config.ts). Never add real ones.
+env:
+  VITE_ADSENSE_CLIENT: ''
+  VITE_ADSENSE_SLOT: ''
+
+jobs:
+  checks:
+    name: Types, lint, unit tests, fixtures and bundle size
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: package.json
+          cache: npm
+      - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      # The wire fixtures are the Python/TypeScript contract, so a tracer.py change must come with new ones.
+      # This only catches drift: the diff is still reviewed by hand. `add -N` makes a new, uncommitted file count.
+      - name: Wire fixtures match tracer.py
+        run: |
+          npm run fixtures
+          git add --intent-to-add tests/fixtures
+          git diff --exit-code tests/fixtures
+      - run: npm run build
+      - run: npm run check:bundle
+
+  tracer:
+    name: Tracer tests (Python ${{ matrix.python }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        # Pyodide 314.x ships Python 3.14, so no version here is allowed to fail.
+        python: ['3.12', '3.13', '3.14']
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
+      # `npm run test:py` with the matrix's Python
+      - run: uv run --no-project --python ${{ matrix.python }} --with pytest python -m pytest tests/tracer -p no:cacheprovider
+
+  e2e:
+    # The trace-table tests download Python (Pyodide) from the jsDelivr CDN, so a CDN outage can fail this job.
+    name: End-to-end tests (needs the jsDelivr CDN)
+    needs: checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: package.json
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      # Builds and serves both the `app` and `ads` projects.
+      - run: npx playwright test
+      - name: Upload the report and traces
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: playwright-results
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7

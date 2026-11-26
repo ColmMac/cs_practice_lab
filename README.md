@@ -1,5 +1,7 @@
 # CS Practice Lab
 
+[![CI](https://github.com/ColmMac/cs_practice_lab/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/ColmMac/cs_practice_lab/actions/workflows/ci.yml)
+
 Free computer science revision tools that run entirely in your browser, with no login: **https://cspracticelab.com**
 
 It is for students on GCSE, SQA National 5 and Higher, A-Level and first-year programming courses, and for the people who teach them. Not every tool matches every course, and the site isn't affiliated with or endorsed by any exam board.
@@ -32,7 +34,7 @@ Step through bubble, insertion and merge sort, and linear and binary search, on 
 
 ## Local development
 
-You need [Node.js](https://nodejs.org) (20.19+ or 22.12+) and, for the tracer tests, [uv](https://docs.astral.sh/uv/).
+You need [Node.js](https://nodejs.org) (22.22.2+, 24.15+ or 26+) and, for the tracer tests, [uv](https://docs.astral.sh/uv/).
 
 ```powershell
 npm install
@@ -52,11 +54,14 @@ The dev server is at http://localhost:5173. It leaves out the CSP, so test heade
 | `npm run typecheck` / `npm run lint` | TypeScript and ESLint |
 | `npm run fixtures` | Regenerate `tests/fixtures/wire/*.json` from the real tracer (the Python↔TypeScript contract) |
 | `npm run build` | Production build into `dist/` |
+| `npm run check:bundle` | After a build, check chunk sizes against `bundle-budget.json` |
 | `npm run preview` | Serve `dist/` **with the production security headers**, to test the real CSP |
 
 Before the E2E tests, run `npx playwright install chromium` once, and stop any `vite preview` on port 4173 (it would be reused, and might be a stale build). If the bundled Chromium can't start, set `$env:PW_CHANNEL = 'msedge'`.
 
 On Windows, application-control policies can block programs inside a project `.venv`, so don't use `uv sync` or `uv run pytest`. The npm scripts use `uv run --no-project` instead.
+
+GitHub Actions ([ci.yml](.github/workflows/ci.yml)) runs these checks on every pull request and every push to `main`.
 
 ## Deploy to Cloudflare Pages
 
@@ -66,7 +71,7 @@ Connect the repository with Pages' Git integration and use these settings:
 |---------|-------|
 | Build command | `npm run build` |
 | Output directory | `dist` |
-| Environment variable `NODE_VERSION` | `22` (Vite needs 20.19+ or 22.12+) |
+| Environment variable `NODE_VERSION` | `22` (it must resolve to 22.22.2 or later) |
 
 | Build variable | Purpose |
 |----------------|---------|

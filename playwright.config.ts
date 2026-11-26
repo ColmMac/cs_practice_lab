@@ -27,8 +27,9 @@ export default defineConfig({
   expect: { timeout: 45_000 },
   fullyParallel: false,
   workers: 1,
-  retries: 0,
-  reporter: [['list']],
+  // CI gets one retry, and an HTML report that the workflow uploads if the job fails.
+  retries: process.env.CI ? 1 : 0,
+  reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : [['list']],
   use: {
     baseURL: `http://localhost:${PORT}`,
     channel: process.env.PW_CHANNEL || undefined,
@@ -43,7 +44,7 @@ export default defineConfig({
       command: `npm run build && npm run preview -- --port ${PORT} --strictPort`,
       url: `http://localhost:${PORT}`,
       env: withAds('', ''),
-      reuseExistingServer: true,
+      reuseExistingServer: !process.env.CI,
       timeout: 180_000,
     },
     {
